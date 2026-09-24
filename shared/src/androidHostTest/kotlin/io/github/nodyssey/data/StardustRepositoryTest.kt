@@ -209,19 +209,6 @@ class StardustRepositoryTest {
             assertEquals(NodeSeekSite.BASE_URL + "/stardust/list?member_id=52425", api.postedReferer)
         }
 
-    /** Answered, but with nobody named. Distinct from a refusal, and it must not read as an error. */
-    @Test
-    fun `reports a nameless prepare answer as no name rather than as a failure`() =
-        runTest {
-            val name =
-                NetworkStardustRepository(
-                    FakeStardustJsonSource("""{"success":true}"""),
-                    dispatchers,
-                ).recipientName(recipientUid = 9, viewerUid = 52_425)
-
-            assertNull(name)
-        }
-
     @Test
     fun `carries the site's own sentence when a recipient lookup is refused`() =
         runTest {

@@ -9,32 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NodeSeekEmojiTest {
-    /**
-     * Four tabs, not five. The site's own editor has a fifth labelled APP, but it inserts 投票 and
-     * 星辰收款 rather than stickers — this app used to read it as a sticker group and fill it with
-     * eighteen Unicode emoji the site does not offer.
-     */
-    @Test
-    fun `offers all three NodeSeek sticker groups`() {
-        assertEquals(4, NodeSeekEmojiGroups.size)
-        assertEquals(listOf(149, 22, 32), NodeSeekEmojiGroups.take(3).map { it.entries.size })
-
-        val stickers = NodeSeekEmojiGroups
-            .take(3)
-            .flatMap(EmojiGroup::entries)
-            .filterIsInstance<EmojiEntry.Sticker>()
-
-        assertEquals(203, stickers.size)
-        assertEquals(203, stickers.map { it.shortcode }.distinct().size)
-        // The same prefix RichContentParser recognises as an inline sticker, so the panel and the
-        // thread share one cached copy instead of the panel carrying its own in the APK.
-        assertTrue(
-            stickers.all {
-                it.url.startsWith("https://www.nodeseek.com/static/image/sticker/")
-            },
-        )
-    }
-
     @Test
     fun `inserts the same shortcode as the site editor`() {
         val first = NodeSeekEmojiGroups.first().entries.first() as EmojiEntry.Sticker

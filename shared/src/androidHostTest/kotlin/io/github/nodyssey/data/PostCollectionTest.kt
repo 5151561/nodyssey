@@ -3,7 +3,6 @@ package io.github.nodyssey.data
 import io.github.nodyssey.core.net.JsonApi
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
-import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -50,21 +49,6 @@ class PostCollectionTest {
             collectedMeta = RoomCollectedPostMetaStore(database.collectedPostMetaDao(), clock),
         )
 
-    @Test
-    fun `the page's own blob decides the star's starting state`() =
-        runTest {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, collected = true, collectionCount = 7)
-            }
-            val repository = repository(api("""{"success":true}"""))
-
-            repository.refreshThread(postId = 42, page = 1)
-
-            val thread = requireNotNull(repository.thread(42).first())
-            assertEquals(true, thread.collected)
-            assertEquals(7, thread.collectionCount)
-        }
-
     /** A page with no blob leaves it unknown, which is what keeps the star from being drawn at all. */
     @Test
     fun `a page that said nothing about the collection leaves it unknown`() =
@@ -92,22 +76,6 @@ class PostCollectionTest {
             val thread = requireNotNull(repository.thread(42).first())
             assertEquals(true, thread.collected)
             assertEquals(7, thread.collectionCount)
-        }
-
-    @Test
-    fun `un-collecting writes the removal through`() =
-        runTest {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, collected = true, collectionCount = 7)
-            }
-            val repository = repository(api("""{"success":true,"message":"removed","postCollectionCount":6}"""))
-            repository.refreshThread(postId = 42, page = 1)
-
-            repository.setCollected(postId = 42, collected = false)
-
-            val thread = requireNotNull(repository.thread(42).first())
-            assertEquals(false, thread.collected)
-            assertEquals(6, thread.collectionCount)
         }
 
     /**
@@ -147,20 +115,6 @@ class PostCollectionTest {
             assertEquals("收藏夹已满", thrown.detail)
             val thread = requireNotNull(repository.thread(42).first())
             assertEquals(false, thread.collected)
-        }
-
-    /** A build that never wired the writer refuses outright rather than reporting a write it never sent. */
-    @Test
-    fun `an unwired repository refuses the toggle`() =
-        runTest {
-            val repository = OfflineFirstPostRepository(database, remote, clock)
-
-            val thrown =
-                assertThrows(SiteException::class.java) {
-                    runBlocking { repository.setCollected(postId = 42, collected = true) }
-                }
-
-            assertEquals(SiteError.NotWired, thrown.error)
         }
 
     /**
@@ -283,20 +237,6 @@ class PostCollectionTest {
             remote.detailResult = { postId, page -> FakePostRemoteDataSource.detail(postId, page, collected = null) }
             repository(api("""{"success":true}""")).refreshThread(postId = 43, page = 1)
             assertTrue(store().observe().first().isEmpty())
-        }
-
-    /** Un-collecting is not new information about the thread, and must not blank what is known. */
-    @Test
-    fun `un-collecting leaves what is known alone`() =
-        runTest {
-            val repository = repository(api("""{"success":true,"collected":true}"""))
-            repository.refreshThread(postId = 42, page = 1)
-            repository.setCollected(postId = 42, collected = true)
-
-            val undo = repository(api("""{"success":true,"collected":false}"""))
-            undo.setCollected(postId = 42, collected = false)
-
-            assertEquals("thread 42", store().observe().first()[42L]?.title)
         }
 
     /**

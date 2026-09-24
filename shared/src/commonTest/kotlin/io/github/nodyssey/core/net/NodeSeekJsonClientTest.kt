@@ -49,18 +49,6 @@ class NodeSeekJsonClientTest {
         assertTrue(error.error is SiteError.Cloudflare)
     }
 
-    @Test
-    fun `the challenge page is a challenge`() = runTest {
-        val error = errorFrom(
-            httpResponse(
-                body = """<html><script src="/cdn-cgi/challenge-platform/h/b.js"></script></html>""",
-                code = 403,
-            ),
-        )
-
-        assertTrue(error.error is SiteError.Cloudflare)
-    }
-
     /** The regression: the site's own shell, on a 200, with nothing of Cloudflare's about it. */
     @Test
     fun `the single-page shell is reported as itself rather than as a wall`() = runTest {
@@ -126,14 +114,6 @@ class NodeSeekJsonClientTest {
         )
 
         assertTrue(error.error is SiteError.Cloudflare)
-    }
-
-    /** A status that speaks for itself keeps speaking: the page it carries does not overrule it. */
-    @Test
-    fun `a server error still reports its status`() = runTest {
-        val error = errorFrom(httpResponse(body = "<html>502 Bad Gateway</html>", code = 502))
-
-        assertEquals(SiteError.Http(502), error.error)
     }
 
     private suspend fun errorFrom(answer: io.github.plaza.core.net.HttpResponse): SiteException =

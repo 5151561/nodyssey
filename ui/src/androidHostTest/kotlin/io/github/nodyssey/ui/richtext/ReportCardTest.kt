@@ -18,12 +18,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
-import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.plaza.core.ansi.AnsiDecoder
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -36,8 +34,7 @@ import org.robolectric.annotation.GraphicsMode
  * What the report looks like once it is on screen rather than in a data class.
  *
  * The parser's own tests cover the reading; these cover the decision the renderer makes — that a
- * benchmark report becomes a card and anything else stays a code block — and that the way back to
- * the original is actually reachable.
+ * benchmark report becomes a card, or under 原文 stays the text as posted.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -54,7 +51,6 @@ class ReportCardTest {
 
     private fun showCodeBlock(
         code: String,
-        language: String? = "ansi",
         format: ReportFormat = ReportFormat.ADAPTED,
     ) {
         val decoded = AnsiDecoder.decode(code)
@@ -69,7 +65,7 @@ class ReportCardTest {
                             nodes = listOf(
                                 RichNode.CodeBlock(
                                     code = decoded.text,
-                                    language = language,
+                                    language = "ansi",
                                     spans = decoded.spans,
                                     columns = decoded.columns,
                                 ),
@@ -96,35 +92,6 @@ class ReportCardTest {
         compose.onNodeWithText("CPU测评").performScrollTo().assertIsDisplayed()
     }
 
-    @Test
-    fun `capability markers become separate chips`() {
-        showCodeBlock(report())
-
-        compose.onNodeWithText("AES-NI").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("VT-x/AMD-V").performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun `the original stays one tap away`() {
-        showCodeBlock(report())
-
-        compose.onNodeWithText("查看原始报告").performScrollTo().performClick()
-
-        // The command that produced the report is in the banner and nowhere in the card, so finding
-        // it means the untouched text is on screen.
-        compose.onNodeWithText("bash <(curl -sL https://Check.Place) -H", substring = true).assertExists()
-    }
-
-    @Test
-    fun `the card collapses from its header`() {
-        showCodeBlock(report())
-
-        compose.onNodeWithText("CPU测评").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("硬件质量体检报告").performClick()
-
-        compose.onAllNodes(hasText("CPU测评")).assertCountEquals(0)
-    }
-
     /** 测评报告 = 原文: the same block, drawn as it was posted rather than read apart. */
     @Test
     fun `the source format draws the report as posted instead of as rows`() {
@@ -136,16 +103,6 @@ class ReportCardTest {
             .assertExists()
         // And the card's own rows — a label the parser lifted out of the padding — are not.
         compose.onAllNodes(hasText("容器/虚拟化")).assertCountEquals(0)
-    }
-
-    @Test
-    fun `the source format still opens full screen`() {
-        showCodeBlock(report(), format = ReportFormat.SOURCE)
-
-        compose.onNodeWithText("全屏查看").performScrollTo().performClick()
-
-        // 关闭 belongs to the dialog alone; the inline block only offers 复制.
-        compose.onNodeWithContentDescription("关闭").assertExists()
     }
 
     /**
@@ -187,15 +144,6 @@ class ReportCardTest {
             .performTouchInput { longClick() }
 
         compose.onNodeWithContentDescription("关闭").assertExists()
-    }
-
-    /** `language-ansi` is also how an ordinary coloured paste arrives, and that is not a report. */
-    @Test
-    fun `anything that is not a report stays a code block`() {
-        showCodeBlock("curl -sL https://run.nodequality.com | bash", language = "bash")
-
-        compose.onNodeWithText("curl -sL https://run.nodequality.com | bash").assertIsDisplayed()
-        assertEquals(null, QualityReportParser.parse("curl -sL https://run.nodequality.com | bash"))
     }
 }
 

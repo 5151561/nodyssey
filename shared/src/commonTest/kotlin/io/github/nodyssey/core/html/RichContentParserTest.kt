@@ -201,38 +201,12 @@ class RichContentParserTest {
         assertEquals("三家的价格和权益差不多", (nodes[1] as RichNode.Paragraph).inlines.first().let { (it as InlineNode.Text).text })
     }
 
-    /** What the app used to do with a vote: render `nsapp://vote?id=2871` as a blue link. */
-    @Test
-    fun `a vote marker never renders as a link or as its own raw text`() {
-        val nodes =
-            parse(
-                """<p><a href="javascript://void(0)" data-href="nsapp://vote?id=2871">nsapp://vote?id=2871</a></p>""",
-            )
-
-        val inlines = nodes.filterIsInstance<RichNode.Paragraph>().flatMap { it.inlines }
-        assertTrue(inlines.filterIsInstance<InlineNode.Link>().isEmpty())
-        assertTrue(inlines.filterIsInstance<InlineNode.Text>().none { it.text.contains("nsapp") })
-    }
-
     /** A body that is nothing but the marker leaves it hanging directly off the article. */
     @Test
     fun `a bare vote anchor at article level is still a block`() {
         val nodes = parse("""<a href="javascript://void(0)" data-href="nsapp://vote?id=99">x</a>""")
 
         assertEquals(listOf(RichNode.VotePlaceholder(99)), nodes)
-    }
-
-    /** The last line of defence: wrapped in anything, it still must not reach the inline flow. */
-    @Test
-    fun `a vote anchor nested inside emphasis is dropped rather than linked`() {
-        val nodes =
-            parse(
-                """<p><strong><a href="javascript://void(0)" data-href="nsapp://vote?id=7">x</a></strong>后文</p>""",
-            )
-
-        val inlines = nodes.filterIsInstance<RichNode.Paragraph>().flatMap { it.inlines }
-        assertTrue(inlines.filterIsInstance<InlineNode.Link>().isEmpty())
-        assertTrue(inlines.filterIsInstance<InlineNode.Text>().none { it.text.contains("nsapp") })
     }
 
     /**

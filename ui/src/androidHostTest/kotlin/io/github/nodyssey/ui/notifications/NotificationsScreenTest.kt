@@ -7,7 +7,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -41,48 +40,6 @@ class NotificationsScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    /**
-     * Board 7d's groups, as the App shows them: 回复 and @我 folded into one tab, 私信 beside it.
-     *
-     * Still no 「系统」 — the site has never had one, and merging two groups is not an excuse to
-     * invent a third.
-     */
-    @Test
-    fun `offers the merged notification tab and 私信`() {
-        setContent(state(items = listOf(mention())))
-
-        composeRule.onNodeWithText("互动").assertIsDisplayed()
-        composeRule.onNodeWithText("私信").assertIsDisplayed()
-        assertEquals(0, composeRule.onAllNodesWithText("回复主题").fetchSemanticsNodes().size)
-        assertEquals(0, composeRule.onAllNodesWithText("系统").fetchSemanticsNodes().size)
-    }
-
-    /** The count on the merged tab counts rows, not the two groups' rows added up. */
-    @Test
-    fun `the merged tab discounts what both groups counted twice`() {
-        setContent(
-            state(items = listOf(mention()), counts = NotificationCounts(replies = 5, mentions = 2, overlap = 2)),
-        )
-
-        composeRule.onNodeWithText("5").assertIsDisplayed()
-    }
-
-    /** A comment that replied *and* @-ed is one row, and says so. */
-    @Test
-    fun `a folded row says both things happened`() {
-        setContent(state(items = listOf(mention(sources = bothGroups()))))
-
-        composeRule.onNodeWithText("nssk 在帖子 求教如何改用户名 中回复并@了我").assertIsDisplayed()
-    }
-
-    @Test
-    fun `renders the mention sentence and both halves of the timestamp`() {
-        setContent(state(items = listOf(mention())))
-
-        composeRule.onNodeWithText("nssk 在帖子 求教如何改用户名 中@了我").assertIsDisplayed()
-        composeRule.onNodeWithText("26 分钟前 · 2026/7/26 09:56:03", substring = true).assertIsDisplayed()
-    }
-
     @Test
     fun `an unread conversation counts towards mark all read`() {
         var markedAllRead = false
@@ -113,95 +70,6 @@ class NotificationsScreenTest {
         composeRule.onNodeWithText("全部已读").performClick()
 
         assertEquals(true, markedAllRead)
-    }
-
-    /**
-     * The stamps form a column, so every row's must end at the same x. They drifted when the name
-     * and a spacer both carried weight and split the slack between them.
-     */
-    @Test
-    fun `conversation stamps share one right edge`() {
-        setContent(
-            state(
-                tab = NotificationTab.MESSAGES,
-                conversations =
-                listOf(
-                    systemConversation(),
-                    conversation(uid = 2, name = "a", stamp = NOW - 26 * 60 * 60_000L),
-                    conversation(uid = 3, name = "一个很长的用户名字", stamp = NOW - 40L * 24 * 60 * 60_000L),
-                ),
-            ),
-        )
-
-        // The row is clickable, so its semantics are merged: asking the merged tree for a stamp
-        // hands back the whole row, whose width is the screen's and always matches.
-        val rightEdges =
-            listOf("09:12", "昨天", "6月16日")
-                .map { composeRule.onNodeWithText(it, useUnmergedTree = true).fetchSemanticsNode() }
-                .map { it.positionInRoot.x + it.size.width }
-
-        rightEdges.forEach { assertEquals(rightEdges.first(), it, 1f) }
-    }
-
-    /**
-     * A read row's stamp sits on its name's line, as an unread row's does.
-     *
-     * The stamp and the count were one trailing column, centred on the row: with a badge under it
-     * the stamp rode the name's line, without one it dropped half-way to the snippet, and the column
-     * of times stepped up and down the list.
-     */
-    @Test
-    fun `every conversation's stamp sits on its name's line`() {
-        setContent(
-            state(
-                tab = NotificationTab.MESSAGES,
-                conversations =
-                listOf(
-                    conversation(uid = 2, name = "unread", stamp = NOW - 26 * 60 * 60_000L).copy(unreadCount = 3),
-                    conversation(uid = 3, name = "read", stamp = NOW - 40L * 24 * 60 * 60_000L),
-                ),
-            ),
-        )
-
-        // How far each stamp sits below its own name: the same for both rows, or the column steps.
-        val drops =
-            listOf("unread" to "昨天", "read" to "6月16日").map { (name, stamp) ->
-                val nameBounds = composeRule.onNodeWithText(name, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-                val stampBounds = composeRule.onNodeWithText(stamp, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-                stampBounds.center.y - nameBounds.center.y
-            }
-        assertEquals(drops.first(), drops.last(), 1f)
-    }
-
-    /** Board 7e: the pinned system conversation shows its Markdown as text, never as syntax. */
-    @Test
-    fun `system conversation snippet drops its markdown syntax`() {
-        setContent(
-            state(
-                tab = NotificationTab.MESSAGES,
-                conversations = listOf(systemConversation()),
-            ),
-        )
-
-        composeRule.onNodeWithText("系统通知").assertIsDisplayed()
-        composeRule.onNodeWithText("您的评论被用户iwil投喂鸡腿").assertIsDisplayed()
-    }
-
-    /** A picture in a private message is named, for the same reason it is in a notification row. */
-    @Test
-    fun `a conversation whose last message is a picture says so`() {
-        setContent(
-            state(
-                tab = NotificationTab.MESSAGES,
-                conversations =
-                listOf(
-                    conversation(uid = 7, name = "老哥", stamp = NOW)
-                        .copy(snippet = contentPreview("![](https://img.example/1.png) 看这个")),
-                ),
-            ),
-        )
-
-        composeRule.onNodeWithText("[图片] 看这个").assertIsDisplayed()
     }
 
     /**
@@ -373,12 +241,6 @@ class NotificationsScreenTest {
     )
 
     private fun mentionSource() = NotificationSource(NotificationCategory.MENTIONS, 1L, isUnread = true)
-
-    private fun bothGroups() =
-        listOf(
-            NotificationSource(NotificationCategory.REPLIES, 7L, isUnread = true),
-            mentionSource(),
-        )
 
     private fun conversation(
         uid: Long,

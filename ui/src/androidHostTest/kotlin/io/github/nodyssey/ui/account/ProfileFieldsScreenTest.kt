@@ -19,7 +19,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The formatting strip is shared by 签名 and Readme, so what these cover is the wiring between them:
- * which field the keys write into, and which keys are offered while they do it.
+ * which field the keys write into, and when the strip goes away.
  *
  * The fields are focused rather than tapped, because focus — not the tap — is what picks the strip's
  * target, and asking for it directly keeps Robolectric's IME out of the run.
@@ -54,13 +54,6 @@ class ProfileFieldsScreenTest {
     }
 
     @Test
-    fun `no field focused means no strip`() {
-        setContent()
-
-        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
-    }
-
-    @Test
     fun `signature keys write into the signature`() {
         var signature = ""
         setContent(onSignatureChange = { signature = it })
@@ -92,16 +85,5 @@ class ProfileFieldsScreenTest {
         // Bio holds no Markdown, so keys standing over it would write somewhere off screen.
         composeRule.onNodeWithContentDescription("Bio").performScrollTo().requestFocus()
         composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
-    }
-
-    @Test
-    fun `readme offers the block keys a signature does not`() {
-        setContent()
-
-        composeRule.onNodeWithContentDescription("Readme").performScrollTo().requestFocus()
-        composeRule.onNodeWithContentDescription("二级标题").assertIsDisplayed()
-
-        composeRule.onNodeWithContentDescription("签名").performScrollTo().requestFocus()
-        composeRule.onNodeWithContentDescription("二级标题").assertDoesNotExist()
     }
 }

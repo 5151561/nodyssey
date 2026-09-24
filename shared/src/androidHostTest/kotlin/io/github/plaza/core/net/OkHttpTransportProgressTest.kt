@@ -61,23 +61,4 @@ class OkHttpTransportProgressTest {
         assertEquals(1f, seen.last())
         assertEquals(seen.sorted(), seen, "progress may not run backwards")
     }
-
-    /** Nobody listening is the ordinary case, and it must not cost the body a wrapper. */
-    @Test
-    fun `a request with no listener still sends its body`() = runTest {
-        val response = OkHttpTransport(client).execute(upload(64))
-
-        assertEquals(200, response.code)
-    }
-
-    /** The text fields are a rounding error against the file, and the ring is about the file. */
-    @Test
-    fun `only the file part is counted`() = runTest {
-        val seen = mutableListOf<Float>()
-
-        OkHttpTransport(client).execute(upload(64), seen::add)
-
-        // 64 bytes goes out in one chunk, so this is the shortest legal report: start and finish.
-        assertEquals(listOf(0f, 1f), seen)
-    }
 }

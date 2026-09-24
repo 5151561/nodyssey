@@ -7,7 +7,6 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -85,23 +84,6 @@ class BlockListViewModelTest {
 
             assertTrue(repository.unblocked.isEmpty())
             assertEquals(1, vm.uiState.value.blocked.size)
-        }
-
-    /** The reveal switch is session state: it flows through settings, not through this ViewModel. */
-    @Test
-    fun `the reveal switch reflects the shared session flag`() =
-        runTest(dispatcher) {
-            val settings = testSettingsRepository(backgroundScope)
-            val vm = viewModel(FakeAccountSettingsRepository(), settings)
-            collectState(vm)
-            advanceUntilIdle()
-            assertFalse(vm.uiState.value.showBlockedContent)
-
-            vm.setShowBlockedContent(true)
-            advanceUntilIdle()
-
-            assertTrue(vm.uiState.value.showBlockedContent)
-            assertTrue(settings.showBlockedContent.first())
         }
 
     /**

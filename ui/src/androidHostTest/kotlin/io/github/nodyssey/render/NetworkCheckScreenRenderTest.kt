@@ -25,9 +25,8 @@ import org.robolectric.annotation.GraphicsMode
  * The worked example for [captureRender] — 网络自检 in both themes.
  *
  * This screen is the example because it is the one whose *look* is the feature: it exists to be
- * screenshotted into a forum thread, so a picture of it is worth more than any assertion
- * `NetworkCheckScreenTest` next to it can make. Copy the shape of this file for whatever screen a
- * change touches.
+ * screenshotted into a forum thread, so a picture of it is worth more than any assertion. Copy the
+ * shape of this file for whatever screen a change touches.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

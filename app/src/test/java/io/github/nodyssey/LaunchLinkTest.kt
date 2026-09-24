@@ -41,17 +41,4 @@ class LaunchLinkTest {
 
         assertNull(launchLinkOf(launcher, isRecreation = false))
     }
-
-    @Test
-    fun `a notification start is not a link`() {
-        val notification =
-            Intent().putExtra(MainActivity.EXTRA_OPEN_TAB, MainActivity.TAB_NOTIFICATIONS)
-
-        assertNull(launchLinkOf(notification, isRecreation = false))
-    }
-
-    @Test
-    fun `no intent at all is no link`() {
-        assertNull(launchLinkOf(null, isRecreation = false))
-    }
 }

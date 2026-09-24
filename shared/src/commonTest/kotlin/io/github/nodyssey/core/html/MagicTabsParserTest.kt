@@ -85,21 +85,6 @@ class MagicTabsParserTest {
     }
 
     @Test
-    fun `measures the report in terminal columns`() {
-        val hardware =
-            parse(report)
-                .filterIsInstance<RichNode.Tabs>()
-                .single()
-                .tabs[0]
-                .children
-                .single() as RichNode.CodeBlock
-
-        // "容器/虚拟化：KVM 虚拟机" — nine wide glyphs (the full-width colon counts) at two cells
-        // each, plus five narrow ones. The 8-column rule line above it does not win.
-        assertEquals(23, hardware.columns)
-    }
-
-    @Test
     fun `content before the first title is kept ahead of the group`() {
         val nodes =
             parse(

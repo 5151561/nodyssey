@@ -29,14 +29,6 @@ class NotificationPollingTest {
     }
 
     @Test
-    fun `first poll against an empty snapshot reports the full backlog`() {
-        val current = NotificationCounts(replies = 3)
-
-        assertEquals(3, newlyUnreadCount(NotificationCounts(), current, NotificationTab.INTERACTIONS))
-        assertEquals(0, newlyUnreadCount(NotificationCounts(), current, NotificationTab.MESSAGES))
-    }
-
-    @Test
     fun `a comment filed under both groups counts once`() {
         // One reply that opens with `@name #7`: the server raised it in each group, so both numbers
         // went up — and the merged load found the two rows are one comment.

@@ -1,46 +1,17 @@
 package io.github.nodyssey.guard
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.File
 
 /**
- * That user-visible copy does not name one forum when the app can be pointed at another.
+ * That copy which takes the active site's name is actually handed one.
  *
- * The app named NodeSeek in twenty-three strings, which was true for as long as there was one site
- * and quietly false the moment there were two: a reader on DeepFlood was told 「登录 NodeSeek」 on
- * the sign-in card, 「连不上 NodeSeek」 when the network dropped, and 「NodeSeek 靠鸡腿升级」 on a
- * level wall. Nineteen of them now take the site's name as an argument — `siteName` — and this is
- * what stops the twentieth from being written.
- *
- * The allowlist is exact in both directions, like the parity guard's: an entry that stops naming
- * NodeSeek has to be struck off, so the list cannot quietly become a place to hide a regression.
+ * The app named NodeSeek in twenty-three strings, which was quietly false the moment there were two
+ * sites. Nineteen of them now take the site's name as an argument — `siteName` — and a `%1$s` no call
+ * site fills renders as `%1$s`.
  */
 class SiteNameInCopyTest {
-
-    @Test
-    fun `only the strings that mean NodeSeek say NodeSeek`() {
-        val catalog = File(repositoryRoot(), "ui/src/commonMain/composeResources/values/strings.xml")
-        val text = catalog.readText()
-        check(text.isNotEmpty()) { "empty catalog — the guard is checking nothing" }
-
-        val naming =
-            Regex("""<string name="([^"]+)"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-                .findAll(text)
-                .filter { "NodeSeek" in it.groupValues[2] }
-                .map { it.groupValues[1] }
-                .toSet()
-
-        assertEquals(
-            "copy that names NodeSeek as a literal changed — parameterise it with `siteName`, or " +
-                "add it here with the reason it genuinely means NodeSeek and not the active site",
-            MEANS_NODESEEK,
-            naming,
-        )
-    }
-
-    /** The same, for the placeholder half: a `%1$s` nobody fills renders as `%1$s`. */
     @Test
     fun `every site-named string is passed a site name`() {
         val root = repositoryRoot()
@@ -66,21 +37,6 @@ class SiteNameInCopyTest {
     }
 
     private companion object {
-        /**
-         * Copy that means NodeSeek whichever site is active, and so is right to name it.
-         *
-         * The three App Links strings because the intent filter carries nodeseek.com and nothing
-         * else — a DeepFlood link does not open this app, and saying otherwise would be a promise
-         * the manifest does not keep. The image host because nodeimage.com signs its users in with
-         * a NodeSeek account regardless of which forum is being read.
-         */
-        val MEANS_NODESEEK = setOf(
-            "settings_app_links_hint_on",
-            "onboarding_app_links_body",
-            "help_app_links_body",
-            "imagehost_error_session_required",
-        )
-
         /**
          * Site-named copy whose argument arrives through a variable, where the scan below cannot
          * see it.

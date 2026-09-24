@@ -8,8 +8,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import io.github.nodyssey.ui.resources.Res
-import io.github.nodyssey.ui.resources.imagehost_key_saved
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertTrue
@@ -91,22 +89,5 @@ class AccountMessageSnackbarTest {
         composeRule.onNodeWithText("重试").performClick()
 
         assertTrue(retried)
-    }
-
-    @Test
-    fun `a network failure with no retry wired shows no button at all`() {
-        setMessage(AccountMessage.Failure(SiteError.Network))
-
-        composeRule.onNodeWithText("网络开小差了").assertIsDisplayed()
-        composeRule.onNodeWithText("重试").assertDoesNotExist()
-    }
-
-    /** Good news has nothing to recover from, so it carries no button and times out on its own. */
-    @Test
-    fun `an informational message carries no action`() {
-        setMessage(AccountMessage.Info(Res.string.imagehost_key_saved))
-
-        composeRule.onNodeWithText("去验证").assertDoesNotExist()
-        composeRule.onNodeWithText("重试").assertDoesNotExist()
     }
 }

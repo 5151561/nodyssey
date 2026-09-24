@@ -34,11 +34,9 @@ internal class FakeAccountSettingsRepository(
 
     var savedFields: AccountProfileFields? = null
     var changedPassword: Pair<String, String>? = null
-    var uploadedAvatar: AvatarUpload? = null
     var unblocked = mutableListOf<Long>()
     var blockedNames = mutableListOf<String>()
     private var nextBlockedUid = 900L
-    var holidayThemeWrites = mutableListOf<Boolean>()
     var boardHiddenWrites = mutableListOf<Pair<String, Boolean>>()
     var enrolmentUri: String = "otpauth://totp/NodeSeek:tester?secret=ABC"
     var enrolmentPassword: String? = null
@@ -60,7 +58,6 @@ internal class FakeAccountSettingsRepository(
 
     override suspend fun uploadAvatar(upload: AvatarUpload) {
         record("uploadAvatar")
-        uploadedAvatar = upload
     }
 
     override suspend fun changePassword(currentPassword: String, newPassword: String) {
@@ -98,7 +95,6 @@ internal class FakeAccountSettingsRepository(
 
     override suspend fun setHolidayTheme(enabled: Boolean) {
         record("setHolidayTheme")
-        holidayThemeWrites += enabled
     }
 
     override suspend fun setHomeBoardHidden(slug: String, hidden: Boolean) {

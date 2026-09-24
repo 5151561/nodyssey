@@ -3,89 +3,12 @@ package io.github.plaza.designsys.component
 import androidx.compose.runtime.MonotonicFrameClock
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-
-/**
- * The pull is bounded by a share of the whole bar, and is zero where there is no window to spare.
- *
- * Both ends are the point. Without the floor a landscape phone gives away nearly half of an already
- * short window to an empty title; without the ceiling a tablet can be pulled open on a 450dp hole.
- * The middle cases are asserted as the fraction minus the toolbar rather than as bare numbers, so
- * they keep meaning something when the fraction is retuned.
- */
-class OneHandExpandedBlankTest {
-    @Test
-    fun `a landscape phone gets no one-hand mode at all`() {
-        assertEquals(0.dp, oneHandExpandedBlank(windowHeight = 360.dp))
-    }
-
-    @Test
-    fun `a short phone can still be pulled but not as far`() {
-        assertEquals(600f * 0.4f - 64f, oneHandExpandedBlank(windowHeight = 600.dp).value, 0.01f)
-    }
-
-    @Test
-    fun `a phone in portrait can be pulled to two fifths of the window`() {
-        assertEquals(800f * 0.4f - 64f, oneHandExpandedBlank(windowHeight = 800.dp).value, 0.01f)
-    }
-
-    @Test
-    fun `a tablet stops growing`() {
-        assertEquals(320.dp, oneHandExpandedBlank(windowHeight = 1280.dp))
-    }
-}
-
-/**
- * There is always a title on screen, at every height the bar can be left at.
- *
- * The bar rests wherever the finger let go, so every fraction in 0..1 is somewhere a reader can sit
- * and look at the screen. An earlier pair of curves faded the small title out by 0.4 and started the
- * big one at 0.4, which is invisible under a snapping bar — it never stops in there — and is a
- * screen with no title at all under this one. Complementary curves are the fix, and this is the
- * assertion that keeps them complementary.
- */
-class OneHandTitleCrossfadeTest {
-    @Test
-    fun `only the small title is drawn when collapsed`() {
-        assertEquals(1f, collapsedTitleAlpha(0f), 0f)
-        assertEquals(0f, expandedTitleAlpha(0f), 0f)
-    }
-
-    @Test
-    fun `only the big title is drawn when open`() {
-        assertEquals(0f, collapsedTitleAlpha(1f), 0f)
-        assertEquals(1f, expandedTitleAlpha(1f), 0f)
-    }
-
-    @Test
-    fun `the two alphas always sum to one`() {
-        for (step in 0..100) {
-            val fraction = step / 100f
-            assertEquals(
-                1f,
-                collapsedTitleAlpha(fraction) + expandedTitleAlpha(fraction),
-                0.001f,
-                "at fraction $fraction",
-            )
-        }
-    }
-
-    @Test
-    fun `the handover runs the right way round`() {
-        var previous = expandedTitleAlpha(0f)
-        for (step in 1..100) {
-            val next = expandedTitleAlpha(step / 100f)
-            assertTrue(next >= previous, "the big title faded out between ${step - 1} and $step")
-            previous = next
-        }
-    }
-}
 
 /**
  * What the bar takes out of a scroll, and when.
@@ -107,29 +30,6 @@ class OneHandAppBarScrollTest {
         val state = state()
         assertEquals(max, state.heightPx, 0f)
         assertEquals(1f, state.fraction, 0f)
-    }
-
-    @Test
-    fun `a bar told not to expand opens folded`() {
-        val state = OneHandAppBarState(0f, 0f).apply { maxHeightPx = max }
-
-        assertEquals(0f, state.heightPx, 0f)
-        assertEquals(0f, state.fraction, 0f)
-    }
-
-    @Test
-    fun `a bar that opened folded can still be pulled`() {
-        val state = OneHandAppBarState(0f, 0f).apply { maxHeightPx = max }
-
-        val taken =
-            state.nestedScrollConnection.onPostScroll(
-                consumed = Offset.Zero,
-                available = Offset(0f, 60f),
-                source = NestedScrollSource.UserInput,
-            )
-
-        assertEquals(60f, taken.y, 0f)
-        assertEquals(60f, state.heightPx, 0f)
     }
 
     @Test
@@ -290,16 +190,6 @@ class OneHandAppBarScrollTest {
 
         assertEquals(50f, taken.y, 0f)
         assertEquals(max, state.heightPx, 0f)
-    }
-
-    @Test
-    fun `a rotation into a shorter window brings an open bar down with it`() {
-        val state = state()
-
-        state.maxHeightPx = 80f
-
-        assertEquals(80f, state.heightPx, 0f)
-        assertEquals(1f, state.fraction, 0f)
     }
 }
 

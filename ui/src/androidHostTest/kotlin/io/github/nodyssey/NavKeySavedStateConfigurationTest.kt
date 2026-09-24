@@ -21,8 +21,7 @@ import java.util.jar.JarFile
  * [NavKeySavedStateConfiguration] is a hand-written list of `subclass()` registrations, and nothing
  * makes the compiler check it against the destinations that exist — a key declared but not
  * registered compiles, navigates, and only fails when the process is killed and the stack it was on
- * tries to come back. `PostDetailKeySavedStateTest` next door pins one key's *contents*; this pins
- * the list itself.
+ * tries to come back.
  *
  * Two tests rather than one because they fail for different reasons. The round trip encodes each key
  * *as a [NavKey]*, which is what `rememberNavBackStack` does and what makes the registration matter

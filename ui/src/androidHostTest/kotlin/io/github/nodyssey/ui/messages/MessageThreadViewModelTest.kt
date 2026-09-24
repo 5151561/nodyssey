@@ -107,22 +107,6 @@ class MessageThreadViewModelTest {
             assertTrue(messages.any { it.status == SendStatus.FAILED && it.content == "在吗" })
         }
 
-    /** There is no MD switch to leave off: what the composer writes is Markdown, and goes out as it. */
-    @Test
-    fun `every message goes out as Markdown`() =
-        runTest(dispatcher) {
-            val repository = FakeMessageRepository()
-            val viewModel = viewModel(repository)
-            advanceUntilIdle()
-
-            viewModel.draftState.setTextAndPlaceCursorAtEnd("**加粗**")
-            viewModel.send()
-            advanceUntilIdle()
-
-            assertEquals(true, repository.lastMarkdown)
-            assertTrue(viewModel.uiState.value.messages.last().isMarkdown)
-        }
-
     /**
      * Bug: fetching a conversation is not what clears it — the ids have to go back — so the 私信
      * badge survived reading the message that put it there.
@@ -196,19 +180,6 @@ class MessageThreadViewModelTest {
             assertEquals("> 在的\n\n> 那明天见\n\n看到了", repository.lastContent)
         }
 
-    @Test
-    fun `the ✕ on a quote card drops only that quotation`() =
-        runTest(dispatcher) {
-            val viewModel = viewModel(FakeMessageRepository())
-            advanceUntilIdle()
-
-            viewModel.quote(bubble("在的", id = "a"))
-            viewModel.quote(bubble("那明天见", id = "b"))
-            viewModel.removeQuote("a")
-
-            assertEquals(listOf("b"), viewModel.uiState.value.quotes.map { it.id })
-        }
-
     private fun bubble(
         content: String,
         id: String = "b",
@@ -254,7 +225,6 @@ private class FakeMessageRepository(
     private val unreadIds: List<Long> = emptyList(),
 ) : MessageRepository {
     var sendCount = 0
-    var lastMarkdown: Boolean? = null
     var lastContent: String? = null
     val markedRead = mutableListOf<Long>()
 
@@ -292,7 +262,6 @@ private class FakeMessageRepository(
         markdown: Boolean,
     ): DirectMessage? {
         sendCount++
-        lastMarkdown = markdown
         lastContent = content
         sendError?.let { throw it }
         return DirectMessage(

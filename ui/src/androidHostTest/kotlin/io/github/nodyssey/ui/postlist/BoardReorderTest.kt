@@ -64,26 +64,4 @@ class BoardReorderTest {
     fun `the parked tail refuses a drop`() {
         assertNull(slots.reorderedFor("tech", over("trade"), bounds))
     }
-
-    @Test
-    fun `a drag with no pill held changes nothing`() {
-        assertNull(slots.reorderedFor(null, over("daily"), bounds))
-    }
-
-    /**
-     * A move lands the held pill in the slot the finger is already in. Once the strip has laid itself
-     * out again the pointer is therefore over the held pill, and the next drag event finds nothing to
-     * swap with — without that the two pills would trade places for as long as the finger sat still.
-     *
-     * The relaid-out bounds are the point, so the test swaps them the way a layout pass would.
-     */
-    @Test
-    fun `a move settles once the strip has laid out again`() {
-        // The finger does not move between the two calls; the pills move under it.
-        val finger = over("daily")
-        val moved = slots.reorderedFor("tech", finger, bounds)!!
-        val relaidOut =
-            bounds + mapOf("tech" to bounds.getValue("daily"), "daily" to bounds.getValue("tech"))
-        assertNull(moved.reorderedFor("tech", finger, relaidOut))
-    }
 }

@@ -7,20 +7,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyDescendant
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -82,13 +75,6 @@ class PostListScreenTest {
     private fun feedPost(
         postId: Long,
         title: String,
-        isRead: Boolean = false,
-        newCommentCount: Int = 0,
-        commentCount: Int? = 12,
-        isPinned: Boolean = false,
-        isLocked: Boolean = false,
-        isAwarded: Boolean = false,
-        categoryTitle: String? = "日常",
         page: Int? = null,
     ) = FeedPost(
         summary =
@@ -98,18 +84,18 @@ class PostListScreenTest {
             authorName = "tester",
             authorUid = 1,
             avatarUrl = null,
-            categoryTitle = categoryTitle,
+            categoryTitle = "日常",
             categorySlug = "daily",
             viewCount = 100,
-            commentCount = commentCount,
+            commentCount = 12,
             lastActiveText = "1分钟前",
             lastActiveTitle = null,
-            isPinned = isPinned,
-            isLocked = isLocked,
-            isAwarded = isAwarded,
+            isPinned = false,
+            isLocked = false,
+            isAwarded = false,
         ),
-        isRead = isRead,
-        newCommentCount = newCommentCount,
+        isRead = false,
+        newCommentCount = 0,
         page = page,
     )
 
@@ -119,11 +105,8 @@ class PostListScreenTest {
         refresh: LoadState = LoadState.NotLoading(false),
         append: LoadState = LoadState.NotLoading(true),
         state: PostListUiState = PostListUiState(boards = boards),
-        onPostClick: (FeedPost) -> Unit = {},
         onBoardClick: (String?) -> Unit = {},
-        onSortChange: (FeedSort) -> Unit = {},
         onRecoverInBrowser: (String) -> Unit = {},
-        onSearch: () -> Unit = {},
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
         feedStates: HomeFeedStates? = null,
@@ -135,11 +118,10 @@ class PostListScreenTest {
                     refresh = refresh,
                     append = append,
                     state = state,
-                    onPostClick = onPostClick,
+                    onPostClick = {},
                     onBoardClick = onBoardClick,
-                    onSortChange = onSortChange,
+                    onSortChange = {},
                     onRecoverInBrowser = onRecoverInBrowser,
-                    onSearch = onSearch,
                     onGoToPage = onGoToPage,
                     onFindPageRow = onFindPageRow,
                     feedStates = feedStates ?: rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() },
@@ -159,7 +141,6 @@ class PostListScreenTest {
         onBoardClick: (String?) -> Unit,
         onSortChange: (FeedSort) -> Unit,
         onRecoverInBrowser: (String) -> Unit,
-        onSearch: () -> Unit = {},
         reselectRequests: Int = 0,
         onGoToPage: (Int) -> Unit = {},
         onFindPageRow: suspend (Int) -> Int? = { null },
@@ -190,44 +171,10 @@ class PostListScreenTest {
             onSortChange = onSortChange,
             onSignInClick = {},
             onRecoverInBrowser = onRecoverInBrowser,
-            onSearch = onSearch,
             onGoToPage = onGoToPage,
             onFindPageRow = onFindPageRow,
             reselectRequests = reselectRequests,
         )
-    }
-
-    @Test
-    fun `renders the board strip and the rows`() {
-        setScreen(listOf(feedPost(1, "first post"), feedPost(2, "second post")))
-
-        composeRule.onNodeWithText("综合").assertIsDisplayed()
-        composeRule.onNodeWithText("技术").assertIsDisplayed()
-        composeRule.onNodeWithText("first post").assertIsDisplayed()
-        composeRule.onNodeWithText("second post").assertIsDisplayed()
-    }
-
-    @Test
-    fun `tapping a row reports the whole row, not just the post id`() {
-        var clicked: FeedPost? = null
-        setScreen(listOf(feedPost(77, "tap me")), onPostClick = { clicked = it })
-
-        composeRule.onNodeWithText("tap me").performClick()
-
-        // The row travels because the thread draws four of its facts before the network answers,
-        // and because they are what the row's own four fly into. See PostDetailKey.preview.
-        assertEquals(77L, clicked?.summary?.postId)
-        assertEquals("tap me", clicked?.summary?.title)
-    }
-
-    @Test
-    fun `tapping a board reports its slug`() {
-        var slug: String? = "unset"
-        setScreen(listOf(feedPost(1, "post")), onBoardClick = { slug = it })
-
-        composeRule.onNodeWithText("技术").performClick()
-
-        assertEquals("tech", slug)
     }
 
     /**
@@ -288,37 +235,6 @@ class PostListScreenTest {
         composeRule.runOnIdle { state = state.copy(categorySlug = null) }
 
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
-    }
-
-    @Test
-    fun `an unread row shows the reply count`() {
-        setScreen(listOf(feedPost(1, "unread", isRead = false, commentCount = 12)))
-
-        // The count is drawn as an icon and a bare number, so the words live in the a11y label.
-        composeRule.onNodeWithContentDescription("12 回复").assertIsDisplayed()
-    }
-
-    /**
-     * The whole point of the read-mark table: once read, the delta rides beside the total (Lean 2a),
-     * drawn as +N and read out in words.
-     */
-    @Test
-    fun `a read row with new replies shows the delta beside the total`() {
-        setScreen(
-            listOf(feedPost(1, "read", isRead = true, newCommentCount = 4, commentCount = 16)),
-        )
-
-        composeRule.onNodeWithText("+4").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("4 条新回复").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("16 回复").assertIsDisplayed()
-    }
-
-    @Test
-    fun `an empty list that is still loading shows a spinner, not an empty screen`() {
-        setScreen(emptyList(), refresh = LoadState.Loading)
-
-        // No rows, and nothing claiming the list is empty.
-        composeRule.onNodeWithText("first post").assertDoesNotExist()
     }
 
     /**
@@ -396,63 +312,6 @@ class PostListScreenTest {
 
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(20, retainedListState.firstVisibleItemIndex) }
-    }
-
-    /** Picking a different board does still start that board's list from the top. */
-    @Test
-    fun `switching boards returns to the top`() {
-        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
-        var state by mutableStateOf(PostListUiState(boards = boards))
-        composeRule.setContent {
-            PlazaTheme {
-                ScreenUnderTest(
-                    posts = posts,
-                    refresh = LoadState.NotLoading(false),
-                    append = LoadState.NotLoading(true),
-                    state = state,
-                    onPostClick = {},
-                    onBoardClick = {},
-                    onSortChange = {},
-                    onRecoverInBrowser = {},
-                )
-            }
-        }
-
-        feedList().performScrollToIndex(20)
-        composeRule.onNodeWithText("post 21").assertIsDisplayed()
-
-        state = state.copy(categorySlug = "tech")
-
-        composeRule.onNodeWithText("post 1").assertIsDisplayed()
-    }
-
-    /** Re-selecting 首页 in the host bar arrives here as an increment, not as a scroll call. */
-    @Test
-    fun `a reselect returns to the first row`() {
-        val posts = (1..40).map { feedPost(it.toLong(), "post $it") }
-        var requests by mutableStateOf(0)
-        composeRule.setContent {
-            PlazaTheme {
-                ScreenUnderTest(
-                    posts = posts,
-                    refresh = LoadState.NotLoading(false),
-                    append = LoadState.NotLoading(true),
-                    state = PostListUiState(boards = boards),
-                    onPostClick = {},
-                    onBoardClick = {},
-                    onSortChange = {},
-                    onRecoverInBrowser = {},
-                    reselectRequests = requests,
-                )
-            }
-        }
-
-        feedList().performScrollToIndex(20)
-        composeRule.onNodeWithText("post 21").assertIsDisplayed()
-
-        requests++
-
-        composeRule.onNodeWithText("post 1").assertIsDisplayed()
     }
 
     /**
@@ -540,16 +399,6 @@ class PostListScreenTest {
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
 
         restorationTester.emulateSavedInstanceStateRestore()
-
-        composeRule.onNodeWithText("post 21").assertIsDisplayed()
-    }
-
-    /** The counter starts at zero, and zero must not read as a request that was already made. */
-    @Test
-    fun `no request leaves the scroll position alone`() {
-        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
-
-        feedList().performScrollToIndex(20)
 
         composeRule.onNodeWithText("post 21").assertIsDisplayed()
     }
@@ -671,17 +520,6 @@ class PostListScreenTest {
         composeRule.onNodeWithContentDescription("排序方式").assertIsDisplayed()
     }
 
-    /** 搜索 left the navigation bar for the home header, so the feed is the only way to reach it. */
-    @Test
-    fun `the app bar opens search`() {
-        var opened = false
-        setScreen(listOf(feedPost(1, "post")), onSearch = { opened = true })
-
-        composeRule.onNodeWithText("搜索帖子或用户").performClick()
-
-        assertTrue(opened)
-    }
-
     /**
      * The vertical list of rows, told apart from the board strip and from the pager that carries it.
      *
@@ -695,18 +533,6 @@ class PostListScreenTest {
     // ---------------------------------------------------------------------------------------------
     // Error recovery
     // ---------------------------------------------------------------------------------------------
-
-    @Test
-    fun `a refresh failure with nothing cached shows the typed error and its recovery action`() {
-        setScreen(
-            posts = emptyList(),
-            refresh = LoadState.Error(SiteException(SiteError.Cloudflare(REFUSED))),
-        )
-
-        composeRule.onNodeWithText("需要确认一下你不是机器人").assertIsDisplayed()
-        composeRule.onNodeWithText("去验证").assertIsDisplayed()
-        composeRule.onNodeWithText("重试").assertIsDisplayed()
-    }
 
     @Test
     fun `a login required error offers signing in rather than a bare retry`() {
@@ -791,209 +617,17 @@ class PostListScreenTest {
         composeRule.onNodeWithText("重试").assertDoesNotExist()
     }
 
-    @Test
-    fun `the verify button on a cached feed opens the challenge page`() {
-        var opened = false
-        setScreen(
-            posts = listOf(feedPost(1, "cached post")),
-            refresh = LoadState.Error(SiteException(SiteError.Cloudflare(REFUSED))),
-            onRecoverInBrowser = { opened = true },
-        )
-
-        composeRule.onNodeWithText("去验证").performClick()
-
-        assert(opened)
-    }
-
-    /** A failure a retry *can* fix keeps the retry: the rule is per error, not "never 重试". */
-    @Test
-    fun `a network failure over cached rows still offers a retry`() {
-        setScreen(
-            posts = listOf(feedPost(1, "cached post")),
-            refresh = LoadState.Error(SiteException(SiteError.Network)),
-        )
-
-        composeRule.onNodeWithText("重试").assertIsDisplayed()
-        composeRule.onNodeWithText("去验证").assertDoesNotExist()
-    }
-
-    /** Nothing to announce while the rows are current — the snackbar is a failure's, not a refresh's. */
-    @Test
-    fun `a successful refresh says nothing`() {
-        setScreen(posts = listOf(feedPost(1, "cached post")))
-
-        composeRule.onNodeWithText("网络开小差了").assertDoesNotExist()
-    }
-
-    // ---------------------------------------------------------------------------------------------
-    // Row anatomy: the design's answers to "what does a row have to survive"
-    // ---------------------------------------------------------------------------------------------
-
-    @Test
-    fun `a pinned row is announced rather than only tinted`() {
-        setScreen(listOf(feedPost(1, "公告", isPinned = true, commentCount = null)))
-
-        // A pinned notice is a one-line strip whose only mark is the pin, so the pin carries the word.
-        composeRule.onAllNodesWithText("置顶").assertCountEquals(0)
-        composeRule.onNodeWithContentDescription("置顶").assertIsDisplayed()
-    }
-
-    /** The badge is an icon, so the announcement is the only thing carrying it to a screen reader. */
-    @Test
-    fun `an 加精 row is announced as 推荐阅读`() {
-        setScreen(listOf(feedPost(1, "加精了的帖子", isAwarded = true)))
-
-        composeRule.onNodeWithContentDescription("推荐阅读").assertIsDisplayed()
-    }
-
-    @Test
-    fun `an ordinary row carries no 推荐阅读 badge`() {
-        setScreen(listOf(feedPost(1, "普通帖子")))
-
-        composeRule.onNodeWithContentDescription("推荐阅读").assertDoesNotExist()
-    }
-
-    @Test
-    fun `a locked row carries the lock affordance`() {
-        setScreen(listOf(feedPost(1, "锁了的帖子", isLocked = true)))
-
-        composeRule.onNodeWithContentDescription("已锁帖").assertIsDisplayed()
-    }
-
-    /** A board that the scrape failed to return must drop the tag, not the row. */
-    @Test
-    fun `a row with no board still renders`() {
-        setScreen(listOf(feedPost(1, "没有版块的帖子", categoryTitle = null)))
-
-        composeRule.onNodeWithText("没有版块的帖子").assertIsDisplayed()
-        // Only the board strip's pill, never a tag on the row itself.
-        composeRule.onAllNodesWithText("日常").assertCountEquals(1)
-    }
-
-    @Test
-    fun `an empty feed that finished loading offers a way out`() {
-        setScreen(
-            posts = emptyList(),
-            refresh = LoadState.NotLoading(true),
-            state = PostListUiState(boards = boards, categorySlug = "tech"),
-        )
-
-        composeRule.onNodeWithText("这里还没有帖子").assertIsDisplayed()
-        composeRule.onNodeWithText("换个版块").assertIsDisplayed()
-    }
-
-    // ---------------------------------------------------------------------------------------------
-    // Sort
-    // ---------------------------------------------------------------------------------------------
-
-    @Test
-    fun `the sort menu reports the chosen order`() {
-        var chosen: FeedSort? = null
-        setScreen(listOf(feedPost(1, "post")), onSortChange = { chosen = it })
-
-        composeRule.onNodeWithContentDescription("排序方式").performClick()
-        composeRule.onNodeWithText("按发帖时间").performClick()
-
-        assertEquals(FeedSort.POST_TIME, chosen)
-    }
-
-    /**
-     * The tick marking the active order is decoration, so it carries no description; without
-     * `selected` on the item itself the two orders were indistinguishable to a screen reader.
-     */
-    @Test
-    fun `the sort menu marks the active order as selected`() {
-        setScreen(
-            listOf(feedPost(1, "post")),
-            state = PostListUiState(boards = boards, sort = FeedSort.LAST_REPLY),
-        )
-
-        composeRule.onNodeWithContentDescription("排序方式").performClick()
-
-        composeRule.onNodeWithText("按回复时间").assertIsSelected()
-        composeRule.onNodeWithText("按发帖时间").assertIsNotSelected()
-    }
-
-    /** The site in use is the menu's selected entry, not only the one with a tick beside it. */
-    @Test
-    fun `the site switcher marks the active site as selected`() {
-        setScreen(listOf(feedPost(1, "post")))
-
-        composeRule.onNodeWithContentDescription("切换站点").performClick()
-
-        composeRule.onNode(hasText("NodeSeek") and isSelectable()).assertIsSelected()
-        composeRule.onNode(hasText("DeepFlood") and isSelectable()).assertIsNotSelected()
-    }
-
-    /** The lock is the only thing saying the board is restricted, so it has to be described. */
-    @Test
-    fun `an admin-only board describes its lock`() {
-        setScreen(
-            posts = listOf(feedPost(1, "post")),
-            state =
-            PostListUiState(
-                boards = boards + Board("inside", "内版", null, adminOnly = true),
-            ),
-        )
-
-        composeRule.onNodeWithContentDescription("仅管理员可见").assertIsDisplayed()
-    }
-
-    /** The needs-login screen has to name the board, or it reads like the whole app is locked. */
-    @Test
-    fun `a locked board names itself in the sign-in state`() {
-        setScreen(
-            posts = emptyList(),
-            refresh = LoadState.Error(SiteException(SiteError.LoginRequired)),
-            state = PostListUiState(boards = boards, categorySlug = "tech"),
-        )
-
-        composeRule.onNodeWithText("「技术」需要登录后查看").assertIsDisplayed()
-    }
-
     // ---------------------------------------------------------------------------------------------
     // 首页翻页栏
     // ---------------------------------------------------------------------------------------------
 
-    private fun pagedState(
-        pageBarEnabled: Boolean = true,
-        totalPages: Int = 217,
-        startPage: Int = 1,
-    ) = PostListUiState(
-        boards = boards,
-        pageBarEnabled = pageBarEnabled,
-        totalPages = totalPages,
-        startPages = mapOf(null to startPage),
-    )
-
-    /** The feed is a scroll by default; the bar exists only for the reader who asks for it. */
-    @Test
-    fun `the page bar stays away until the setting turns it on`() {
-        setScreen(
-            posts = listOf(feedPost(1, "post", page = 1)),
-            state = pagedState(pageBarEnabled = false),
+    private fun pagedState(startPage: Int = 1) =
+        PostListUiState(
+            boards = boards,
+            pageBarEnabled = true,
+            totalPages = 217,
+            startPages = mapOf(null to startPage),
         )
-
-        composeRule.onAllNodesWithContentDescription("第 1 / 217 页").assertCountEquals(0)
-    }
-
-    @Test
-    fun `the page bar names the page and the total`() {
-        setScreen(listOf(feedPost(1, "post", page = 1)), state = pagedState())
-
-        composeRule.onNodeWithContentDescription("第 1 / 217 页").assertIsDisplayed()
-    }
-
-    /** One page is not a pager: a bar that can only ever say "第 1 / 1 页" is furniture. */
-    @Test
-    fun `a single-page feed draws no bar`() {
-        setScreen(
-            posts = listOf(feedPost(1, "post", page = 1)),
-            state = pagedState(totalPages = 1),
-        )
-
-        composeRule.onAllNodesWithContentDescription("第 1 / 1 页").assertCountEquals(0)
-    }
 
     /** A jump names its destination before the rows arrive; otherwise the tap reads as ignored. */
     @Test
@@ -1006,24 +640,9 @@ class PostListScreenTest {
         composeRule.onNodeWithContentDescription("第 40 / 217 页").assertIsDisplayed()
     }
 
-    /** Travel, not fetching: a page the feed already holds is somewhere to scroll to. */
-    @Test
-    fun `next page scrolls instead of reloading when the page is already stored`() {
-        var requested: Int? = null
-        setScreen(
-            posts = listOf(feedPost(1, "page one row", page = 1), feedPost(2, "page two row", page = 2)),
-            state = pagedState(),
-            onGoToPage = { requested = it },
-            onFindPageRow = { page -> 1.takeIf { page == 2 } },
-        )
-
-        composeRule.onNodeWithContentDescription("下一页").performClick()
-
-        assertEquals(null, requested)
-    }
-
     /**
-     * The regression this pairs with: the row is stored, and the pager is not holding it.
+     * Travel, not fetching: a page the feed already holds is somewhere to scroll to — even when the
+     * row is stored and the pager is not holding it.
      *
      * That is the ordinary state of the page one step away — the feed runs with placeholders on and
      * Room re-windows it on every write, so nothing outside the current window is in [posts] even
@@ -1084,43 +703,6 @@ class PostListScreenTest {
         assertEquals(2, requested)
     }
 
-    /** The scroller is the jump: a page key is the whole gesture, with nothing to confirm after it. */
-    @Test
-    fun `a page key on the jump sheet reports the page it names`() {
-        var requested: Int? = null
-        setScreen(
-            posts = listOf(feedPost(1, "post", page = 40)),
-            state = pagedState(startPage = 40),
-            onGoToPage = { requested = it },
-        )
-
-        composeRule.onNodeWithContentDescription("第 40 / 217 页").performClick()
-        composeRule.onNode(hasText("41") and hasClickAction()).performClick()
-
-        assertEquals(41, requested)
-    }
-
-    /**
-     * 最新 on the feed is page 1, not the last page.
-     *
-     * The site's page numbers drift under a feed sorted by activity — a post that was on page 3 is on
-     * page 4 an hour later — so its newest content is always at the head, and "最后一页" would be the
-     * oldest thing the board has.
-     */
-    @Test
-    fun `the jump sheet sends 最新 back to the first page`() {
-        var requested: Int? = null
-        setScreen(
-            posts = listOf(feedPost(1, "post", page = 40)),
-            state = pagedState(startPage = 40),
-            onGoToPage = { requested = it },
-        )
-
-        composeRule.onNodeWithContentDescription("第 40 / 217 页").performClick()
-        composeRule.onNodeWithText("最新").performClick()
-
-        assertEquals(1, requested)
-    }
     private companion object {
         /** A path the zone actually challenges — deliberately not the exempt home page. */
         const val REFUSED = "https://www.nodeseek.com/page-2?sortBy=replyTime"

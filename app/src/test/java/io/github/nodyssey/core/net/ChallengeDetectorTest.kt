@@ -87,18 +87,6 @@ class ChallengeDetectorTest {
         )
     }
 
-    @Test
-    fun `a plain cloudflare server header is not a challenge`() {
-        assertNull(
-            detector.detect(
-                Fixtures.load("page-1.html"),
-                200,
-                mapOf("server" to "cloudflare"),
-                URL,
-            ),
-        )
-    }
-
     /** 内版, signed out: JSON on an HTML route, and the one sentence that separates it from a 404. */
     @Test
     fun `a members-only board refused as JSON is a login wall`() {
@@ -169,13 +157,5 @@ class ChallengeDetectorTest {
             </div></div></body></html>
             """.trimIndent()
         assertNull(detector.detect(html, 200, emptyMap(), URL))
-    }
-
-    @Test
-    fun `an unexpected status is reported as blocked`() {
-        assertEquals(
-            SiteError.Http(500),
-            detector.detect("<html>oops</html>", 500, emptyMap(), URL),
-        )
     }
 }

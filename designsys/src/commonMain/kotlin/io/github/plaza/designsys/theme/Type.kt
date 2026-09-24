@@ -121,7 +121,7 @@ val CommentBody = TextStyle(fontSize = 15.sp, lineHeight = 25.sp, letterSpacing 
  * at the 1.2 system font scale, greedy fills the opening line to 0.94 of the column where optimal
  * left it at 0.76. The trade is real and known — a paragraph carrying a long unbreakable token,
  * a URL most often, keeps that token whole and so leaves a wider gap on the line above it than
- * optimal would; see `ProseLineBreakTest`, which pins both halves.
+ * optimal would.
  *
  * Strictness stays at [LineBreak.Simple]'s Normal rather than Strict for the same reason: Normal
  * is CSS `line-break: auto`, which is what the site's stylesheet resolves to. Baseline UAX#14

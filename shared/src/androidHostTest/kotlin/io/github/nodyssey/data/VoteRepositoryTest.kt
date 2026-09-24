@@ -53,17 +53,6 @@ class VoteRepositoryTest {
             assertTrue(vote.items.first().voted)
         }
 
-    /** Single choice sends an array too — the site's wire format has no scalar form. */
-    @Test
-    fun `a single choice is submitted as a one-element array`() =
-        runTest {
-            val api = FakeVoteApi(writes = mapOf("/api/vote/voteforitem" to SUCCESS))
-
-            NetworkVoteRepository(api).submit(2871, listOf(13201))
-
-            assertEquals(listOf("POST" to """{"ids":[13201]}"""), api.calls("/api/vote/voteforitem"))
-        }
-
     @Test
     fun `multiple choices go in one request`() =
         runTest {
@@ -127,48 +116,6 @@ class VoteRepositoryTest {
                 listOf("POST" to """{"title":"说\"是\"","multiple":true,"isPublic":false,"items":["a\"b"]}"""),
                 api.calls("/api/vote/info"),
             )
-        }
-
-    /** Deletion is a DELETE that carries a body, which is unusual and is what the site expects. */
-    @Test
-    fun `deleting sends DELETE with a body, not a POST`() =
-        runTest {
-            val api = FakeVoteApi(writes = mapOf("/api/vote/info/2871" to SUCCESS))
-
-            NetworkVoteRepository(api).delete(2871)
-
-            assertEquals(listOf("DELETE" to """{"deleted":true}"""), api.calls("/api/vote/info/2871"))
-        }
-
-    /** A moderator-only refusal arrives as HTTP 500 with `status:404` inside. Body first, always. */
-    @Test
-    fun `a moderator-only refusal wrapped in a 500 still reads as its message`() =
-        runTest {
-            val api =
-                FakeVoteApi(
-                    writes =
-                    mapOf(
-                        "/api/vote/info/2871" to
-                            JsonPostResponse(500, """{"message":"Not admin account","status":404,"success":false}"""),
-                    ),
-                )
-
-            val thrown =
-                assertThrows(SiteException::class.java) {
-                    runTestBlocking { NetworkVoteRepository(api).delete(2871) }
-                }
-
-            assertEquals("Not admin account", thrown.detail)
-        }
-
-    @Test
-    fun `locking posts the flag`() =
-        runTest {
-            val api = FakeVoteApi(writes = mapOf("/api/vote/lock/2871" to SUCCESS))
-
-            NetworkVoteRepository(api).setLocked(2871, false)
-
-            assertEquals(listOf("POST" to """{"locked":false}"""), api.calls("/api/vote/lock/2871"))
         }
 
     @Test

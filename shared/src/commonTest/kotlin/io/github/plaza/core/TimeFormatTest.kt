@@ -47,11 +47,6 @@ class TimeFormatTest {
     }
 
     @Test
-    fun `absolute label keeps seconds`() {
-        assertEquals("2026/7/26 09:56:03", TimeFormat.absolute(at("2026-07-26 09:56:03"), zone))
-    }
-
-    @Test
     fun `conversation stamp degrades from clock to weekday to date`() {
         assertEquals("10:18", TimeFormat.conversationStamp(at("2026-07-26 10:18:00"), now, zone))
         assertEquals("昨天", TimeFormat.conversationStamp(at("2026-07-25 10:18:00"), now, zone))

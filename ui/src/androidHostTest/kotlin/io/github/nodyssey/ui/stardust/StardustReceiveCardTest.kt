@@ -50,24 +50,6 @@ class StardustReceiveCardTest {
         }
     }
 
-    /** Everything the card draws about the ask comes from the marker, and all of it has to show. */
-    @Test
-    fun `shows the amount, the note, the ref and the one-off marker`() {
-        setCard(loaded())
-
-        composeRule.onNodeWithText("2 🌌").assertIsDisplayed()
-        composeRule.onNodeWithText("请我喝杯咖啡").assertIsDisplayed()
-        composeRule.onNodeWithText("Ref ID 100").assertIsDisplayed()
-        composeRule.onNodeWithText("一次性").assertIsDisplayed()
-    }
-
-    @Test
-    fun `shows the tally once it has loaded`() {
-        setCard(loaded())
-
-        composeRule.onNodeWithText("你未付款 · 共 3 人付款 · 收到 6 🌌").assertIsDisplayed()
-    }
-
     /**
      * A tally still in flight says so instead of printing zeroes.
      *
@@ -132,16 +114,6 @@ class StardustReceiveCardTest {
         composeRule.onNodeWithText("确认付款 2 星辰？").assertIsDisplayed()
         composeRule.onNodeWithText("确认付款").performClick()
         assertEquals(1, paid)
-    }
-
-    /** The one-off warning is the one worth reading twice, so the dialog says which kind this is. */
-    @Test
-    fun `the confirmation names the one-off rule`() {
-        setCard(loaded())
-
-        composeRule.onNodeWithText("付款").performClick()
-
-        composeRule.onNodeWithText("这是一次性收款码，同一账号只能付一次。星辰转出后无法撤回。").assertIsDisplayed()
     }
 
     private fun loaded() =

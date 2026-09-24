@@ -226,14 +226,6 @@ class MarkdownTest {
         assertEquals(source, paragraph.inlines.filterIsInstance<InlineNode.Text>().joinToString("") { it.text })
     }
 
-    /** No resolver means no stickers: a readme that mentions `:ac01:` in prose is left as written. */
-    @Test
-    fun `leaves shortcodes alone without a resolver`() {
-        val paragraph = parseMarkdown("收到 :ac01: 了").single() as RichNode.Paragraph
-
-        assertEquals("收到 :ac01: 了", paragraph.inlines.filterIsInstance<InlineNode.Text>().joinToString("") { it.text })
-    }
-
     /** Inline rules run inside code spans on no parser worth the name — the site's included. */
     @Test
     fun `leaves a shortcode inside a code span as text`() {

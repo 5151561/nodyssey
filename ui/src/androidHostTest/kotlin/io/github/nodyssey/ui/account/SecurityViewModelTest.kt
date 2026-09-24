@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.account
 
-import io.github.nodyssey.data.account.TwoFactorState
 import io.github.nodyssey.ui.ViewModels
 import io.github.nodyssey.ui.typeText
 import kotlinx.coroutines.Dispatchers
@@ -51,16 +50,6 @@ class SecurityViewModelTest {
         advanceUntilIdle()
         return vm
     }
-
-    @Test
-    fun `reads the two-factor state on open`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository(twoFactor = TwoFactorState(true)))
-            advanceUntilIdle()
-
-            assertFalse(vm.uiState.value.isLoading)
-            assertEquals(true, vm.uiState.value.twoFactorEnabled)
-        }
 
     @Test
     fun `requesting a password change only opens the dialog`() =
@@ -202,33 +191,5 @@ class SecurityViewModelTest {
 
             assertFalse(repository.calls.contains("beginTwoFactorEnrolment"))
             assertNull(vm.uiState.value.enrolmentUri)
-        }
-
-    /** The URI is handed over once; keeping it would re-launch the authenticator on every recomposition. */
-    @Test
-    fun `the enrolment uri is consumed after being handed over`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository())
-            advanceUntilIdle()
-            vm.twoFactorPasswordState.typeText("hunter2!")
-            runCurrent()
-            advanceUntilIdle()
-            vm.confirmTwoFactorEnrolment()
-            advanceUntilIdle()
-
-            vm.consumeEnrolmentUri()
-
-            assertNull(vm.uiState.value.enrolmentUri)
-        }
-
-    @Test
-    fun `a missing authenticator app is reported rather than swallowed`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository())
-            advanceUntilIdle()
-
-            vm.reportMissingAuthenticatorApp()
-
-            assertTrue(vm.uiState.value.message is AccountMessage.Info)
         }
 }

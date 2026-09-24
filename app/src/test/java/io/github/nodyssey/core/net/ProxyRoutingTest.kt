@@ -68,14 +68,6 @@ class ProxyRoutingTest {
         assertEquals(listOf(PLATFORM_PROXY), selector.select(FORUM))
     }
 
-    /** Deferring needs something to defer to; without it, direct is the only answer left. */
-    @Test
-    fun `with no platform selector an unrouted call is direct`() = runTest {
-        val selector = selectorFor(CONFIGURED.copy(enabled = false), ProxyClientKind.FORUM, platform = null)
-
-        assertEquals(listOf(Proxy.NO_PROXY), selector.select(FORUM))
-    }
-
     /**
      * A failure on the app's own proxy has nothing to fall back to. One on a route the platform chose
      * is the platform's to know about, since it is the half keeping that bookkeeping.

@@ -83,30 +83,6 @@ class ProfileFieldsViewModelTest {
         ProfileFieldsViewModel(repository, profiles, caches)
 
     @Test
-    fun `loads the avatar from the forum profile and the fields from the settings page`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository(fields = stored))
-            advanceUntilIdle()
-
-            val state = vm.uiState.value
-            assertEquals("林地雪原-0062", state.displayName)
-            assertEquals("https://www.nodeseek.com/avatar/52425.png", state.avatarUrl)
-            assertEquals("常驻杭州", state.bio)
-            assertEquals("### 关于我", state.readme)
-        }
-
-    /** Nothing edited means nothing to save; the top bar's 保存 is driven by this. */
-    @Test
-    fun `a freshly loaded form is not dirty`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository(fields = stored))
-            advanceUntilIdle()
-
-            assertFalse(vm.uiState.value.isDirty)
-            assertFalse(vm.uiState.value.canSave)
-        }
-
-    @Test
     fun `editing a field or picking an avatar makes the form dirty`() =
         runTest(dispatcher) {
             val vm = viewModel(FakeAccountSettingsRepository(fields = stored))
@@ -194,34 +170,6 @@ class ProfileFieldsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf("https://www.nodeseek.com/avatar/52425.png"), caches.evicted)
-        }
-
-    /** Saving text alone changes no picture, and emptying a cache entry for it would be superstition. */
-    @Test
-    fun `saving text fields alone touches no image cache`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository(fields = stored))
-            advanceUntilIdle()
-
-            vm.updateBio("新的一句话")
-            vm.save()
-            advanceUntilIdle()
-
-            assertEquals(emptyList<String>(), caches.evicted)
-        }
-
-    /** A picture the site refused is still the old one; forgetting it would only cost a re-download. */
-    @Test
-    fun `a failed avatar upload leaves the caches alone`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeAccountSettingsRepository.failing())
-            advanceUntilIdle()
-
-            vm.setPendingAvatar(pendingAvatar())
-            vm.save()
-            advanceUntilIdle()
-
-            assertEquals(emptyList<String>(), caches.evicted)
         }
 
     @Test

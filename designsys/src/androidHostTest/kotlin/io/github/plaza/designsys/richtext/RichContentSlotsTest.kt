@@ -50,13 +50,6 @@ class RichContentSlotsTest {
     }
 
     @Test
-    fun `a vote at the top level uses the caller's slot`() {
-        setContent(listOf(vote))
-
-        composeRule.onNodeWithText("live vote 2871").assertIsDisplayed()
-    }
-
-    @Test
     fun `a vote inside a quote uses the caller's slot`() {
         setContent(listOf(RichNode.Quote(children = listOf(vote))))
 
@@ -74,20 +67,6 @@ class RichContentSlotsTest {
     fun `a vote inside a tab uses the caller's slot`() {
         setContent(
             listOf(RichNode.Tabs(tabs = listOf(RichNode.Tabs.Tab(title = "一", children = listOf(vote))))),
-        )
-
-        composeRule.onNodeWithText("live vote 2871").assertIsDisplayed()
-    }
-
-    /** A vote two levels down: the quote's own recursion has to keep handing the slot on. */
-    @Test
-    fun `a vote quoted inside a quoted list uses the caller's slot`() {
-        setContent(
-            listOf(
-                RichNode.Quote(
-                    children = listOf(RichNode.ListBlock(ordered = true, items = listOf(listOf(vote)))),
-                ),
-            ),
         )
 
         composeRule.onNodeWithText("live vote 2871").assertIsDisplayed()

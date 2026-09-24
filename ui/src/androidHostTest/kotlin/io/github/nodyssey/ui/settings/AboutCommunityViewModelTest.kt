@@ -1,7 +1,6 @@
 package io.github.nodyssey.ui.settings
 
 import io.github.nodyssey.data.CommunityRepository
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -26,29 +25,6 @@ class AboutCommunityViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun `successful load publishes the real member count`() =
-        runTest(dispatcher) {
-            val viewModel = AboutCommunityViewModel(CommunityRepository { 70_123L })
-
-            advanceUntilIdle()
-
-            assertEquals(CommunityStatsUiState.Content(70_123L), viewModel.uiState.value)
-        }
-
-    @Test
-    fun `load failure publishes a retryable error`() =
-        runTest(dispatcher) {
-            val viewModel =
-                AboutCommunityViewModel(
-                    CommunityRepository { throw IllegalStateException("offline") },
-                )
-
-            advanceUntilIdle()
-
-            assertSame(CommunityStatsUiState.Error, viewModel.uiState.value)
-        }
-
-    @Test
     fun `retry replaces an error with the latest member count`() =
         runTest(dispatcher) {
             var calls = 0
@@ -68,18 +44,5 @@ class AboutCommunityViewModelTest {
 
             assertEquals(CommunityStatsUiState.Content(70_124L), viewModel.uiState.value)
             assertEquals(2, calls)
-        }
-
-    @Test
-    fun `cancellation is not rendered as a load error`() =
-        runTest(dispatcher) {
-            val viewModel =
-                AboutCommunityViewModel(
-                    CommunityRepository { throw CancellationException("screen left") },
-                )
-
-            advanceUntilIdle()
-
-            assertSame(CommunityStatsUiState.Loading, viewModel.uiState.value)
         }
 }

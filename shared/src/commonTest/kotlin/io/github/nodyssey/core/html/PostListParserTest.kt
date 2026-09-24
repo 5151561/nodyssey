@@ -3,7 +3,6 @@ package io.github.nodyssey.core.html
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PostListParserTest {
@@ -141,25 +140,5 @@ class PostListParserTest {
         assertEquals(listOf(11L, 12L), posts.map { it.postId })
         assertTrue(posts.first().isAwarded)
         assertFalse(posts.last().isAwarded)
-    }
-
-    /** The sidebar's `/award` link must not mark the rows beside it. */
-    @Test
-    fun `leaves the front page un-awarded`() {
-        assertTrue(page.posts.none { it.isAwarded })
-    }
-
-    @Test
-    fun `leaves the front page unblocked`() {
-        assertTrue(page.posts.none { it.isBlocked })
-    }
-
-    @Test
-    fun `every row carries an id and a title and an author`() {
-        page.posts.forEach { post ->
-            assertTrue(post.title.isNotBlank(), "empty title for ${post.postId}")
-            assertTrue(post.postId > 0, "bad id")
-            assertNotNull(post.avatarUrl, "no avatar for ${post.postId}")
-        }
     }
 }

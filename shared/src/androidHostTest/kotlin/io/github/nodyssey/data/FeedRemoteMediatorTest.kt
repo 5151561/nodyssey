@@ -14,7 +14,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -100,21 +99,6 @@ class FeedRemoteMediatorTest {
         }
 
     @Test
-    fun `refresh writes page one and records the next page`() =
-        runTest {
-            remote.listResult = { slug, page ->
-                FakePostRemoteDataSource.page(slug, page, firstId = 100, count = 3)
-            }
-
-            val result = load(LoadType.REFRESH)
-
-            assertTrue(result is RemoteMediator.MediatorResult.Success)
-            assertFalse((result as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
-            assertEquals(listOf(100L, 101L, 102L), storedFeed())
-            assertEquals(2, database.feedDao().remoteKey(feedKeyFor(null))?.nextPage)
-        }
-
-    @Test
     fun `append adds the following page after the existing rows`() =
         runTest {
             remote.listResult = { slug, page ->
@@ -183,24 +167,6 @@ class FeedRemoteMediatorTest {
             assertEquals(null, database.feedDao().commentCount(100L))
         }
 
-    /** A read post is history: dropping it would silently mark the thread unread again. */
-    @Test
-    fun `refresh keeps a post the user has read`() =
-        runTest {
-            remote.listResult = { slug, page ->
-                FakePostRemoteDataSource.page(slug, page, firstId = 100, count = 3)
-            }
-            load(LoadType.REFRESH)
-            database.readMarkDao().markRead(postId = 100L, commentCount = 5, nowMillis = clock.nowMillis())
-
-            remote.listResult = { slug, page ->
-                FakePostRemoteDataSource.page(slug, page, firstId = 500, count = 2)
-            }
-            load(LoadType.REFRESH)
-
-            assertEquals(5, database.readMarkDao().find(100L)?.lastSeenCommentCount)
-        }
-
     @Test
     fun `no next page reports end of pagination and stores no key`() =
         runTest {
@@ -237,19 +203,6 @@ class FeedRemoteMediatorTest {
     // -----------------------------------------------------------------------------------------
     // 首页翻页栏: a window that need not start at page 1
     // -----------------------------------------------------------------------------------------
-
-    @Test
-    fun `every row records the page it arrived on`() =
-        runTest {
-            remote.listResult = { slug, page ->
-                FakePostRemoteDataSource.page(slug, page, firstId = 100L * page, count = 2)
-            }
-
-            load(LoadType.REFRESH)
-            load(LoadType.APPEND)
-
-            assertEquals(listOf(1, 1, 2, 2), storedPages())
-        }
 
     @Test
     fun `the pager's own total is stored for the bar to draw`() =

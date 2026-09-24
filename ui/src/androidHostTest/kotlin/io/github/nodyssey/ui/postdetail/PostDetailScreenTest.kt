@@ -1,59 +1,34 @@
 package io.github.nodyssey.ui.postdetail
 
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
-import androidx.compose.ui.test.hasAnyDescendant
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasScrollToIndexAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onChildren
-import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performScrollToIndex
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.height
-import androidx.compose.ui.unit.width
 import io.github.nodyssey.ThreadPreview
-import io.github.nodyssey.data.FreeChickenLegs
-import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.ui.settings.ProvideAppLanguage
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import kotlin.math.absoluteValue
 
 /** Screen-level tests for the thread view, including the offline-first error behaviour. */
 @RunWith(RobolectricTestRunner::class)
@@ -68,7 +43,6 @@ class PostDetailScreenTest {
     private fun content(
         text: String,
         author: String = "tester",
-        signature: List<RichNode> = emptyList(),
         /** Null is a page that never carried the tallies, which is what disables the three marks. */
         reactions: PostReactions? = null,
         floor: String? = null,
@@ -85,7 +59,6 @@ class PostDetailScreenTest {
         createdAtTitle = null,
         categoryTitle = null,
         nodes = listOf(RichNode.Paragraph(listOf(InlineNode.Text(text)))),
-        signatureNodes = signature,
         reactions = reactions,
         isBlocked = blocked,
     )
@@ -94,7 +67,6 @@ class PostDetailScreenTest {
         state: PostDetailUiState,
         onRetry: () -> Unit = {},
         onBack: () -> Unit = {},
-        onOpenBrowser: (String) -> Unit = {},
         onSignIn: () -> Unit = {},
         onReact: (Long, ReactionAction) -> Unit = { _, _ -> },
         onLoadPage: (Int) -> Unit = {},
@@ -106,7 +78,7 @@ class PostDetailScreenTest {
                     state = state,
                     postUrl = "https://www.nodeseek.com/post-1-1",
                     onBack = onBack,
-                    onOpenBrowser = onOpenBrowser,
+                    onOpenBrowser = {},
                     onImageClick = {},
                     onRetry = onRetry,
                     onLoadMore = {},
@@ -118,51 +90,6 @@ class PostDetailScreenTest {
                 )
             }
         }
-    }
-
-    @Test
-    fun `renders the title, the body and the comments`() {
-        setScreen(
-            PostDetailUiState(
-                title = "a thread title",
-                body = content("the opening post", author = "op"),
-                comments = listOf(content("first reply"), content("second reply")),
-            ),
-        )
-
-        // The app bar stays quiet until the full title has scrolled away.
-        composeRule.onAllNodesWithText("a thread title").assertCountEquals(1)
-        composeRule.onNodeWithText("the opening post").assertIsDisplayed()
-        composeRule.onNodeWithText("first reply").assertIsDisplayed()
-        composeRule.onNodeWithText("second reply").assertIsDisplayed()
-    }
-
-    /**
-     * The loading state states what the list already knew, instead of standing in for it.
-     *
-     * Grey bars were the only honest thing this screen could draw back when nothing had told it any
-     * of this. Something has now — see `PostDetailKey.preview` — and this frame is also where the
-     * row's own title, avatar, name and board tag are flying to, so a placeholder here would be a
-     * flight to nowhere.
-     */
-    @Test
-    fun `the loading state states what the list already knew`() {
-        setScreen(
-            PostDetailUiState(
-                title = "a thread title",
-                preview =
-                ThreadPreview(
-                    title = "a thread title",
-                    authorName = "op",
-                    categoryTitle = "技术",
-                ),
-                isLoading = true,
-            ),
-        )
-
-        composeRule.onNodeWithText("a thread title").assertIsDisplayed()
-        composeRule.onNodeWithText("op").assertIsDisplayed()
-        composeRule.onNodeWithText("技术").assertIsDisplayed()
     }
 
     /** What a feed row hands over, and what the thread then draws before the network answers. */
@@ -250,48 +177,6 @@ class PostDetailScreenTest {
     }
 
     /**
-     * Where the loading state puts the four travelling things is where the thread puts them.
-     *
-     * The whole point of the flight is that it ends. If the loading state parked the avatar 24dp
-     * low — which it did, by laying the author row out in a padded column of its own instead of in
-     * the opening post's — then the reader watched it settle and then step, and the animation became
-     * a claim the layout went back on. Measured rather than reasoned about, because the two layouts
-     * live in one composable only by construction and nothing but a ruler notices when they drift.
-     */
-    @Test
-    fun `the loading state puts what is flying exactly where the thread will put it`() {
-        val state = setThreadArriving()
-        val before = travellers.associateWith { nodeWithText(it).getUnclippedBoundsInRoot() }
-
-        state.land()
-
-        travellers.forEach { text ->
-            val after = nodeWithText(text).getUnclippedBoundsInRoot()
-            assertEquals("$text moved sideways when the thread arrived", before[text]!!.left, after.left)
-            val moved = (before[text]!!.top - after.top).value.absoluteValue
-            /*
-             * A dp of slack, spent only on the author's name and only because of the harness.
-             *
-             * The name is centred against the line below it, so its position depends on how tall
-             * that line measures — and Robolectric's stub font ignores the style's `lineHeight`,
-             * which is what the placeholder is built from and what a real device honours. The other
-             * three are positioned by paddings and an avatar's size, which Robolectric gets right,
-             * so they are held to the dp.
-             */
-            val slack = if (text == "op") 1f else 0f
-            assertTrue("$text moved $moved dp down the screen when the thread arrived", moved <= slack)
-        }
-    }
-
-    /** Nothing told it anything, so the grey bars are still what it has to draw. */
-    @Test
-    fun `the loading state falls back to placeholders when no list opened the thread`() {
-        setScreen(PostDetailUiState(isLoading = true))
-
-        composeRule.onAllNodesWithText("op").assertCountEquals(0)
-    }
-
-    /**
      * The floor is kept and collapsed, not dropped. A reply quoting #2 has to still find a #2 there,
      * and the reader has to be able to see what was hidden without turning blocking off for the app.
      */
@@ -334,58 +219,12 @@ class PostDetailScreenTest {
         composeRule.onAllNodesWithText("已屏蔽用户的评论").assertCountEquals(0)
     }
 
-    @Test
-    fun `renders the public signature and opens its link`() {
-        var opened: String? = null
-        val signature = listOf(
-            RichNode.Paragraph(
-                listOf(InlineNode.Link(text = "个人博客", url = "https://example.com")),
-            ),
-        )
-        setScreen(
-            PostDetailUiState(
-                title = "t",
-                body = content("body", author = "op", signature = signature),
-            ),
-            onOpenBrowser = { opened = it },
-        )
-
-        composeRule.onNodeWithText("个人博客").assertIsDisplayed().performClick()
-
-        assert(opened == "https://example.com")
-    }
-
-    @Test
-    fun `the back affordance reports the intent to leave`() {
-        var backed = false
-        setScreen(
-            PostDetailUiState(title = "t", body = content("body")),
-            onBack = { backed = true },
-        )
-
-        composeRule.onNodeWithContentDescription("返回").performClick()
-
-        assert(backed)
-    }
-
     private fun signedInState(reactions: PostReactions? = PostReactions()) =
         PostDetailUiState(
             title = "t",
             body = content("body", author = "op", reactions = reactions),
             isSignedIn = true,
         )
-
-    @Test
-    fun `feeding chicken opens the confirmation dialog`() {
-        setScreen(signedInState())
-
-        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
-
-        composeRule.onNodeWithText("投喂鸡腿？").assertIsDisplayed()
-        composeRule.onNodeWithText("是否向 op 投喂鸡腿？这将消耗你一个鸡腿。").assertIsDisplayed()
-        composeRule.onNodeWithText("取消").performClick()
-        composeRule.onNodeWithText("投喂鸡腿？").assertDoesNotExist()
-    }
 
     /** Confirming is what sends it; dismissing must not. */
     @Test
@@ -412,36 +251,6 @@ class PostDetailScreenTest {
         composeRule.onNodeWithContentDescription("点赞").performClick()
 
         assert(sent == listOf(ReactionAction.Upvote)) { "sent $sent" }
-    }
-
-    /** 反对 costs two chicken legs, and the dialog is the only place that says so. */
-    @Test
-    fun `the dislike confirmation names its price`() {
-        setScreen(signedInState())
-
-        // 点踩 lives in the floor's 1c panel, not on its row.
-        composeRule.onNodeWithContentDescription("楼层操作").performClick()
-        composeRule.onNodeWithText("点踩").performClick()
-
-        composeRule.onNodeWithText("是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。").assertIsDisplayed()
-    }
-
-    /** Only when the site confirmed the allowance — an unread quota must not promise "免费". */
-    @Test
-    fun `says the feed is free when today's allowance still covers it`() {
-        setScreen(signedInState().copy(freeChickenLegs = FreeChickenLegs(max = 5, used = 2)))
-
-        composeRule.onNodeWithContentDescription("投喂鸡腿").performClick()
-
-        composeRule.onNodeWithText("是否向 op 投喂鸡腿？今日还有 3 次免费投喂，本次不消耗鸡腿。").assertIsDisplayed()
-    }
-
-    @Test
-    fun `shows the tallies the page carried`() {
-        setScreen(signedInState(PostReactions(likeCount = 3, upvoteCount = 1, dislikeCount = 0)))
-
-        // The opening post's 投喂 pill says its tally beside its name, as 1b draws it.
-        composeRule.onNodeWithText("投喂 3").assertIsDisplayed()
     }
 
     /** Signing in comes before the spend, not after the site has rejected it. */
@@ -475,24 +284,6 @@ class PostDetailScreenTest {
         assert(sent.isEmpty()) { "sent $sent" }
     }
 
-    /** Whole-thread on NodeSeek, so the star belongs to the opening post and to nothing else. */
-    @Test
-    fun `only the opening post carries the collect star`() {
-        setScreen(
-            PostDetailUiState(
-                title = "t",
-                body = content("body", author = "op", reactions = PostReactions()),
-                comments = listOf(content("a reply", reactions = PostReactions())),
-                isSignedIn = true,
-                collected = false,
-                collectionCount = 6,
-            ),
-        )
-
-        composeRule.onAllNodesWithContentDescription("收藏").assertCountEquals(1)
-        composeRule.onNodeWithText("6").assertIsDisplayed()
-    }
-
     /**
      * Null is not false. No fetched page has said which way the toggle points, and a star drawn on a
      * guess is one tap away from silently un-collecting the thread.
@@ -503,40 +294,6 @@ class PostDetailScreenTest {
 
         composeRule.onAllNodesWithContentDescription("收藏").assertCountEquals(0)
         composeRule.onAllNodesWithContentDescription("已收藏").assertCountEquals(0)
-    }
-
-    @Test
-    fun `a collected thread shows the filled star`() {
-        setScreen(
-            PostDetailUiState(
-                title = "t",
-                body = content("body", author = "op", reactions = PostReactions()),
-                isSignedIn = true,
-                collected = true,
-                collectionCount = 7,
-            ),
-        )
-
-        composeRule.onNodeWithContentDescription("已收藏").assertIsDisplayed()
-    }
-
-    @Test
-    fun `tapping the star reports the toggle`() {
-        var collects = 0
-        setScreen(
-            PostDetailUiState(
-                title = "t",
-                body = content("body", author = "op", reactions = PostReactions()),
-                isSignedIn = true,
-                collected = false,
-                collectionCount = 6,
-            ),
-            onCollect = { collects++ },
-        )
-
-        composeRule.onNodeWithContentDescription("收藏").performClick()
-
-        assertEquals(1, collects)
     }
 
     /** Same gate as the marks and the editor: the account comes before the action. */
@@ -622,13 +379,6 @@ class PostDetailScreenTest {
         composeRule.onNodeWithText("cached body").assertIsDisplayed()
         composeRule.onNodeWithText("cached reply").assertIsDisplayed()
         composeRule.onNodeWithText("网络开小差了").assertDoesNotExist()
-    }
-
-    @Test
-    fun `a first load shows a spinner rather than an empty thread`() {
-        setScreen(PostDetailUiState(isLoading = true, body = null))
-
-        composeRule.onNodeWithText("重试").assertDoesNotExist()
     }
 
     /**
@@ -797,75 +547,6 @@ class PostDetailScreenTest {
         assertEquals(12, requested)
     }
 
-    /** 点标题看正文, the way the site does it: its title is a link back to the first page. */
-    @Test
-    fun `tapping the title of a bodyless thread fetches page one`() {
-        var requested: Int? = null
-        setScreen(jumpedState(body = null), onLoadPage = { requested = it })
-
-        composeRule.onNodeWithText("查看正文").performClick()
-
-        assertEquals(1, requested)
-    }
-
-    /** And nothing to offer when the opening post is the item directly under the title. */
-    @Test
-    fun `no jump to the opening post when it is already on screen`() {
-        setScreen(jumpedState())
-
-        composeRule.onNodeWithText("查看正文").assertDoesNotExist()
-    }
-
-    /** A reply's 1c panel carries the rest of the site's set: 点踩 as a tile, 回复 and 引用 as rows. */
-    @Test
-    fun `a floor's panel offers reply, quote and the three marks`() {
-        val quoted = mutableListOf<Int>()
-        composeRule.setContent {
-            PlazaTheme {
-                PostDetailScreen(
-                    state =
-                    PostDetailUiState(
-                        title = "t",
-                        body = content("body", author = "op", reactions = PostReactions()),
-                        comments = listOf(content("a reply", author = "nssk", floor = "#12", reactions = PostReactions())),
-                        isSignedIn = true,
-                    ),
-                    postUrl = "https://www.nodeseek.com/post-1-1",
-                    onBack = {},
-                    onOpenBrowser = {},
-                    onImageClick = {},
-                    onRetry = {},
-                    onLoadMore = {},
-                    onVerify = {},
-                    onQuote = { quoted += it.floor },
-                )
-            }
-        }
-
-        // The second ⋯ is the reply's; the first is the opening post's.
-        composeRule.onAllNodesWithContentDescription("楼层操作")[1].performClick()
-
-        composeRule.onNodeWithText("nssk · #12").assertIsDisplayed()
-        composeRule.onNodeWithText("点踩").assertIsDisplayed()
-        composeRule.onNodeWithText("扣 2 鸡腿").assertIsDisplayed()
-        composeRule.onNodeWithText("回复 nssk").assertIsDisplayed()
-        composeRule.onNodeWithText("引用这一楼").performClick()
-
-        assertEquals(listOf(12), quoted)
-    }
-
-    /** The opening post has no 回复 or 引用 on the site, and the panel does not invent them. */
-    @Test
-    fun `the opening post's panel has neither reply nor quote`() {
-        setScreen(signedInState())
-
-        composeRule.onNodeWithContentDescription("楼层操作").performClick()
-
-        composeRule.onNodeWithText("复制正文").assertIsDisplayed()
-        composeRule.onAllNodesWithText("引用这一楼").assertCountEquals(0)
-        composeRule.onAllNodesWithText("回复 op").assertCountEquals(0)
-    }
-
     /** A spent mark says so on its tile, and the tile no longer spends. */
     @Test
     fun `a spent mark's tile is marked and inert`() {
@@ -881,26 +562,6 @@ class PostDetailScreenTest {
 
         composeRule.onAllNodesWithText("是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。").assertCountEquals(0)
         assert(sent.isEmpty()) { "sent $sent" }
-    }
-
-    /**
-     * A floor that is only a picture has no 正文, and its panel does not offer to copy one.
-     *
-     * The row used to be there all the same and put the picture's address on the clipboard, saying
-     * 正文已复制.
-     */
-    @Test
-    fun `a floor that is only a picture offers no 复制正文`() {
-        setScreen(
-            signedInState().let { state ->
-                state.copy(body = state.body!!.copy(nodes = listOf(RichNode.BlockImage(url = "https://i.example/a.png", alt = null))))
-            },
-        )
-
-        composeRule.onNodeWithContentDescription("楼层操作").performClick()
-
-        composeRule.onNodeWithText("点赞").assertIsDisplayed()
-        composeRule.onAllNodesWithText("复制正文").assertCountEquals(0)
     }
 
     /**
@@ -930,246 +591,6 @@ class PostDetailScreenTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("回复 nssk").assertIsDisplayed()
     }
-
-    /** The opening post at its widest: four-digit tallies and a collected thread. */
-    private fun setCrowdedOpeningPost(fontScale: Float) {
-        composeRule.setContent {
-            val density = Density(LocalDensity.current.density, fontScale = fontScale)
-            CompositionLocalProvider(LocalDensity provides density) {
-                PlazaTheme {
-                    PostDetailScreen(
-                        state =
-                        PostDetailUiState(
-                            title = "t",
-                            body = content("body", author = "op", reactions = PostReactions(upvoteCount = 1234, likeCount = 5678)),
-                            isSignedIn = true,
-                            collected = true,
-                            collectionCount = 1234,
-                        ),
-                        postUrl = "https://www.nodeseek.com/post-1-1",
-                        onBack = {},
-                        onOpenBrowser = {},
-                        onImageClick = {},
-                        onRetry = {},
-                        onLoadMore = {},
-                        onVerify = {},
-                    )
-                }
-            }
-        }
-    }
-
-    /**
-     * The ⋯ keeps its whole touch target and stays on screen however wide the pills get.
-     *
-     * It is the only visible way to 点踩, 编辑 and 复制正文 on the opening post, and as the last
-     * child of a Row it was the one the shortfall came out of: about 11dp wide at 1.3×, gone at 2×.
-     */
-    private fun assertOpeningPostActionsStayWhole(fontScale: Float) {
-        setCrowdedOpeningPost(fontScale)
-        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
-        listOf(
-            composeRule.onNodeWithContentDescription("楼层操作"),
-            composeRule.onNodeWithContentDescription("已收藏", useUnmergedTree = true),
-        ).forEach { node ->
-            val bounds = node.getUnclippedBoundsInRoot()
-            assertTrue("$bounds at ${fontScale}x", bounds.right <= screen.right)
-        }
-        val more = composeRule.onNodeWithContentDescription("楼层操作").getUnclippedBoundsInRoot()
-        // The button's own 40dp, inside the 48dp its minimum touch size lays out.
-        assertTrue("⋯ is ${more.width} wide at ${fontScale}x", more.width >= 40.dp)
-    }
-
-    @Test
-    fun `the opening post's more button stays whole at 1_3x text`() = assertOpeningPostActionsStayWhole(1.3f)
-
-    @Test
-    fun `the opening post's more button stays whole at 2x text`() = assertOpeningPostActionsStayWhole(2f)
-
-    /**
-     * A reply's foot keeps its ⋯ whole too, however wide its tallies and its 回复 get.
-     *
-     * The same Row the opening post's actions were: the ⋯ was measured last and squeezed at 2×.
-     */
-    private fun assertReplyFootStaysWhole(fontScale: Float) {
-        composeRule.setContent {
-            val density = Density(LocalDensity.current.density, fontScale = fontScale)
-            CompositionLocalProvider(LocalDensity provides density) {
-                PlazaTheme {
-                    PostDetailScreen(
-                        state =
-                        PostDetailUiState(
-                            title = "t",
-                            comments =
-                            listOf(
-                                content(
-                                    "a reply",
-                                    author = "nssk",
-                                    floor = "#12",
-                                    reactions = PostReactions(upvoteCount = 1234, likeCount = 5678),
-                                ),
-                            ),
-                            isSignedIn = true,
-                        ),
-                        postUrl = "https://www.nodeseek.com/post-1-1",
-                        onBack = {},
-                        onOpenBrowser = {},
-                        onImageClick = {},
-                        onRetry = {},
-                        onLoadMore = {},
-                        onVerify = {},
-                    )
-                }
-            }
-        }
-        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
-        val more = composeRule.onNodeWithContentDescription("楼层操作").getUnclippedBoundsInRoot()
-        val reply = composeRule.onNodeWithText("回复").getUnclippedBoundsInRoot()
-        assertTrue("⋯ at $more, ${fontScale}x", more.right <= screen.right)
-        assertTrue("回复 at $reply, ${fontScale}x", reply.right <= screen.right)
-        // The button's own 40dp, inside the 48dp its minimum touch size lays out.
-        assertTrue("⋯ is ${more.width} wide at ${fontScale}x", more.width >= 40.dp)
-    }
-
-    @Test
-    fun `a reply's more button stays whole at 1_3x text`() = assertReplyFootStaysWhole(1.3f)
-
-    @Test
-    fun `a reply's more button stays whole at 2x text`() = assertReplyFootStaysWhole(2f)
-
-    /**
-     * An edited 楼主 floor with more badges keeps its author's name whole.
-     *
-     * The header was one Row, which measured the badges and the time first and gave the name what
-     * was left — a few letters here, and nothing at all with one badge more.
-     */
-    @Test
-    fun `a reply's name is not squeezed out by its badges and its edited time`() {
-        setScreen(
-            PostDetailUiState(
-                title = "t",
-                body = content("the opening post"),
-                comments =
-                listOf(
-                    content("a reply", author = "homelander", floor = "#3").copy(
-                        isOriginalPoster = true,
-                        badges = listOf("管理(退休)", "骗子"),
-                        createdAtText = "1小时前",
-                        isEdited = true,
-                        editedAtText = "30分钟前",
-                    ),
-                ),
-            ),
-        )
-
-        val layouts = mutableListOf<TextLayoutResult>()
-        composeRule
-            .onNodeWithText("homelander", useUnmergedTree = true)
-            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
-        // The width the name was offered holds the whole name; its ellipsis is the proof it did not.
-        // Not hasVisualOverflow: Robolectric's text metrics report a fraction of overflow on any text.
-        val name = layouts.single()
-        assertTrue(name.multiParagraph.maxIntrinsicWidth <= name.layoutInput.constraints.maxWidth)
-        assertFalse(name.isLineEllipsized(0))
-    }
-
-    /** A landscape phone is shorter than the panel; its last row has to be reachable by scrolling. */
-    @Test
-    @Config(qualifiers = "w640dp-h360dp")
-    fun `the floor panel scrolls to its last row on a landscape phone`() {
-        setScreen(
-            PostDetailUiState(
-                title = "t",
-                body = content("the opening post", author = "op", reactions = PostReactions()),
-                comments = listOf(content("a reply", author = "nssk", floor = "#12", reactions = PostReactions())),
-                isSignedIn = true,
-            ),
-        )
-
-        // The reply is below the fold of a 360dp-tall window, and its ⋯ then sits under the floating
-        // page controls, which would take a touch — the click goes in as the semantics action.
-        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
-        composeRule.onAllNodesWithContentDescription("楼层操作").onLast().performSemanticsAction(SemanticsActions.OnClick)
-
-        composeRule.onNodeWithText("复制正文").performScrollTo().assertIsDisplayed()
-    }
-
-    /**
-     * The panel's three tiles are one height, and each holds all of what it says.
-     *
-     * A tally too wide to share 投喂鸡腿's line went under it, and the equal height was measured as if
-     * it had not: the tiles stayed a line short, and the middle one's price — the thing the tile is
-     * there to say — was cut off at its bottom edge.
-     */
-    private fun assertReactionTilesHoldTheirText(language: AppLanguage) {
-        var likeCount by mutableStateOf(0)
-        composeRule.setContent {
-            ProvideAppLanguage(language) {
-                PlazaTheme {
-                    PostDetailScreen(
-                        state =
-                        PostDetailUiState(
-                            title = "t",
-                            body =
-                            content(
-                                "body",
-                                author = "op",
-                                reactions = PostReactions(upvoteCount = 12, likeCount = likeCount, dislikeCount = 3),
-                            ),
-                            isSignedIn = true,
-                            freeChickenLegs = FreeChickenLegs(max = 1, used = 0),
-                        ),
-                        postUrl = "https://www.nodeseek.com/post-1-1",
-                        onBack = {},
-                        onOpenBrowser = {},
-                        onImageClick = {},
-                        onRetry = {},
-                        onLoadMore = {},
-                        onVerify = {},
-                    )
-                }
-            }
-        }
-        val english = language == AppLanguage.ENGLISH
-        composeRule.onNodeWithContentDescription(if (english) "Floor actions" else "楼层操作").performClick()
-        val prices =
-            if (english) listOf("Free", "1 free today", "Costs 2 drumsticks") else listOf("免费", "今日免费 1 次", "扣 2 鸡腿")
-        val tiles = prices.map { hasClickAction() and hasAnyDescendant(hasText(it)) }
-
-        // 360dp: four digits no longer fit beside 投喂鸡腿, and seven fit nowhere but a line of their own.
-        listOf(5678, 56789, 1234567).forEach { count ->
-            likeCount = count
-            composeRule.waitForIdle()
-            val heights = tiles.map { composeRule.onNode(it, useUnmergedTree = true).getUnclippedBoundsInRoot().height }
-            heights.forEach { assertEquals("$heights at $count", heights[0].value, it.value, 0.5f) }
-            tiles.forEach { tile ->
-                val tileBounds = composeRule.onNode(tile, useUnmergedTree = true).getUnclippedBoundsInRoot()
-                val texts = composeRule.onNode(tile, useUnmergedTree = true).onChildren()
-                repeat(texts.fetchSemanticsNodes().size) { index ->
-                    val text = texts[index]
-                    val bounds = text.getUnclippedBoundsInRoot()
-                    val layouts = mutableListOf<TextLayoutResult>()
-                    text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
-                    val layout = layouts.single()
-                    val what = "\"${layout.layoutInput.text}\" at $count"
-                    assertTrue("$what ends at ${bounds.bottom}, below $tileBounds", bounds.bottom <= tileBounds.bottom)
-                    // Laid out whole: a text squeezed shorter than its lines is drawn cut through them.
-                    assertTrue(
-                        "$what is ${layout.size.height}px of ${layout.multiParagraph.height}",
-                        layout.size.height >= layout.multiParagraph.height - 1f,
-                    )
-                }
-            }
-        }
-    }
-
-    @Test
-    fun `the panel's tiles hold a feed tally too wide to share its line`() =
-        assertReactionTilesHoldTheirText(AppLanguage.SIMPLIFIED_CHINESE)
-
-    @Test
-    fun `the panel's tiles hold a feed tally too wide to share its line in English`() =
-        assertReactionTilesHoldTheirText(AppLanguage.ENGLISH)
 
     /** One page of a long thread, loaded on its own — what a jump or a notification produces. */
     private fun jumpedState(

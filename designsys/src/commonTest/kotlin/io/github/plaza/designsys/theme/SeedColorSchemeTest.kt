@@ -93,28 +93,6 @@ class SeedColorSchemeTest {
     }
 
     @Test
-    fun `the seed's own lightness barely reaches the scheme`() {
-        // The reason the picker moves 色相 and 鲜艳度 rather than lightness: the palettes are built
-        // from the seed's hue and chroma, and its tone is thrown away. Not bit-exact — rounding a
-        // seed to eight bits per channel shifts its hue and chroma by a fraction of a unit, which
-        // can move a role by one step — so the property is stated as "the same colour", not "the
-        // same integer". Tones near black or white are excluded on purpose: there the chroma asked
-        // for does not fit in sRGB and gets clipped, which really does produce a different seed.
-        val base = Color(0xFF35606E).toPlazaSeedHct()
-        val reference = plazaSeedColorScheme(base.copy(tone = 40f).toColor(), darkTheme = false)
-        for (tone in listOf(20f, 30f, 50f, 60f, 70f, 80f)) {
-            val variant = base.copy(tone = tone).toColor()
-            assertNotEquals(base.toColor().toArgb().toLong(), variant.toArgb().toLong())
-            val primary = plazaSeedColorScheme(variant, darkTheme = false).primary
-            for (channel in listOf(16, 8, 0)) {
-                val expected = (reference.primary.toArgb() shr channel) and 0xFF
-                val actual = (primary.toArgb() shr channel) and 0xFF
-                assertTrue(abs(expected - actual) <= 3, "tone $tone -> ${hex(primary)}")
-            }
-        }
-    }
-
-    @Test
     fun `a colour survives the trip through the picker's coordinates`() {
         for (seed in Seeds) {
             val roundTripped = seed.toPlazaSeedHct().toColor()

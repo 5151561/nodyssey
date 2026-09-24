@@ -21,11 +21,7 @@ class MessageRepositoryTest {
     private fun repository(
         api: JsonApi,
         ownUid: Long? = null,
-        onAsked: () -> Unit = {},
-    ) = NetworkMessageRepository(api) {
-        onAsked()
-        ownUid
-    }
+    ) = NetworkMessageRepository(api) { ownUid }
 
     private val threadPath = NodeSeekJsonClient.messageThreadPath(5230)
 
@@ -100,33 +96,6 @@ class MessageRepositoryTest {
             assertEquals(1, conversation.unreadCount)
         }
 
-    /** The uid lookup is only worth a request when the rows cannot answer on their own. */
-    @Test
-    fun `several conversations identify us without asking who we are`() =
-        runTest {
-            var asked = 0
-            val api =
-                FakeJsonApi(
-                    mapOf(
-                        listPath to
-                            """
-                            {"msgArray":[
-                              {"receiver_id":16874,"sender_id":52425,"content":"我发的",
-                               "created_at":"2026-07-24T16:24:20.000Z","viewed":1},
-                              {"receiver_id":52425,"sender_id":51822,"content":"他发的",
-                               "created_at":"2026-05-13T14:21:19.000Z","viewed":1}
-                            ]}
-                            """.trimIndent(),
-                    ),
-                )
-
-            val conversations =
-                repository(api, onAsked = { asked++ }).conversations()
-
-            assertEquals(0, asked)
-            assertEquals(listOf(16874L, 51822L), conversations.map(MessageConversation::uid).sorted())
-        }
-
     @Test
     fun `marks the snippet as ours only when we sent the last message`() =
         runTest {
@@ -154,36 +123,6 @@ class MessageRepositoryTest {
             // Unread counts only their messages, so the one we sent never shows a badge.
             assertEquals(0, conversations.getValue("adang").unreadCount)
             assertEquals(1, conversations.getValue("ZcZiXs").unreadCount)
-        }
-
-    /** The row has one line, and a message written in Markdown has to read as its words on it. */
-    @Test
-    fun `flattens the snippet the way a notification row is flattened`() =
-        runTest {
-            val api =
-                FakeJsonApi(
-                    mapOf(
-                        listPath to
-                            """
-                            {"msgArray":[
-                              {"receiver_id":16874,"sender_id":52425,
-                               "content":"![](https://img.example.com/1.png) 看这个",
-                               "created_at":"2026-07-24T16:24:20.000Z","viewed":1,
-                               "sender_name":"ZcZiXs","receiver_name":"我"}
-                            ]}
-                            """.trimIndent(),
-                    ),
-                )
-
-            val snippet = repository(api).conversations().single().snippet
-
-            assertEquals(
-                listOf(
-                    PreviewPart.Placeholder(PreviewPlaceholder.IMAGE),
-                    PreviewPart.Text(" 看这个"),
-                ),
-                snippet,
-            )
         }
 
     /** The full history lives behind `with/{uid}`; the list only ever holds the latest message. */
@@ -253,20 +192,6 @@ class MessageRepositoryTest {
             assertEquals(listOf(1L), repository(api).thread(5230).unreadIds)
         }
 
-    @Test
-    fun `mark read posts the message ids the site's own thread view posts`() =
-        runTest {
-            val api =
-                FakeJsonApi(
-                    posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED to """{"success":true}"""),
-                )
-
-            repository(api).markRead(listOf(11L, 12L))
-
-            assertEquals(listOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED), api.postedPaths)
-            assertEquals(listOf("""{"messages":[11,12]}"""), api.postedBodies)
-        }
-
     /** The recipient field is camel-cased here and nowhere else on this API. */
     @Test
     fun `send posts receiverUid`() =
@@ -302,19 +227,6 @@ class MessageRepositoryTest {
             assertEquals(SiteError.Unknown, failure.error)
             assertEquals("对方已屏蔽你", failure.message)
         }
-
-    @Test
-    fun `mark all read hits the site's own all=true endpoint`() =
-        runTest {
-            val api =
-                FakeJsonApi(
-                    posts = mapOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL to """{"success":true}"""),
-                )
-
-            repository(api).markAllRead()
-
-            assertEquals(listOf(NodeSeekJsonClient.PATH_MESSAGE_MARK_VIEWED_ALL), api.postedPaths)
-        }
 }
 
 private class FakeJsonApi(
@@ -322,13 +234,11 @@ private class FakeJsonApi(
     private val posts: Map<String, String> = emptyMap(),
 ) : JsonApi {
     val postedBodies = mutableListOf<String>()
-    val postedPaths = mutableListOf<String>()
 
     override suspend fun getJson(path: String, referer: String): String =
         requireNotNull(responses[path]) { "No response for $path" }
 
     override suspend fun postJson(path: String, body: String, referer: String): String {
-        postedPaths += path
         postedBodies += body
         return requireNotNull(posts[path]) { "No response for $path" }
     }

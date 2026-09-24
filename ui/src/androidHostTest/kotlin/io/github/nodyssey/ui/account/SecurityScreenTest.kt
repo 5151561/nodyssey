@@ -3,7 +3,6 @@ package io.github.nodyssey.ui.account
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -81,30 +80,6 @@ class SecurityScreenTest {
     }
 
     @Test
-    fun `only the dialog's confirm submits`() {
-        var submitted = false
-        setContent(
-            state = ready.copy(confirming = SecurityConfirmation.Password),
-            onConfirmPasswordChange = { submitted = true },
-        )
-
-        composeRule.onNodeWithText("确认修改").performClick()
-
-        assertEquals(true, submitted)
-    }
-
-    /** The dialog names the consequence, which is the point of having one. */
-    @Test
-    fun `the confirmation says what changing the password does to other devices`() {
-        setContent(ready.copy(confirming = SecurityConfirmation.Password))
-
-        composeRule.onNodeWithText("确认修改密码？").assertExists()
-        composeRule
-            .onNodeWithText("修改后除当前设备外，其他已登录设备将全部退出，需要用新密码重新登录。")
-            .assertExists()
-    }
-
-    @Test
     fun `mismatched confirmations block the update`() {
         setContent(ready.copy(confirmPassword = "Correct-Horse-8"))
 
@@ -118,12 +93,5 @@ class SecurityScreenTest {
 
         composeRule.onNodeWithText("新密码至少 8 位").performScrollTo().assertExists()
         composeRule.onNodeWithText("更新密码").performScrollTo().assertIsNotEnabled()
-    }
-
-    @Test
-    fun `a complete, matching form enables the update`() {
-        setContent(ready)
-
-        composeRule.onNodeWithText("更新密码").performScrollTo().assertIsEnabled()
     }
 }

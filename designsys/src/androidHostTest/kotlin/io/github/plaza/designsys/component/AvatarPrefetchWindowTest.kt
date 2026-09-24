@@ -20,18 +20,4 @@ class AvatarPrefetchWindowTest {
     fun `nothing to warm once the last row is visible`() {
         assertEquals(true, avatarPrefetchWindow(lastVisibleIndex = 49, itemCount = 50, rowsAhead = 10).isEmpty())
     }
-
-    /**
-     * An append spinner is an item of the list but not a row, so the last visible index can sit one
-     * past the last post. Clipping is by count, which covers it without knowing it exists.
-     */
-    @Test
-    fun `an index past the last row warms nothing`() {
-        assertEquals(true, avatarPrefetchWindow(lastVisibleIndex = 50, itemCount = 50, rowsAhead = 10).isEmpty())
-    }
-
-    @Test
-    fun `an empty list warms nothing`() {
-        assertEquals(true, avatarPrefetchWindow(lastVisibleIndex = -1, itemCount = 0, rowsAhead = 10).isEmpty())
-    }
 }

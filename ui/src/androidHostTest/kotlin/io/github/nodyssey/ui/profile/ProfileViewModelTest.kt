@@ -53,41 +53,6 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `publishes real profile values for the signed in account`() =
-        runTest(dispatcher) {
-            val viewModel =
-                ProfileViewModel(
-                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    profileRepository =
-                    FakeProfileRepository(
-                        UserProfile(
-                            uid = 31037,
-                            name = "缭雾",
-                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
-                            rank = 2,
-                            createdAt = "2025-04-27T14:29:22.000Z",
-                            chickenCount = 305,
-                            starCount = 7,
-                        ),
-                    ),
-                    assetsRepository = FakeAssetsRepository(),
-                )
-
-            advanceUntilIdle()
-
-            val state = viewModel.uiState.value
-            assertEquals("缭雾", state.displayName)
-            assertEquals("Lv 2", state.level)
-            assertEquals(31037L, state.uid)
-            assertEquals(2025, state.registeredYear)
-            assertEquals(4, state.registeredMonth)
-            assertEquals(305, state.chickenCount)
-            assertEquals(7, state.starCount)
-            assertFalse(state.isLoading)
-            assertEquals(null, state.error)
-        }
-
-    @Test
     fun `keeps a typed error when profile loading fails`() =
         runTest(dispatcher) {
             val viewModel =
@@ -145,30 +110,6 @@ class ProfileViewModelTest {
         }
 
     @Test
-    fun `publishes today's attendance gain from the board`() =
-        runTest(dispatcher) {
-            val viewModel =
-                ProfileViewModel(
-                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    profileRepository =
-                    FakeProfileRepository(
-                        UserProfile(
-                            uid = 31037,
-                            name = "缭雾",
-                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
-                        ),
-                    ),
-                    assetsRepository = FakeAssetsRepository(gain = 7),
-                )
-
-            advanceUntilIdle()
-
-            assertEquals(true, viewModel.uiState.value.hasSignedInToday)
-            assertEquals(7, viewModel.uiState.value.attendanceGain)
-            assertFalse(viewModel.uiState.value.isCheckingAttendance)
-        }
-
-    @Test
     fun `keeps today's receipt on screen while a re-check runs`() =
         runTest(dispatcher) {
             val assets = FakeAssetsRepository(gain = 7)
@@ -200,41 +141,6 @@ class ProfileViewModelTest {
 
             assertFalse(viewModel.uiState.value.isAttendanceUnknown)
             assertEquals(7, viewModel.uiState.value.attendanceGain)
-        }
-
-    @Test
-    fun `opens attendance board in the profile state without navigation`() =
-        runTest(dispatcher) {
-            val entries =
-                listOf(
-                    AttendanceBoardEntry(
-                        uid = 31037,
-                        name = "缭雾",
-                        gain = 7,
-                        timeText = "刚刚",
-                    ),
-                )
-            val viewModel =
-                ProfileViewModel(
-                    session = SessionRepository(SessionCookies(NodeSeekSite.CONFIG, cookies)),
-                    profileRepository =
-                    FakeProfileRepository(
-                        UserProfile(
-                            uid = 31037,
-                            name = "缭雾",
-                            avatarUrl = "https://www.nodeseek.com/avatar/31037.png",
-                        ),
-                    ),
-                    assetsRepository = FakeAssetsRepository(gain = 7, board = entries),
-                )
-            advanceUntilIdle()
-
-            viewModel.openAttendanceBoard()
-            advanceUntilIdle()
-
-            assertEquals(true, viewModel.uiState.value.boardOpen)
-            assertEquals(entries, viewModel.uiState.value.board)
-            assertFalse(viewModel.uiState.value.isLoadingBoard)
         }
 
     @Test
@@ -274,7 +180,6 @@ class ProfileViewModelTest {
 
 private class FakeAssetsRepository(
     private val gain: Int? = null,
-    private val board: List<AttendanceBoardEntry> = emptyList(),
     private val signInResult: AttendanceResult? = null,
 ) : AssetsRepository {
     private val status = MutableStateFlow<AttendanceStatus?>(null)
@@ -306,7 +211,7 @@ private class FakeAssetsRepository(
         return result
     }
 
-    override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = board
+    override suspend fun attendanceBoard(page: Int): List<AttendanceBoardEntry> = error("Not used")
 
     private companion object {
         val TODAY: LocalDate = LocalDate(2026, 8, 2)

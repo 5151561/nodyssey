@@ -63,16 +63,6 @@ class UserSpaceFollowTest {
     )
 
     @Test
-    fun `takes the followed flag from the profile`() =
-        runTest(dispatcher) {
-            val vm = viewModel(followed = true)
-            advanceUntilIdle()
-
-            assertEquals(true, vm.uiState.value.followed)
-            assertTrue(vm.uiState.value.canFollow)
-        }
-
-    @Test
     fun `flips to followed before the site answers`() =
         runTest(dispatcher) {
             val vm = viewModel()

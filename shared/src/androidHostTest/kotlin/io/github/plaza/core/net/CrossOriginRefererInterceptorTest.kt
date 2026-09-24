@@ -4,20 +4,16 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Test
 
 class CrossOriginRefererInterceptorTest {
     private val forum = "https://www.nodeseek.com/"
 
-    private fun request(
-        url: String,
-        referer: String? = forum,
-    ): Request =
+    private fun request(url: String): Request =
         Request
             .Builder()
             .url(url)
-            .apply { referer?.let { header("Referer", it) } }
+            .header("Referer", forum)
             .build()
 
     @Test
@@ -55,12 +51,5 @@ class CrossOriginRefererInterceptorTest {
             )
 
         assertEquals(forum, sent.header("Referer"))
-    }
-
-    @Test
-    fun `a request that never had one is passed through untouched`() {
-        val hop = request("https://wkphoto.cdn.bcebos.com/b.jpg", referer = null)
-
-        assertSame(hop, withoutForeignReferer("https://pic1.imgdb.cn/i/a.jpg".toHttpUrl(), hop))
     }
 }

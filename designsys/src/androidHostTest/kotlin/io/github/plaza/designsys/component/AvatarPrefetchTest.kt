@@ -18,7 +18,6 @@ import coil3.compose.setSingletonImageLoaderFactory
 import coil3.request.ImageRequest
 import coil3.test.FakeImageLoaderEngine
 import io.github.plaza.designsys.theme.PlazaTheme
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -31,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The list has fifty rows and shows eight of them. Without [PrefetchAvatars] the other forty-two
  * avatars are not asked for until the reader scrolls onto them, one row at a time; this is the test
- * that says they are asked for beforehand — and that "beforehand" stops well short of the whole page.
+ * that says they are asked for beforehand. Where "beforehand" stops is [AvatarPrefetchWindowTest]'s.
  */
 @OptIn(ExperimentalCoilApi::class, DelicateCoilApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -94,16 +93,6 @@ class AvatarPrefetchTest {
         // cannot see — and the first this exists to fetch anyway.
         composeRule.waitUntil(TIMEOUT) { avatarUrl(FIRST_HIDDEN) in requested }
         assertTrue(requested.toString(), avatarUrl(FIRST_HIDDEN + 9) in requested)
-    }
-
-    /** Fifty avatars is several megabytes; a reader who stops at row three must not pay for it. */
-    @Test
-    fun `the rest of the page is left alone`() {
-        setContent()
-        composeRule.waitUntil(TIMEOUT) { avatarUrl(FIRST_HIDDEN) in requested }
-        composeRule.waitForIdle()
-        assertFalse(requested.toString(), avatarUrl(FIRST_HIDDEN + 10) in requested)
-        assertFalse(requested.toString(), avatarUrl(ROWS - 1) in requested)
     }
 
     private companion object {

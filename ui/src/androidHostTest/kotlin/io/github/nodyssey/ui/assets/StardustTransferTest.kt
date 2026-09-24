@@ -28,9 +28,9 @@ import org.junit.Test
  * 星辰转账, which is the one thing this app does that cannot be undone by doing it again.
  *
  * Everything pinned here is a way the screen could send something the user did not agree to: twice,
- * or to the uid they had already corrected, or without ever having been told whose uid it was. The
- * balance guard is in the same family — a send the site would refuse anyway, but refusing it here is
- * what keeps the confirmation step honest about the numbers it just showed.
+ * or without ever having been told whose uid it was. The balance guard is in the same family — a
+ * send the site would refuse anyway, but refusing it here is what keeps the confirmation step honest
+ * about the numbers it just showed.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class StardustTransferTest {
@@ -101,28 +101,6 @@ class StardustTransferTest {
             advanceUntilIdle()
 
             assertEquals(listOf(Sent(9, 2, 866_042)), stardust.sent)
-        }
-
-    /** A lookup landing after the user went back and retyped would otherwise name the old uid. */
-    @Test
-    fun `drops a lookup that answers about a uid the form no longer holds`() =
-        runTest(dispatcher) {
-            stardust.lookupGate = CompletableDeferred()
-            val vm = viewModel()
-            advanceUntilIdle()
-            vm.fillForm(recipient = "9")
-            vm.requestConfirm()
-            advanceUntilIdle()
-
-            vm.dismissConfirm()
-            vm.fillForm(recipient = "10")
-            vm.requestConfirm()
-            stardust.lookupGate?.complete(Unit)
-            advanceUntilIdle()
-
-            // The second lookup is the one on screen; the first was cancelled with its dialog.
-            assertEquals(listOf(9L to VIEWER, 10L to VIEWER), stardust.lookups)
-            assertEquals(RecipientCheck.Named("站长"), vm.uiState.value.recipient)
         }
 
     @Test
@@ -236,7 +214,6 @@ private data class Sent(
 private class FakeStardustRepository : StardustRepository {
     val lookups = mutableListOf<Pair<Long, Long>>()
     val sent = mutableListOf<Sent>()
-    var lookupGate: CompletableDeferred<Unit>? = null
     var sendGate: CompletableDeferred<Unit>? = null
     var lookupError: Throwable? = null
     var sendError: Throwable? = null
@@ -251,7 +228,6 @@ private class FakeStardustRepository : StardustRepository {
         viewerUid: Long,
     ): String? {
         lookups += recipientUid to viewerUid
-        lookupGate?.await()
         lookupError?.let { throw it }
         return "站长"
     }

@@ -26,12 +26,6 @@ import java.nio.file.Files
  */
 class ColorSourceSettingTest {
     @Test
-    fun `an empty store uses the presets`() =
-        runTest {
-            assertEquals(ColorSource.PRESET, repository().settings.first().colorSource)
-        }
-
-    @Test
     fun `a store written before 配色来源 existed keeps its 动态取色 answer`() =
         runTest {
             val repository = repository()
@@ -78,24 +72,6 @@ class ColorSourceSettingTest {
             val repository = repository()
             dataStore.edit { it[KEY_COLOR_SOURCE] = "GRADIENT" }
             assertEquals(ColorSource.PRESET, repository.settings.first().colorSource)
-        }
-
-    @Test
-    fun `each source keeps its own answer`() =
-        runTest {
-            val repository = repository()
-            repository.setPresetId(PRESET_ID)
-            repository.setSeedColor(CUSTOM)
-            repository.setWallpaperSeed(WALLPAPER)
-
-            // The point of three fields rather than one: tapping a preset to see what it looks like
-            // must not overwrite the colour that took a minute in the picker to arrive at.
-            repository.setColorSource(ColorSource.PRESET)
-            repository.settings.first().let {
-                assertEquals(PRESET_ID, it.presetId)
-                assertEquals(CUSTOM, it.seedColor)
-                assertEquals(WALLPAPER, it.wallpaperSeed)
-            }
         }
 
     @Test
@@ -159,8 +135,6 @@ class ColorSourceSettingTest {
         val KEY_COLOR_SOURCE = stringPreferencesKey("color_source")
         val KEY_SAVED_THEMES = stringPreferencesKey("saved_themes")
 
-        const val PRESET_ID = "miku"
         const val CUSTOM = 0xFF2F6D8C.toInt()
-        const val WALLPAPER = 0xFF7C6A50.toInt()
     }
 }

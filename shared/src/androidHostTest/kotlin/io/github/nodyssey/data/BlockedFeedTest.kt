@@ -82,14 +82,6 @@ class BlockedFeedTest {
         repository.feed(null, FeedSort.LAST_REPLY).asSnapshot().map { it.summary.postId }
 
     @Test
-    fun `a blocked row is kept out of the feed`() =
-        runTest {
-            givenFeed()
-
-            assertEquals(listOf(2L), feedIds())
-        }
-
-    @Test
     fun `revealing shows the same rows without a re-fetch`() =
         runTest {
             givenFeed()

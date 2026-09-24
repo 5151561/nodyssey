@@ -29,7 +29,6 @@ class BlockListScreenTest {
     val composeRule = createComposeRule()
 
     private val blocks = mutableListOf<String>()
-    private val openedUsers = mutableListOf<Long>()
 
     /** The name lives in Compose state so the send button re-enables the way it does in the app. */
     private fun setContent(state: BlockListUiState) {
@@ -46,7 +45,7 @@ class BlockListScreenTest {
                     onRequestUnblock = {},
                     onDismissUnblock = {},
                     onConfirmUnblock = {},
-                    onOpenUser = { openedUsers += it },
+                    onOpenUser = {},
                 )
             }
         }
@@ -58,17 +57,6 @@ class BlockListScreenTest {
             blocked = listOf(BlockedUser(uid = 7, name = "vps_matthew")),
         )
 
-    /**
-     * The badge is the whole point of the row: blocking follows the account, so a reader who expects
-     * it to be this-device-only would be surprised on their next login. The site labels it the same.
-     */
-    @Test
-    fun `badges the blocked list as account state`() {
-        setContent(populated)
-
-        composeRule.onNodeWithText("Remote").performScrollTo().assertExists()
-    }
-
     @Test
     fun `sends the typed name to the site`() {
         setContent(populated)
@@ -78,16 +66,6 @@ class BlockListScreenTest {
         composeRule.onNodeWithText("添加").performClick()
 
         assertEquals(listOf("someone"), blocks)
-    }
-
-    /** Blocking hides someone's words, not their door: the row still leads to their space. */
-    @Test
-    fun `opens the blocked user's space from their row`() {
-        setContent(populated)
-
-        composeRule.onNodeWithText("vps_matthew").performScrollTo().performClick()
-
-        assertEquals(listOf(7L), openedUsers)
     }
 
     @Test

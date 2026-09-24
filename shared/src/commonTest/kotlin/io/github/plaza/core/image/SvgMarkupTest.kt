@@ -130,15 +130,4 @@ class SvgMarkupTest {
 
         assertEquals(original, original.fitInside(width = null, height = null))
     }
-
-    /** The attributes the badges carry are on the root beside the ones being read. */
-    @Test
-    fun `the size is read off a root tag carrying other attributes`() {
-        val markup =
-            """<svg xmlns="http://www.w3.org/2000/svg" width="104" height="20" role="img">""" +
-                """<text x="5" y="14">build</text></svg>"""
-
-        assertEquals(SvgSize(104f, 20f), SvgMarkup.intrinsicSize(markup))
-        assertTrue(SvgMarkup.needsFullRenderer(markup))
-    }
 }

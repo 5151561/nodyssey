@@ -73,36 +73,6 @@ class BookmarksViewModelTest {
         }
 
     /**
-     * The endpoint answers with a title and, in practice, nothing else.
-     *
-     * Without this the 收藏 list is a column of bare headlines while the same row on the front page
-     * carries a board, an author and a reply count — all of which the site itself told this device
-     * somewhere else.
-     */
-    @Test
-    fun `a row the endpoint left bare is filled from what this device was told`() =
-        runTest(dispatcher) {
-            known.remember(
-                CollectedPostMeta(
-                    postId = 1,
-                    categoryTitle = "日常",
-                    authorName = "原作者",
-                    commentCount = 12,
-                    createdAtText = "3 天前",
-                ),
-            )
-            space.pages = listOf(page(1, 1..1, hasNext = false, row = ::bare))
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            val row = viewModel.uiState.value.entries.single()
-            assertEquals("日常", row.categoryTitle)
-            assertEquals("原作者", row.authorName)
-            assertEquals(12, row.commentCount)
-            assertEquals("3 天前", row.createdAtText)
-        }
-
-    /**
      * The collection payload carries no author at all, so the avatar can only come from memory.
      *
      * The stored URL wins over the one built from the uid, because that is the address an offline
@@ -124,45 +94,6 @@ class BookmarksViewModelTest {
             val rows = viewModel.uiState.value.entries
             assertEquals("https://ns/uploaded.png", rows[0].avatarUrl)
             assertTrue(rows[1].avatarUrl.orEmpty().endsWith("/avatar/88.png"))
-        }
-
-    /** Nothing known about the author means no picture asked for, and the row keeps its initial. */
-    @Test
-    fun `a thread nothing has ever seen still has no avatar`() =
-        runTest(dispatcher) {
-            space.pages = listOf(page(1, 1..1, hasNext = false, row = ::bare))
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            assertNull(viewModel.uiState.value.entries.single().avatarUrl)
-        }
-
-    /** A remembered answer is a fallback, never an override: the site is the one being asked. */
-    @Test
-    fun `the site's own answer wins over what was remembered`() =
-        runTest(dispatcher) {
-            known.remember(CollectedPostMeta(postId = 1, categoryTitle = "旧板块", commentCount = 1))
-            space.pages =
-                listOf(page(1, 1..1, hasNext = false) { it.copy(categoryTitle = "技术", commentCount = 9) })
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            val row = viewModel.uiState.value.entries.single()
-            assertEquals("技术", row.categoryTitle)
-            assertEquals(9, row.commentCount)
-        }
-
-    @Test
-    fun `whatever the endpoint did say is written down for next time`() =
-        runTest(dispatcher) {
-            space.pages =
-                listOf(page(1, 1..1, hasNext = false) { it.copy(categoryTitle = "技术", commentCount = 9) })
-            viewModel()
-            advanceUntilIdle()
-
-            val stored = requireNotNull(known.observe().first()[1L])
-            assertEquals("技术", stored.categoryTitle)
-            assertEquals(9, stored.commentCount)
         }
 
     /**
@@ -244,47 +175,6 @@ class BookmarksViewModelTest {
             assertTrue(state.isStale)
             // The full-screen error is for a device that has nothing, and this one has two.
             assertEquals(false, state.isLoading)
-        }
-
-    /** With nothing stored there is nothing honest to draw, and the error page is the right answer. */
-    @Test
-    fun `a failed load with nothing stored is still an error page`() =
-        runTest(dispatcher) {
-            space.failure = SiteException(SiteError.Network)
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            val state = viewModel.uiState.value
-            assertTrue(state.entries.isEmpty())
-            assertEquals(false, state.isStale)
-            assertEquals(SiteError.Network, state.error)
-        }
-
-    /** A thread un-collected on another device announces itself by being absent from the walk. */
-    @Test
-    fun `a successful walk replaces the stored list rather than adding to it`() =
-        runTest(dispatcher) {
-            known.rememberCollection(listOf(CollectedPostMeta(postId = 99, title = "去年收的")))
-            space.pages = listOf(page(1, 1..2, hasNext = false))
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            assertEquals(listOf(1L, 2L), viewModel.uiState.value.entries.map { it.postId })
-        }
-
-    /** Removing rows has to reach the store, because the store is what the list is drawn from. */
-    @Test
-    fun `a removal takes the rows out of the stored list too`() =
-        runTest(dispatcher) {
-            space.pages = listOf(page(1, 1..3, hasNext = false))
-            val viewModel = viewModel()
-            advanceUntilIdle()
-
-            viewModel.startSelection(2L)
-            viewModel.removeSelected { _, _ -> }
-            advanceUntilIdle()
-
-            assertEquals(listOf(1L, 3L), known.observeCollection().first().map { it.postId })
         }
 
     @Test

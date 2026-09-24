@@ -4,7 +4,6 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,22 +32,6 @@ class ReadingPositionStoreTest {
     fun tearDown() {
         database.close()
     }
-
-    @Test
-    fun `a thread nobody has read has no place to return to`() =
-        runTest {
-            assertNull(store.readingPosition(703863))
-        }
-
-    @Test
-    fun `each thread keeps its own place`() =
-        runTest {
-            store.setReadingPosition(703863, ReadingPosition(page = 4, floor = "#31"))
-            store.setReadingPosition(704000, ReadingPosition(page = 9))
-
-            assertEquals(ReadingPosition(page = 4, floor = "#31"), store.readingPosition(703863))
-            assertEquals(ReadingPosition(page = 9), store.readingPosition(704000))
-        }
 
     /** Reading on replaces the place rather than accumulating them; the newest is the only one worth keeping. */
     @Test

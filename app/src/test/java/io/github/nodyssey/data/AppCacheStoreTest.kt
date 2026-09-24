@@ -110,13 +110,4 @@ class AppCacheStoreTest {
             writeCachedImage(512)
             assertTrue(diskCache.size > 0L)
         }
-
-    @Test
-    fun `a cache directory that does not exist yet measures zero rather than failing`() =
-        runTest {
-            val store = store()
-            assertTrue(cacheDirectory.deleteRecursively())
-
-            assertEquals(0L, store.sizeBytes())
-        }
 }

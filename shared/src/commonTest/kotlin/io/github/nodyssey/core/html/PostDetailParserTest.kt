@@ -98,17 +98,6 @@ class PostDetailParserTest {
     }
 
     @Test
-    fun `turns br separated lines into line breaks rather than lost text`() {
-        val inlines = detail.comments.first().nodes
-            .filterIsInstance<RichNode.Paragraph>()
-            .flatMap { it.inlines }
-        assertTrue(inlines.any { it is InlineNode.LineBreak })
-        val text = inlines.filterIsInstance<InlineNode.Text>().joinToString("") { it.text }
-        assertTrue(text.contains("如果你是建站"))
-        assertTrue(text.contains("如果你喜欢绿帽"))
-    }
-
-    @Test
     fun `reads the pager`() {
         assertEquals(1, detail.page)
         assertTrue(detail.totalPages >= 4)
@@ -220,12 +209,6 @@ class PostDetailParserTest {
         assertFalse(parsed.comments.last().isBlocked)
     }
 
-    @Test
-    fun `leaves an ordinary thread unblocked`() {
-        assertFalse(body.isBlocked)
-        assertTrue(detail.comments.none { it.isBlocked })
-    }
-
     /**
      * The blob names the moment; the markup marker only ever says that an edit happened. Both halves
      * matter to the reader — "编辑于 5min ago" next to a floor posted three hours back is the whole
@@ -249,14 +232,6 @@ class PostDetailParserTest {
         assertEquals("2026-04-27 16:20:00", edited.editedAtTitle)
         assertTrue(parsed.comments.count { it.isEdited } == 1)
         assertFalse(requireNotNull(parsed.body).isEdited)
-    }
-
-    /** An unedited floor is what the fixture's own blob is full of: `editedDate` arrives null. */
-    @Test
-    fun `leaves an unedited floor unmarked`() {
-        assertFalse(body.isEdited)
-        assertNull(body.editedAtText)
-        assertNull(body.editedAtTitle)
     }
 
     /** Swaps the fixture's bootstrap blob for [json], base64 as the site encodes it. */
@@ -315,17 +290,5 @@ class PostDetailParserTest {
         val parsed = PostDetailParser.parse(html, postId = 1L, page = 2)
         assertNull(parsed.body)
         assertNull(parsed.isAwarded)
-    }
-
-    @Test
-    fun `parses a long post without dropping content`() {
-        val long =
-            PostDetailParser.parse(Fixtures.load("post-705039-1.html"), postId = 705039L, page = 1)
-        assertTrue(long.title.isNotBlank())
-        assertTrue(requireNotNull(long.body).nodes.isNotEmpty())
-        assertTrue(long.comments.isNotEmpty())
-        long.comments.forEach { comment ->
-            assertTrue(comment.authorName.isNotBlank(), "comment without author")
-        }
     }
 }

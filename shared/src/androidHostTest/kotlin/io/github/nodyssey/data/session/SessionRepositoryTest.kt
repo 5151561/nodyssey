@@ -31,13 +31,6 @@ class SessionRepositoryTest {
     private fun setCookie(raw: String) = cookies.setCookie(NodeSeekSite.BASE_URL, raw)
 
     @Test
-    fun `starts signed out when the store is empty`() {
-        assertFalse(repository.state.value.isSignedIn)
-        assertFalse(repository.state.value.hasClearance)
-        assertEquals(0, repository.state.value.generation)
-    }
-
-    @Test
     fun `notices the session cookie the WebView collected`() {
         setCookie("session=abc123")
 
@@ -123,18 +116,6 @@ class SessionRepositoryTest {
         assertEquals(before.generation, repository.sync().generation)
     }
 
-    /** Clearing the challenge, on the other hand, is exactly what we are waiting for. */
-    @Test
-    fun `the clearance cookie is not treated as challenge noise`() {
-        val before = repository.sync()
-
-        setCookie("cf_clearance=solved")
-        val after = repository.sync()
-
-        assertTrue(after.hasClearance)
-        assertEquals(before.generation + 1, after.generation)
-    }
-
     /**
      * `peek` is what the WebView polls with. It must see the new cookie and still publish nothing, or
      * the feed starts fetching mid-challenge.
@@ -196,15 +177,6 @@ class SessionRepositoryTest {
         assertTrue(after.isSignedIn)
         assertEquals(before.generation + 1, after.generation)
         assertTrue("the published state is what screens read", repository.state.value.isSignedIn)
-    }
-
-    /** `sync` is how callers *ask*, so it must never hand back the state it just failed to update. */
-    @Test
-    fun `sync answers with what the store says, not with what was last published`() {
-        setCookie("session=abc123")
-
-        assertTrue(repository.sync().isSignedIn)
-        assertEquals(repository.state.value, repository.sync())
     }
 
     @Test

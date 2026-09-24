@@ -357,7 +357,6 @@ private fun RichBlock(
                     // lines in Chinese means a short one. post-584268's `GitHub项目地址（欢迎Star
                     // 关注）： <url>` came out filling 0.69 of the column against greedy's 0.92,
                     // with `关注）：` pushed onto the next line while 305px sat empty beside it.
-                    // See `ProseLineBreakTest`.
                 ),
                 onLinkClick = onLinkClick,
                 onQuoteRefClick = onQuoteRefClick,
@@ -1395,7 +1394,7 @@ private fun InlineText(
      *
      * A paragraph that kept its rhythm needs none of it: its leading already stands the sticker off
      * its neighbours, and a taller box there would push every line holding a 20sp 表情 a dp past the
-     * 27sp it is supposed to be — which is what `InlineStickerSizeTest` pins down.
+     * 27sp it is supposed to be.
      */
     val stickerGap =
         with(density) {

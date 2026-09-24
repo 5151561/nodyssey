@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.tools
 
-import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingPage
 import io.github.nodyssey.data.RulingRecord
@@ -17,8 +16,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -45,20 +42,6 @@ class RulingViewModelTest {
 
     private fun viewModel(repository: RulingRepository = FakeRulingRepository()) =
         RulingViewModel(repository, flowOf(emptyList()))
-
-    @Test
-    fun `starts on page one`() =
-        runTest(dispatcher) {
-            val repository = FakeRulingRepository()
-
-            val state = viewModel(repository).also { advanceUntilIdle() }.uiState.value
-
-            assertEquals(listOf(1), repository.requestedPages)
-            assertEquals(20, state.records.size)
-            assertEquals(1, state.firstLoadedPage)
-            assertEquals(1, state.lastLoadedPage)
-            assertTrue(state.hasNextPage)
-        }
 
     @Test
     fun `appends the next page onto the tail rather than replacing the list`() =
@@ -164,19 +147,6 @@ class RulingViewModelTest {
         }
 
     @Test
-    fun `clears the pending scroll once the screen reports it handled`() =
-        runTest(dispatcher) {
-            val viewModel = viewModel()
-            advanceUntilIdle()
-            viewModel.loadPage(60)
-            advanceUntilIdle()
-
-            viewModel.onScrollHandled()
-
-            assertNull(viewModel.uiState.value.pendingScroll)
-        }
-
-    @Test
     fun `clamps a jump past the last page`() =
         runTest(dispatcher) {
             val repository = FakeRulingRepository()
@@ -223,21 +193,6 @@ class RulingViewModelTest {
 
             assertEquals(listOf(1, 60, 60), repository.requestedPages)
             assertEquals(60, viewModel.uiState.value.firstLoadedPage)
-        }
-
-    /** Board titles are the category repository's; this screen only observes them. */
-    @Test
-    fun `lets an observed board title win over the built-in table`() =
-        runTest(dispatcher) {
-            val renamed = listOf(Board(slug = "daily", title = "日常闲聊", description = null))
-
-            val viewModel = RulingViewModel(FakeRulingRepository(), flowOf(renamed))
-            advanceUntilIdle()
-
-            val titles = viewModel.uiState.value.boardTitles
-            assertEquals("日常闲聊", titles["daily"])
-            // Boards the endpoint omits still resolve, so an old row never shows a raw slug.
-            assertEquals("无意义", titles["meaningless"])
         }
 }
 

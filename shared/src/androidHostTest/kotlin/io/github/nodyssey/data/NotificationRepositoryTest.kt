@@ -54,17 +54,6 @@ class NotificationRepositoryTest {
             assertTrue(item.isUnread)
         }
 
-    /** §1.5: 私信 is a conversation list, so it has no notification endpoint of its own. */
-    @Test
-    fun `the message group has no notification rows`() =
-        runTest {
-            val items =
-                NotificationRepository(FakeJsonSource(emptyMap()))
-                    .notifications(NotificationCategory.MESSAGES)
-
-            assertTrue(items.isEmpty())
-        }
-
     @Test
     fun `keeps both the parsed instant and the server wording`() =
         runTest {

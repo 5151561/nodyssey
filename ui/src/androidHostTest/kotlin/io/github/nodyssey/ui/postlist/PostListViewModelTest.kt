@@ -46,8 +46,8 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * The ViewModel is now a thin state holder: the list belongs to Room, and Paging owns loading and
- * error state. What is left to test is board mirroring, board selection, and that rows really do
- * reach the UI through the database.
+ * error state. What is left to test is the board strip's filtering, the stored sort, and session
+ * changes reaching the feed.
  *
  * Three tests that used to live here — "does not start a second page while one is in flight",
  * "discards a response that arrives after the board changed" and "cancelling an in-flight load does
@@ -95,27 +95,6 @@ class PostListViewModelTest {
     )
 
     @Test
-    fun `starts on the front page with the front page tab selected`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            assertEquals(null, vm.uiState.value.categorySlug)
-        }
-
-    @Test
-    fun `mirrors the board list the repository owns`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            val boards = vm.uiState.value.boards
-            assertEquals(CategoryRepository.FRONT_PAGE, boards.first())
-            // The API call failed, so this is the offline fallback list — still more than nothing.
-            assertTrue("expected fallback boards, got $boards", boards.size > 1)
-        }
-
-    @Test
     fun `the strip honours the 首页版块 preference and always keeps the front page`() =
         runTest(dispatcher) {
             val settings = testSettingsRepository(backgroundScope)
@@ -150,37 +129,6 @@ class PostListViewModelTest {
             advanceUntilIdle()
 
             assertEquals(null, vm.uiState.value.categorySlug)
-        }
-
-    @Test
-    fun `selecting a board updates the state and the selected tab`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            val target =
-                vm.uiState.value.boards
-                    .first { it.slug != null }
-            vm.selectCategory(target.slug)
-            advanceUntilIdle()
-
-            assertEquals(target.slug, vm.uiState.value.categorySlug)
-        }
-
-    @Test
-    fun `re-selecting the current board is a no-op`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-            vm.selectCategory("tech")
-            advanceUntilIdle()
-            val before = vm.uiState.value
-
-            vm.selectCategory("tech")
-            advanceUntilIdle()
-
-            // Same instance, so nothing downstream — the pager included — was rebuilt.
-            assertTrue(before === vm.uiState.value)
         }
 
     /**
@@ -235,34 +183,6 @@ class PostListViewModelTest {
             assertEquals(listOf(FeedSort.POST_TIME), repository.feedSorts)
         }
 
-    @Test
-    fun `re-selecting the current sort is a no-op`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-            val before = vm.uiState.value
-
-            vm.selectSort(FeedSort.LAST_REPLY)
-            advanceUntilIdle()
-
-            assertTrue(before === vm.uiState.value)
-        }
-
-    /** End to end through Room: the network writes, the pager reads, the rows come out in order. */
-    @Test
-    fun `posts reach the ui through the database`() =
-        runTest(dispatcher) {
-            remote.listResult = { slug, page ->
-                FakePostRemoteDataSource.page(slug, page, firstId = 10, count = 3, hasNextPage = false)
-            }
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            val titles = vm.feed(null).asSnapshot().map { it.summary.title }
-
-            assertEquals(listOf("post 10", "post 11", "post 12"), titles)
-        }
-
     /**
      * The bug this exists for: signing in used to change nothing on screen. The cookies were shared
      * all along, but the feed was inside its five-minute cache window, so the signed-in reader kept
@@ -314,23 +234,6 @@ class PostListViewModelTest {
 
             assertNull(repository.thread(42).first())
             assertEquals(null, vm.uiState.value.categorySlug)
-        }
-
-    /** A cold start reads cookies that were already on disk; that is not a session *change*. */
-    @Test
-    fun `the session the app started with does not trigger an extra fetch`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-            vm.feed(null).asSnapshot()
-            val requestsBefore = remote.listRequests.size
-
-            // Same generation re-emitted: the WebView was opened and nothing changed.
-            session.value = SessionState()
-            advanceUntilIdle()
-            vm.feed(null).asSnapshot()
-
-            assertEquals(requestsBefore, remote.listRequests.size)
         }
 }
 

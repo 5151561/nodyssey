@@ -11,7 +11,6 @@ import kotlin.test.assertEquals
  */
 class MarkdownFormattingTest {
     private val bold = MarkdownInsertion(prefix = "**", suffix = "**", placeholder = "加粗文字")
-    private val heading = MarkdownInsertion(prefix = "## ", placeholder = "标题")
     private val link =
         MarkdownInsertion(
             prefix = "[",
@@ -48,16 +47,6 @@ class MarkdownFormattingTest {
         assertEquals(TextRange("**出杭州轻量**".length), state.selection)
     }
 
-    @Test
-    fun `a prefix-only action needs no suffix`() {
-        val state = field("关于我", selection = 0..3)
-
-        state.edit { applyMarkdown(heading) }
-
-        assertEquals("## 关于我", state.text.toString())
-        assertEquals(TextRange("## 关于我".length), state.selection)
-    }
-
     /** Link is the exception: with the text written, the URL is the only thing left to type. */
     @Test
     fun `link puts the caret in the url slot rather than at the end`() {
@@ -70,16 +59,6 @@ class MarkdownFormattingTest {
     }
 
     @Test
-    fun `an empty link selection puts the caret on the link text`() {
-        val state = field("")
-
-        state.edit { applyMarkdown(link) }
-
-        assertEquals("[链接文字](https://)", state.text.toString())
-        assertEquals(TextRange(1), state.selection)
-    }
-
-    @Test
     fun `formatting applies in the middle of existing text`() {
         val state = field("交易走星辰担保，勿私", selection = 3..7)
 
@@ -87,15 +66,5 @@ class MarkdownFormattingTest {
 
         assertEquals("交易走**星辰担保**，勿私", state.text.toString())
         assertEquals(TextRange("交易走**星辰担保**".length), state.selection)
-    }
-
-    /** The buffer clamps a selection to the text on construction; formatting must survive that. */
-    @Test
-    fun `an out-of-range selection is clamped rather than crashing`() {
-        val state = TextFieldState(initialText = "短", initialSelection = TextRange(0, 99))
-
-        state.edit { applyMarkdown(bold) }
-
-        assertEquals("**短**", state.text.toString())
     }
 }

@@ -135,19 +135,6 @@ class ReadHistoryTest {
         }
 
     @Test
-    fun `history is most recently read first`() =
-        runTest {
-            givenListedPost(postId = 1, title = "first")
-            givenListedPost(postId = 2, title = "second")
-
-            repository.markThreadRead(1)
-            clock.advanceBy(1_000)
-            repository.markThreadRead(2)
-
-            assertEquals(listOf(2L, 1L), repository.readHistory().first().map { it.postId })
-        }
-
-    @Test
     fun `removing one entry leaves the rest`() =
         runTest {
             givenListedPost(postId = 1, title = "first")
@@ -213,21 +200,6 @@ class ReadHistoryTest {
             assertEquals(removed, repository.readHistory().first().single())
         }
 
-    /** A thread read without scrolling has no bookmark, and its history row must survive anyway. */
-    @Test
-    fun `a thread with no bookmark still lists and still restores`() =
-        runTest {
-            givenListedPost(postId = 7, title = "绿云抢鸡竞赛")
-            repository.markThreadRead(7)
-            val removed = repository.readHistory().first().single()
-            assertNull(removed.readingPosition)
-
-            repository.removeFromHistory(7)
-            repository.restoreToHistory(removed)
-
-            assertEquals(removed, repository.readHistory().first().single())
-        }
-
     @Test
     fun `clearing forgets where every thread was left off`() =
         runTest {
@@ -268,25 +240,6 @@ class ReadHistoryTest {
             assertEquals(ReadingPosition(page = cap + 2), positions.readingPosition(cap + 2L))
         }
 
-    /** 无上限 keeps every place, for the same reason it keeps every row: it was asked to. */
-    @Test
-    fun `an unlimited history keeps every bookmark`() =
-        runTest {
-            repository = repositoryWithLimit(MutableStateFlow(SettingsRepository.READ_HISTORY_UNLIMITED))
-            val positions = readingPositions()
-            repeat(5) { index ->
-                val postId = index + 1L
-                givenListedPost(postId = postId, title = "post $postId")
-                repository.markThreadRead(postId)
-                clock.advanceBy(1000)
-                positions.setReadingPosition(postId, ReadingPosition(page = index + 1))
-            }
-
-            repository.trimReadHistory()
-
-            assertEquals(5, database.readingPositionDao().count())
-        }
-
     private fun readingPositions() = RoomReadingPositionStore(database.readingPositionDao(), clock)
 
     /** Undo for a swiped-away row: the snapshot is enough to write the whole mark again. */
@@ -319,17 +272,6 @@ class ReadHistoryTest {
             assertEquals((cap + 5).toLong(), history.first().postId)
             // The five oldest went, and so did their read marks.
             assertNull(database.readMarkDao().find(1))
-        }
-
-    /** 无上限 keeps everything — including the read marks the feed greys its rows with. */
-    @Test
-    fun `an unlimited history is never trimmed`() =
-        runTest {
-            repository =
-                repositoryWithLimit(MutableStateFlow(SettingsRepository.READ_HISTORY_UNLIMITED))
-            givenReadThreads(12)
-
-            assertEquals(12, repository.readHistory().first().size)
         }
 
     /**

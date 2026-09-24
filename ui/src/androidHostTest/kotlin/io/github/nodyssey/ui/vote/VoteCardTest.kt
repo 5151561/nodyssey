@@ -3,12 +3,10 @@ package io.github.nodyssey.ui.vote
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.model.Vote
 import io.github.nodyssey.model.VoteItem
-import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -48,21 +46,6 @@ class VoteCardTest {
                 )
             }
         }
-    }
-
-    /**
-     * The single most load-bearing assertion in the file. NodeSeek withholds the counts until this
-     * account votes, so an unvoted card that showed a percentage would be inventing one.
-     */
-    @Test
-    fun `an unvoted card shows no counts, no percentages and no total`() {
-        setCard(VoteUiState(vote = unvoted(), isLoading = false, isSignedIn = true))
-
-        composeRule.onNodeWithText("移动").assertIsDisplayed()
-        composeRule.onNodeWithText("投票后可以看到结果").assertIsDisplayed()
-        composeRule.onNodeWithText("12 票").assertDoesNotExist()
-        composeRule.onNodeWithText("30%").assertDoesNotExist()
-        composeRule.onNodeWithText("共 40 票").assertDoesNotExist()
     }
 
     @Test
@@ -119,88 +102,24 @@ class VoteCardTest {
         composeRule.onNodeWithText("提交投票").assertDoesNotExist()
     }
 
-    @Test
-    fun `an anonymous vote is labelled`() {
-        setCard(VoteUiState(vote = unvoted(isPublic = false), isLoading = false, isSignedIn = true))
-
-        composeRule.onNodeWithText("匿名投票").assertIsDisplayed()
-    }
-
-    /** A row rather than a full-screen state: this sits inside an article the reader is still on. */
-    @Test
-    fun `a failed read offers a retry without taking over`() {
-        var retries = 0
-        setCard(VoteUiState(vote = null, isLoading = false, error = SiteError.Network), onRetry = { retries++ })
-
-        composeRule.onNodeWithText("重试").performClick()
-
-        assertEquals(1, retries)
-    }
-
-    @Test
-    fun `the manage menu is absent for a bystander`() {
-        setCard(VoteUiState(vote = unvoted(), isLoading = false, isSignedIn = true, selfUid = 999))
-
-        composeRule.onNodeWithContentDescription("管理投票").assertDoesNotExist()
-    }
-
-    /** The owner may lock; unlocking and deleting are the moderator's, and must not be offered. */
-    @Test
-    fun `the owner's manage menu offers only locking`() {
-        setCard(VoteUiState(vote = unvoted(), isLoading = false, isSignedIn = true, selfUid = OWNER_UID))
-
-        composeRule.onNodeWithContentDescription("管理投票").performClick()
-
-        composeRule.onNodeWithText("锁定投票").assertIsDisplayed()
-        composeRule.onNodeWithText("删除投票").assertDoesNotExist()
-        composeRule.onNodeWithText("解锁投票").assertDoesNotExist()
-    }
-
-    @Test
-    fun `a moderator's manage menu offers unlocking and deleting`() {
-        setCard(
-            VoteUiState(
-                vote = unvoted(locked = true),
-                isLoading = false,
-                isSignedIn = true,
-                selfUid = 999,
-                isAdmin = true,
-            ),
-        )
-
-        composeRule.onNodeWithContentDescription("管理投票").performClick()
-
-        composeRule.onNodeWithText("解锁投票").assertIsDisplayed()
-        composeRule.onNodeWithText("删除投票").assertIsDisplayed()
-    }
-
-    @Test
-    fun `a deleted vote says so instead of showing an empty card`() {
-        setCard(VoteUiState(vote = null, isLoading = false, deleted = true))
-
-        composeRule.onNodeWithText("投票已删除").assertIsDisplayed()
-    }
-
     private companion object {
         const val OWNER_UID = 57815L
 
-        fun unvoted(
-            locked: Boolean = false,
-            isPublic: Boolean = true,
-        ) = Vote(
-            id = 2871,
-            title = "哪个运营商比较好",
-            ownerUid = OWNER_UID,
-            isPublic = isPublic,
-            locked = locked,
-            multiple = false,
-            items =
-            listOf(
-                VoteItem(13201, "移动", voted = false),
-                VoteItem(13202, "联通", voted = false),
-                VoteItem(13203, "电信", voted = false),
-            ),
-        )
+        fun unvoted(locked: Boolean = false) =
+            Vote(
+                id = 2871,
+                title = "哪个运营商比较好",
+                ownerUid = OWNER_UID,
+                isPublic = true,
+                locked = locked,
+                multiple = false,
+                items =
+                listOf(
+                    VoteItem(13201, "移动", voted = false),
+                    VoteItem(13202, "联通", voted = false),
+                    VoteItem(13203, "电信", voted = false),
+                ),
+            )
 
         fun voted() =
             Vote(

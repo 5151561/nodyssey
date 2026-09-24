@@ -79,8 +79,7 @@ object PlazaSpinnerDefaults {
      * 40dp — `CircularProgressIndicatorTokens.Size`, which Material keeps private.
      *
      * Copied rather than referenced so that a call site passing nothing gets exactly what
-     * `CircularProgressIndicator()` gave it before this wrapper existed. If a Material bump moves the
-     * token, the goldens in `DesignSystemSnapshotTest` are what will say so.
+     * `CircularProgressIndicator()` gave it before this wrapper existed.
      */
     val Size = 40.dp
 

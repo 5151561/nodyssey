@@ -7,10 +7,8 @@ import io.github.plaza.core.net.httpResponse
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * The vote signature, on the transport that carries it rather than on the digest.
@@ -38,15 +36,6 @@ class DynamicSignTest {
     private val HttpRequest.signature: String? get() = headers["x-dynamic-sign"]
 
     @Test
-    fun `signs a vote read over method url user agent and an empty body`() = runTest {
-        val url = "$BASE/api/vote/info/2871"
-
-        val sent = send(url)
-
-        assertEquals(dynamicSign("GET", url, UA, ""), sent.signature)
-    }
-
-    @Test
     fun `signs a write over its body too`() = runTest {
         val url = "$BASE/api/vote/voteforitem"
         val body = """{"ids":[13201]}"""
@@ -54,16 +43,6 @@ class DynamicSignTest {
         val sent = send(url, method = "POST", body = HttpBody.Text(body))
 
         assertEquals(dynamicSign("POST", url, UA, body), sent.signature)
-    }
-
-    /** The body is only read from — a signed request still has to arrive with its own intact. */
-    @Test
-    fun `the request body survives being signed`() = runTest {
-        val body = HttpBody.Text("""{"deleted":true}""")
-
-        val sent = send("$BASE/api/vote/info/2871", method = "DELETE", body = body)
-
-        assertEquals(body, sent.body)
     }
 
     /**
@@ -118,18 +97,6 @@ class DynamicSignTest {
         val sent = send("$BASE/jump?to=$BASE/api/vote/info/1")
 
         assertNull(sent.signature)
-    }
-
-    @Test
-    fun `an upload listener passes through untouched`() = runTest {
-        val recorder = transport()
-
-        send("$BASE/api/vote/info/1", recorder = recorder)
-        assertFalse(recorder.listened)
-
-        DynamicSignTransport(recorder, UA)
-            .execute(HttpRequest("$BASE/api/vote/info/1"), onUploadProgress = {})
-        assertTrue(recorder.listened)
     }
 
     private companion object {

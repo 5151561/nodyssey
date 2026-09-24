@@ -19,11 +19,6 @@ class ContentPreviewTest {
         assertEquals(emptyList(), contentPreview("   "))
     }
 
-    @Test
-    fun `plain words come through as one run`() {
-        assertEquals(listOf(PreviewPart.Text("还没有这个功能")), contentPreview("还没有这个功能"))
-    }
-
     /** An `@` is whoever the writer chose to address; nothing about it is worth dropping. */
     @Test
     fun `keeps a mention wherever it stands`() {

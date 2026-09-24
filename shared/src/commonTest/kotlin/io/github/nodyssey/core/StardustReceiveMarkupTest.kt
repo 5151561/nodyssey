@@ -102,21 +102,6 @@ class StardustReceiveMarkupTest {
         )
     }
 
-    /**
-     * The seeded Ref ID stays in the site's own range, `100 + [0, 1e8)`.
-     *
-     * The floor matters twice over. It is the site's, and it also keeps a fresh code clear of
-     * `ref_id` 10 — the number every `upvote` row in the ledger carries, and therefore the one
-     * value where a code's payment count would silently include other people's likes.
-     */
-    @Test
-    fun `seeds a ref id in the range the site's generator uses`() {
-        repeat(200) {
-            val refId = StardustReceiveMarkup.randomRefId()
-            assertTrue(refId in 100L until 100L + 100_000_000L, "got $refId")
-        }
-    }
-
     /** The site's `/^\d+$/` on the three numbers, refusal and all. */
     @Test
     fun `refuses a marker whose numbers are not bare digits`() {

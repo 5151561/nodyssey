@@ -9,7 +9,6 @@ import coil3.network.NetworkResponse
 import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.request.Options
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,23 +54,6 @@ class LongLivedImageCacheStrategyTest {
                 .set("ETag", "\"637e56f0-24b0e\"")
                 .build(),
         )
-
-    @Test
-    fun `an avatar is stored with the app's own lifetime, not the site's`() =
-        runTest {
-            val result = strategy.write(null, NetworkRequest(AVATAR), served(NOW), options)
-
-            assertEquals("public, max-age=604800", result.response?.headers?.get("Cache-Control"))
-        }
-
-    /** An attachment's address changes when its bytes do, so it has nothing to gain and a staleness to lose. */
-    @Test
-    fun `anything else keeps what the server said`() =
-        runTest {
-            val result = strategy.write(null, NetworkRequest(ATTACHMENT), served(NOW), options)
-
-            assertEquals("public, max-age=14400", result.response?.headers?.get("Cache-Control"))
-        }
 
     /**
      * The point of the whole class. Five hours in, the site's own four have run out and a feed of

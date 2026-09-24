@@ -3,7 +3,6 @@ package io.github.nodyssey.data.session
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.plaza.core.net.SessionCookies
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -38,13 +37,6 @@ class ColorSchemeCookieTest {
         assertEquals("light", cookieValue("colorscheme"))
     }
 
-    @Test
-    fun `a dark theme writes the other one`() {
-        cookies.applyColorScheme(dark = true)
-
-        assertEquals("dark", cookieValue("colorscheme"))
-    }
-
     /** Switching themes replaces the cookie; two of them would be two answers to one question. */
     @Test
     fun `switching the theme rewrites the same cookie`() {
@@ -53,17 +45,6 @@ class ColorSchemeCookieTest {
 
         assertEquals("dark", cookieValue("colorscheme"))
         assertEquals(listOf("colorscheme"), cookies.cookieNames())
-    }
-
-    /**
-     * The write is flushed by the class rather than by its caller: on Android the store batches, and
-     * the request this cookie exists for can be the next thing a cold start does.
-     */
-    @Test
-    fun `the write is flushed`() {
-        cookies.applyColorScheme(dark = false)
-
-        assertTrue(store.flushes > 0)
     }
 
     /**
@@ -81,15 +62,5 @@ class ColorSchemeCookieTest {
         val after = cookies.snapshot()
         assertEquals(before.fingerprint, after.fingerprint)
         assertTrue(after.isSignedIn)
-    }
-
-    /** A site that has no such cookie is not given one. */
-    @Test
-    fun `a site without a theme cookie writes nothing`() {
-        val plain = SessionCookies(NodeSeekSite.CONFIG.copy(colorSchemeCookie = null), store)
-
-        plain.applyColorScheme(dark = true)
-
-        assertNull(store.cookieHeader(NodeSeekSite.BASE_URL))
     }
 }

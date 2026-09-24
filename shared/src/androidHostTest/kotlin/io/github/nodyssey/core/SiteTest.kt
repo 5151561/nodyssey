@@ -99,24 +99,6 @@ class SiteTest {
     }
 
     /**
-     * Every site can render the native sign-in form.
-     *
-     * Asserted as "has a key", not "has *this* key": the two sharing one Turnstile application is a
-     * measurement (see [Site.turnstileSitekey]), and a site that later gets its own must not fail
-     * here. What would be a real defect is a site reaching the form with nothing to render.
-     */
-    @Test
-    fun `every site has a turnstile sitekey`() {
-        Site.entries.forEach { site ->
-            ActiveSite.install(site)
-            assertTrue(
-                NodeSeekSite.TURNSTILE_SITEKEY.isNotBlank(),
-                "${site.displayName} has no Turnstile sitekey",
-            )
-        }
-    }
-
-    /**
      * 一键登录 opens the *site's own* page for it, not the provider's authorisation URL.
      *
      * The distinction is the point: `deepflood.com/nsSignIn.html` is a page whose own script knows

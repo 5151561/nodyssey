@@ -12,7 +12,7 @@ plugins {
     // The navigation keys are `@Serializable`: `rememberNavBackStack` saves the stack across process
     // death by serializing them. The annotation arrives through `:shared`, but the plugin that turns
     // it into a serializer does not — without this line every key compiles and none of them restores,
-    // which is a runtime failure `PostDetailKeySavedStateTest` is what catches.
+    // which is a runtime failure `NavKeySavedStateConfigurationTest` is what catches.
     alias(libs.plugins.kotlin.serialization)
 }
 

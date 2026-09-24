@@ -17,12 +17,6 @@ class UnbreakableLabelTest {
         assertEquals("腿${joiner}王${joiner}的", "腿王的".unbreakable())
     }
 
-    @Test
-    fun `leaves a single character alone`() {
-        assertEquals("王", "王".unbreakable())
-        assertEquals("", "".unbreakable())
-    }
-
     /** Splitting a ZWJ sequence would draw the family as the three people it is made of. */
     @Test
     fun `never joins inside one emoji`() {

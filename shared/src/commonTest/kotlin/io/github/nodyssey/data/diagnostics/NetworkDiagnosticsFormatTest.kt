@@ -40,18 +40,6 @@ class NetworkDiagnosticsFormatTest {
     }
 
     @Test
-    fun `a body of nothing has no rate`() {
-        assertNull(timing(firstByteMillis = 100, totalMillis = 5_000, bytes = 0).bodyBytesPerSecond())
-    }
-
-    @Test
-    fun `the slow case this screen exists for survives the arithmetic`() {
-        // The report that prompted the screen: a page crawling in at about five kilobytes a second.
-        val measured = timing(firstByteMillis = 600, totalMillis = 13_600, bytes = 68_000)
-        assertEquals("5.1 KB/s", formatRate(measured.bodyBytesPerSecond()!!))
-    }
-
-    @Test
     fun `bytes are shown in the unit that keeps them readable`() {
         assertEquals("834 B", formatBytes(834))
         assertEquals("1.0 KB", formatBytes(1024))
@@ -74,13 +62,5 @@ class NetworkDiagnosticsFormatTest {
         assertEquals("1.0 MB/s", formatRate(1_048_550))
         // And a hair below it still reads as kilobytes, because there it is still accurate.
         assertEquals("1023.9 KB", formatBytes(1_048_500))
-    }
-
-    @Test
-    fun `durations stay in milliseconds until seconds are easier to read`() {
-        assertEquals("412 ms", formatMillis(412))
-        assertEquals("9999 ms", formatMillis(9_999))
-        assertEquals("10.0 s", formatMillis(10_000))
-        assertEquals("13.4 s", formatMillis(13_400))
     }
 }

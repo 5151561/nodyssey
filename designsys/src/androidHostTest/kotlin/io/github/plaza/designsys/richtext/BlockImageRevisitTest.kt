@@ -43,8 +43,7 @@ class BlockImageRevisitTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    // See BlockImageLayoutTest: the singleton outlives the test that set it, and so does the size
-    // cache under test here.
+    // The loader singleton outlives the test that set it, and so does the size cache under test here.
     @Before
     fun resetSharedState() {
         SingletonImageLoader.reset()

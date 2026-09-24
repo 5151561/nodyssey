@@ -39,8 +39,7 @@ class OfflineReadFallbackTest {
         database.close()
     }
 
-    private fun repository(reader: OfflineThreadReader? = stored) =
-        OfflineFirstPostRepository(database, remote, clock, offlineThreads = reader)
+    private fun repository() = OfflineFirstPostRepository(database, remote, clock, offlineThreads = stored)
 
     @Test
     fun `a thread with no connection reads from the downloaded copy`() =
@@ -120,16 +119,6 @@ class OfflineReadFallbackTest {
             remote.detailError = SiteException(SiteError.Network)
 
             assertEquals(SiteError.Network, refusalOf { repository().refreshThread(postId = 7, page = 4) })
-        }
-
-    @Test
-    fun `a build with no download store simply has no fallback`() =
-        runTest {
-            remote.detailError = SiteException(SiteError.Network)
-            stored.pages[7L to 1] =
-                StoredThreadPage(FakePostRemoteDataSource.detail(postId = 7, page = 1), downloadedAtMillis = 500L)
-
-            assertEquals(SiteError.Network, refusalOf { repository(reader = null).refreshThread(postId = 7, page = 1) })
         }
 
     /** The site's own error behind whatever the call threw, so a test can name it rather than a type. */

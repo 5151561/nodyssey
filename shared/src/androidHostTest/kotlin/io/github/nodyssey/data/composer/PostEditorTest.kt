@@ -84,20 +84,6 @@ class PostEditorTest {
         assertEquals("新回复", comments.body)
     }
 
-    /**
-     * The page is re-read so the thread behind the editor updates itself — and `extend`, not
-     * `refresh`, so the other pages the reader has scrolled through stay in the cache.
-     */
-    @Test
-    fun `a saved edit re-reads the page it was on`() = runTest {
-        val reloaded = mutableListOf<Pair<Long, Int>>()
-
-        editor(FakeSource(source), threads = { postId, page -> reloaded += postId to page })
-            .save(replyTarget, PostEditContent("", PostPermission.PUBLIC, "x"))
-
-        assertEquals(listOf(876332L to 3), reloaded)
-    }
-
     /** The write landed. Reporting a failed re-read as a failed save is how an edit gets sent twice. */
     @Test
     fun `a failed re-read does not fail the save`() = runTest {

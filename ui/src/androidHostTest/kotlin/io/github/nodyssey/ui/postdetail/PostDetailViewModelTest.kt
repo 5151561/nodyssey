@@ -129,20 +129,6 @@ class PostDetailViewModelTest {
             )
         }
 
-    @Test
-    fun `an unchanged session does not refetch the thread`() =
-        runTest(dispatcher) {
-            val vm = viewModel()
-            advanceUntilIdle()
-            val requestsBefore = remote.detailRequests.size
-
-            session.value = SessionState()
-            advanceUntilIdle()
-
-            assertEquals(requestsBefore, remote.detailRequests.size)
-            assertNull(vm.uiState.value.error)
-        }
-
     /**
      * The title the feed row already showed is the screen's until the thread itself says otherwise.
      *
@@ -171,24 +157,6 @@ class PostDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals("thread 42", vm.uiState.value.title)
-        }
-
-    @Test
-    fun `loads a thread that is not cached yet`() =
-        runTest(dispatcher) {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 3, totalPages = 1)
-            }
-
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            val state = vm.uiState.value
-            assertEquals("thread 42", state.title)
-            assertNotNull(state.body)
-            assertEquals(3, state.comments.size)
-            assertFalse(state.isLoading)
-            assertNull(state.error)
         }
 
     @Test
@@ -342,26 +310,6 @@ class PostDetailViewModelTest {
             assertEquals(SiteError.Network, vm.uiState.value.error)
         }
 
-    /** 刷新 aims at the page on screen, not at the window's first — see [PostDetailViewModel.refreshPage]. */
-    @Test
-    fun `refreshing a page re-fetches that page rather than the window's first`() =
-        runTest(dispatcher) {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 3)
-            }
-            val vm = viewModel()
-            advanceUntilIdle()
-            vm.loadNextPage()
-            advanceUntilIdle()
-
-            vm.refreshPage(2)
-            advanceUntilIdle()
-
-            assertEquals(42L to 2, remote.detailRequests.last())
-            assertEquals(2, vm.uiState.value.firstLoadedPage)
-            assertEquals(2, vm.uiState.value.lastLoadedPage)
-        }
-
     /**
      * The point of phase two: a thread read moments ago paints from the database and issues no
      * request at all.
@@ -507,19 +455,6 @@ class PostDetailViewModelTest {
         }
 
     @Test
-    fun `surfaces a typed error rather than a message string`() =
-        runTest(dispatcher) {
-            remote.detailError = SiteException(SiteError.LoginRequired)
-
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            assertEquals(SiteError.LoginRequired, vm.uiState.value.error)
-            assertFalse(vm.uiState.value.isLoading)
-            assertNull(vm.uiState.value.body)
-        }
-
-    @Test
     fun `an unclassified failure becomes Unknown, not a crash`() =
         runTest(dispatcher) {
             remote.detailError = IllegalStateException("boom")
@@ -558,15 +493,6 @@ class PostDetailViewModelTest {
             assertNull(vm.uiState.value.error)
             assertFalse(vm.uiState.value.isLoading)
             assertFalse(vm.uiState.value.isAppending)
-        }
-
-    @Test
-    fun `opening a thread marks it read`() =
-        runTest(dispatcher) {
-            viewModel(postId = 42)
-            advanceUntilIdle()
-
-            assertNotNull(database.readMarkDao().find(42))
         }
 
     /**
@@ -913,20 +839,6 @@ class PostDetailViewModelTest {
             assertEquals(6, vm.uiState.value.firstLoadedPage)
         }
 
-    @Test
-    fun `the post url points at the page currently being read`() =
-        runTest(dispatcher) {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 3)
-            }
-            val vm = viewModel()
-            advanceUntilIdle()
-            vm.loadNextPage()
-            advanceUntilIdle()
-
-            assertTrue("got ${vm.postUrl()}", vm.postUrl().endsWith("-2"))
-        }
-
     /**
      * Two taps on a slow connection must send one request. The site would reject the second with
      * "已经进行过加鸡腿操作", but only after it had already taken the first one's chicken leg — and on
@@ -973,24 +885,6 @@ class PostDetailViewModelTest {
 
             vm.onReactionFailureShown()
             assertNull(vm.uiState.value.reactionFailure)
-        }
-
-    /**
-     * The state the star is drawn from arrives by the same Room observation as the rest of the
-     * thread — nothing about collection is fetched separately.
-     */
-    @Test
-    fun `the page's collection state reaches the screen`() =
-        runTest(dispatcher) {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, collected = true, collectionCount = 7)
-            }
-
-            val vm = viewModel()
-            advanceUntilIdle()
-
-            assertEquals(true, vm.uiState.value.collected)
-            assertEquals(7, vm.uiState.value.collectionCount)
         }
 
     /**

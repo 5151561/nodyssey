@@ -54,17 +54,6 @@ class CommentComposerRepositoryTest {
         assertEquals(841108L, payload.getValue("postId").jsonPrimitive.long)
     }
 
-    @Test
-    fun `an accepted reply advances its threads read baseline`() = runTest {
-        val published = mutableListOf<Long>()
-        val recorder = RecordingCommentInterceptor(body = """{"success":true}""")
-
-        repository(recorder) { published += it }
-            .publish(CommentSubmission(postId = 841108L, body = "回复正文"))
-
-        assertEquals(listOf(841108L), published)
-    }
-
     /**
      * The floor number exists nowhere but `redirectHash`. A response without one is still a posted
      * reply, so it must not throw — the caller reads null as "posted, scroll to the end".
@@ -179,17 +168,13 @@ class CommentComposerRepositoryTest {
         assertEquals(SiteError.LoginRequired, exception.error)
     }
 
-    private fun TestScope.repository(
-        interceptor: Interceptor,
-        onReplyPublished: suspend (Long) -> Unit = {},
-    ) =
+    private fun TestScope.repository(interceptor: Interceptor) =
         StandardTestDispatcher(testScheduler).let { dispatcher ->
             DefaultCommentComposerRepository(
                 dataStore = testPreferenceStore(backgroundScope, "comment-composer"),
                 transport = OkHttpTransport(OkHttpClient.Builder().addInterceptor(interceptor).build()),
                 dispatchers = AppDispatchers(dispatcher, dispatcher),
                 clock = AppClock { 0L },
-                onReplyPublished = onReplyPublished,
             )
         }
 

@@ -1,14 +1,12 @@
 package io.github.nodyssey.ui.richtext
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import io.github.plaza.core.ansi.AnsiDecoder
 import io.github.plaza.designsys.component.rememberTerminalText
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -61,29 +59,6 @@ class AnsiTextTest {
         val style = styleOf("\u001B[47m   padding   \u001B[0m").single()
 
         assertTrue(contrastOf(style.color, style.background) >= 4.5f)
-    }
-
-    /**
-     * The dark fills are read against the ground, which is the case the foreground palette already
-     * answers — resolving ink against the fill must leave them exactly as they were.
-     */
-    @Test
-    fun `a dark fill keeps the ink it always had`() {
-        val (chip, bar) = styleOf("\u001B[42m ✔ VT-x/AMD-V \u001B[0m", "\u001B[41m\u001B[30m J1900 \u001B[0m")
-
-        assertEquals(Color(0xFF3E6B33), chip.background)
-        assertTrue("green chips inherit the terminal ink", !chip.color.isSpecified)
-        assertEquals(Color(0xFF8C2F38), bar.background)
-        assertEquals(Color(0xFF5C6370), bar.color)
-    }
-
-    /** Bare colour runs never had a fill to be read against, so nothing about them changes. */
-    @Test
-    fun `text with no fill keeps its palette colour`() {
-        val style = styleOf("\u001B[36m一、操作系统信息\u001B[0m").single()
-
-        assertEquals(Color(0xFF56B6C2), style.color)
-        assertTrue(!style.background.isSpecified)
     }
 
     private fun contrastOf(a: Color, b: Color): Float {

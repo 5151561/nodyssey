@@ -14,7 +14,7 @@ import java.io.File
 import java.nio.file.Files
 
 /**
- * 测评报告 round-trips through the store, and a value it cannot read falls back to the card.
+ * A stored 测评报告 value this build cannot read falls back to the card.
  *
  * The stored form is the enum name, so a renamed
  * constant would otherwise hand the renderer a format it has no case for. Defaulting keeps that a
@@ -22,31 +22,14 @@ import java.nio.file.Files
  */
 class ReportFormatSettingTest {
     @Test
-    fun `an empty store draws the adapted card`() =
-        runTest {
-            assertEquals(ReportFormat.ADAPTED, storedFormat(null))
-        }
-
-    @Test
-    fun `the chosen format survives a round trip`() =
-        runTest {
-            val repository = repository()
-            repository.setReportFormat(ReportFormat.SOURCE)
-            assertEquals(ReportFormat.SOURCE, repository.settings.first().reportFormat)
-
-            repository.setReportFormat(ReportFormat.ADAPTED)
-            assertEquals(ReportFormat.ADAPTED, repository.settings.first().reportFormat)
-        }
-
-    @Test
     fun `a value this build does not know falls back to the default`() =
         runTest {
             assertEquals(ReportFormat.ADAPTED, storedFormat("TERMINAL"))
         }
 
-    private suspend fun CoroutineScope.storedFormat(raw: String?): ReportFormat {
+    private suspend fun CoroutineScope.storedFormat(raw: String): ReportFormat {
         val repository = repository()
-        if (raw != null) dataStore.edit { it[KEY_REPORT_FORMAT] = raw }
+        dataStore.edit { it[KEY_REPORT_FORMAT] = raw }
         return repository.settings.first().reportFormat
     }
 

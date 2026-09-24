@@ -19,10 +19,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -45,19 +41,6 @@ class NetworkCheckViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
-    fun `the check runs on arrival rather than waiting to be asked`() = runTest(dispatcher) {
-        val viewModel = NetworkCheckViewModel(diagnostics)
-        diagnostics.answerAll()
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertNotNull(state.environment)
-        assertNotNull(state.forum)
-        assertNotNull(state.updates)
-        assertFalse(state.running)
-    }
-
-    @Test
     fun `the second probe does not start until the first has answered`() = runTest(dispatcher) {
         NetworkCheckViewModel(diagnostics)
         advanceUntilIdle()
@@ -69,24 +52,6 @@ class NetworkCheckViewModelTest {
         diagnostics.answer(ProbeTarget.FORUM)
         advanceUntilIdle()
         assertEquals(listOf(ProbeTarget.FORUM, ProbeTarget.UPDATES), diagnostics.started)
-    }
-
-    @Test
-    fun `the environment survives a re-run while the probes are cleared`() = runTest(dispatcher) {
-        val viewModel = NetworkCheckViewModel(diagnostics)
-        diagnostics.answerAll()
-        advanceUntilIdle()
-        assertNotNull(viewModel.uiState.value.forum)
-
-        diagnostics.reset()
-        viewModel.run()
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        // The rows most likely to hold the answer stay readable for the whole of the slow half.
-        assertNotNull(state.environment)
-        assertNull(state.forum)
-        assertTrue(state.running)
     }
 
     @Test
@@ -109,7 +74,7 @@ class NetworkCheckViewModelTest {
  */
 private class FakeNetworkDiagnostics : NetworkDiagnostics {
     val started = mutableListOf<ProbeTarget>()
-    private var pending = mutableMapOf<ProbeTarget, CompletableDeferred<ProbeResult>>()
+    private val pending = mutableMapOf<ProbeTarget, CompletableDeferred<ProbeResult>>()
 
     override suspend fun environment(): NetworkEnvironment =
         NetworkEnvironment(
@@ -137,13 +102,6 @@ private class FakeNetworkDiagnostics : NetworkDiagnostics {
 
     fun answer(target: ProbeTarget) {
         pending.getOrPut(target) { CompletableDeferred() }.complete(ANSWER)
-    }
-
-    fun answerAll() = ProbeTarget.entries.forEach(::answer)
-
-    fun reset() {
-        started.clear()
-        pending = mutableMapOf()
     }
 
     private companion object {

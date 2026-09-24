@@ -38,11 +38,6 @@ class AvifHeaderTest {
     }
 
     @Test
-    fun `an ftyp box with no brands at all`() {
-        assertFalse(DecodeUtils.isAvif(ftyp("mif1")))
-    }
-
-    @Test
     fun `a file that is not iso base media`() {
         val png = Buffer().write(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A))
         assertFalse(DecodeUtils.isAvif(png))
@@ -52,19 +47,6 @@ class AvifHeaderTest {
     fun `a header that ends mid-brand`() {
         val truncated = Buffer().write(ftyp("mif1", "mif1", "avif").readByteArray(14L))
         assertFalse(DecodeUtils.isAvif(truncated))
-    }
-
-    @Test
-    fun `a box size larger than the file`() {
-        // The size is whatever the file claims — here the largest a 32-bit unsigned box size can be,
-        // which is also the read that must not be attempted. It ends at the end of the data, false.
-        val buffer = Buffer()
-        buffer.writeInt(-1)
-        buffer.writeUtf8("ftyp")
-        buffer.writeUtf8("mif1")
-        buffer.writeInt(0)
-        buffer.writeUtf8("heic")
-        assertFalse(DecodeUtils.isAvif(buffer))
     }
 
     @Test

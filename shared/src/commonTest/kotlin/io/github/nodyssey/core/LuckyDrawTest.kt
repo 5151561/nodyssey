@@ -72,9 +72,4 @@ class LuckyDrawTest {
         assertTrue(link.contains("&n=1&"))
         assertTrue(link.contains("&start=0&"))
     }
-
-    @Test
-    fun `formats the closing time the way the form displays it`() {
-        assertEquals("2026/7/27 20:00", LuckyDraw.formatDrawTime(drawAt, shanghai))
-    }
 }

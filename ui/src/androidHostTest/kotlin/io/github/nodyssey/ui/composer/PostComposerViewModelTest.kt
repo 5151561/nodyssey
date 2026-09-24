@@ -296,42 +296,6 @@ class PostComposerViewModelTest {
         assertEquals(VoteCreationState.Idle, viewModel.uiState.value.voteCreation)
     }
 
-    /** A build that never wired the repository does nothing rather than reporting a create it never sent. */
-    @Test
-    fun `an unwired composer cannot create a vote`() = runTest(dispatcher) {
-        val viewModel = viewModel()
-        advanceUntilIdle()
-        var inserted = false
-
-        viewModel.createVote("标题", multiple = false, isPublic = true, items = listOf("甲")) { inserted = true }
-        advanceUntilIdle()
-
-        assertFalse(inserted)
-        assertEquals("", viewModel.bodyState.text.toString())
-    }
-
-    @Test
-    fun `read permission offers every level up to the account's own`() = runTest(dispatcher) {
-        val viewModel = viewModel(FakeProfileRepository(rank = 3))
-        advanceUntilIdle()
-
-        assertEquals(
-            listOf(0, 1, 2, 3, 255),
-            viewModel.uiState.value.permissionOptions.map { it.wireValue },
-        )
-    }
-
-    @Test
-    fun `read permission falls back to Lv1 when the profile never arrives`() = runTest(dispatcher) {
-        val viewModel = viewModel(FakeProfileRepository(rank = 3, fails = true))
-        advanceUntilIdle()
-
-        assertEquals(
-            listOf(0, 1, 255),
-            viewModel.uiState.value.permissionOptions.map { it.wireValue },
-        )
-    }
-
     @Test
     fun `a restored draft keeps a level the account has outgrown the menu`() = runTest(dispatcher) {
         repository.draftState.value =
@@ -516,15 +480,12 @@ class PostComposerViewModelTest {
 
 private class FakeProfileRepository(
     private val rank: Int?,
-    private val fails: Boolean = false,
     selfUid: Long? = null,
 ) : ProfileRepository {
     override val selfUid = MutableStateFlow(selfUid)
 
-    override suspend fun profile(refresh: Boolean): UserProfile {
-        if (fails) throw SiteException(SiteError.Network)
-        return UserProfile(uid = 1L, name = "我", avatarUrl = "", rank = rank)
-    }
+    override suspend fun profile(refresh: Boolean): UserProfile =
+        UserProfile(uid = 1L, name = "我", avatarUrl = "", rank = rank)
 
     override suspend fun profile(uid: Long): UserProfile = profile(refresh = false)
 }

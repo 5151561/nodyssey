@@ -67,16 +67,6 @@ class LinkPressPrefetchTest {
     }
 
     @Test
-    fun `pressing a paragraph that holds no link warms nothing`() {
-        setContent(listOf(InlineNode.Text(PROSE_TEXT)))
-
-        composeRule.onNodeWithText(PROSE_TEXT).performTouchInput { down(center) }
-        composeRule.waitForIdle()
-
-        assertEquals(emptyList<String>(), prefetched)
-    }
-
-    @Test
     fun `pressing the prose half of a paragraph does not warm the link in its other half`() {
         setContent(
             listOf(

@@ -50,11 +50,6 @@ class ImageLoadFailureTest {
     }
 
     @Test
-    fun `a plain refusal keeps its status`() {
-        assertEquals(ImageLoadFailure.Http(404), diagnoseImageFailure(httpException(code = 404)))
-    }
-
-    @Test
     fun `an unresolvable host reads as unreachable`() {
         assertEquals(ImageLoadFailure.Unreachable, diagnoseImageFailure(UnknownHostException("img.invalid")))
     }

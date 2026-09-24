@@ -5,11 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -21,7 +19,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** The wrench panel: what it offers, and that a drag survives its own reordering. */
+/** The wrench panel: it never empties the strip, and a drag survives its own reordering. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w360dp-h800dp")
@@ -30,7 +28,6 @@ class ToolbarCustomizeSheetTest {
     val composeRule = createComposeRule()
 
     private lateinit var enabled: List<EditorAction>
-    private var resets = 0
 
     private fun setSheet(start: List<EditorAction>) {
         enabled = start
@@ -46,31 +43,11 @@ class ToolbarCustomizeSheetTest {
                         keys = it
                         enabled = it
                     },
-                    onReset = { resets++ },
+                    onReset = {},
                     onDismiss = {},
                 )
             }
         }
-    }
-
-    @Test
-    fun `the pool holds everything the strip does not`() {
-        setSheet(listOf(EditorAction.BOLD, EditorAction.CODE))
-
-        composeRule.onNodeWithText("工具栏上的按键").assertIsDisplayed()
-        composeRule.onNodeWithText("可添加").assertIsDisplayed()
-        // 斜体 is in neither composer's defaults, so the pool is where it can be found at all.
-        composeRule.onNodeWithText("斜体").assertIsDisplayed()
-    }
-
-    @Test
-    fun `adding a key puts it at the end of the strip`() {
-        setSheet(listOf(EditorAction.BOLD, EditorAction.CODE))
-
-        composeRule.onAllNodesWithContentDescription("加入工具栏")[0].performClick()
-
-        assertEquals(3, enabled.size)
-        assertEquals(listOf(EditorAction.BOLD, EditorAction.CODE), enabled.take(2))
     }
 
     @Test

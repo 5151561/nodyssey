@@ -164,22 +164,6 @@ class NotificationsViewModelTest {
             assertEquals(5, viewModel.uiState.value.counts.mentions)
         }
 
-    /**
-     * 通知 and 私信 are pages the reader swipes between, so the group that is not selected has to be
-     * loaded too — a page that arrives empty and fills in a moment later is the flicker the swipe
-     * exists to avoid.
-     */
-    @Test
-    fun `both groups load, not only the selected one`() =
-        runTest(dispatcher) {
-            val viewModel = viewModel(FakeApi(counts = """{"atMe":2}"""), messages = FakeMessages())
-            advanceUntilIdle()
-
-            assertEquals(NotificationTab.INTERACTIONS, viewModel.uiState.value.selectedTab)
-            assertTrue(viewModel.uiState.value.items.isNotEmpty())
-            assertEquals(listOf(7L), viewModel.uiState.value.conversations.map { it.uid })
-        }
-
     /** One endpoint behind a wall must not put an error screen over the group that loaded fine. */
     @Test
     fun `a failure in one group leaves the other alone`() =

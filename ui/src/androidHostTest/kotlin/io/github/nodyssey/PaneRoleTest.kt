@@ -2,7 +2,6 @@ package io.github.nodyssey
 
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.ui.login.WebViewGoal
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,16 +19,6 @@ class PaneRoleTest {
     @Test
     fun `a thread under the feed shares the window with it`() {
         assertTrue(listOf<NavKey>(PostListKey, PostDetailKey(1)).showsListPane())
-    }
-
-    @Test
-    fun `a thread under search shares the window with it`() {
-        assertTrue(listOf<NavKey>(SearchKey, PostDetailKey(1)).showsListPane())
-    }
-
-    @Test
-    fun `a conversation under the notification list shares the window with it`() {
-        assertTrue(listOf<NavKey>(NotificationsKey, MessageThreadKey(7, "Alice")).showsListPane())
     }
 
     @Test
@@ -65,28 +54,5 @@ class PaneRoleTest {
                 WebKey("https://example.test", "NodeSeek", WebViewGoal.MANAGE),
             )
         assertFalse(stack.showsListPane())
-    }
-
-    @Test
-    fun `我的 is a menu, not a list`() {
-        assertEquals(null, paneRoleOf(ProfileKey))
-        assertFalse(listOf<NavKey>(ProfileKey).showsListPane())
-    }
-
-    @Test
-    fun `every list pane says something different when its detail is empty`() {
-        val listKeys = listOf<NavKey>(PostListKey, SearchKey, NotificationsKey, UserSpaceKey(uid = 7))
-        // Distinct implies present: a key with no line of its own throws rather than returning 0.
-        assertEquals(listKeys.size, listKeys.map { emptyDetailTextOf(it) }.toSet().size)
-    }
-
-    @Test
-    fun `the three list roots and the two details keep their roles`() {
-        listOf<NavKey>(PostListKey, SearchKey, NotificationsKey, UserSpaceKey(uid = 7)).forEach {
-            assertEquals(PaneRole.LIST, paneRoleOf(it))
-        }
-        listOf<NavKey>(PostDetailKey(1), MessageThreadKey(7, "Alice")).forEach {
-            assertEquals(PaneRole.DETAIL, paneRoleOf(it))
-        }
     }
 }

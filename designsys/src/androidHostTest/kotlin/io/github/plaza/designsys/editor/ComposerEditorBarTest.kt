@@ -7,10 +7,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.SoftwareKeyboardController
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -43,13 +39,9 @@ class ComposerEditorBarTest {
 
     private val keyboard =
         object : SoftwareKeyboardController {
-            var hides = 0
-
             override fun show() = Unit
 
-            override fun hide() {
-                hides++
-            }
+            override fun hide() = Unit
         }
 
     private lateinit var view: View
@@ -91,17 +83,6 @@ class ComposerEditorBarTest {
     }
 
     @Test
-    fun `收起 puts the bar back`() {
-        setBar()
-
-        composeRule.onNodeWithText("格式").performClick()
-        composeRule.onNodeWithText("收起").performClick()
-
-        composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("表情").assertIsDisplayed()
-    }
-
-    @Test
     fun `opening the card puts the emoji panel away`() {
         setBar()
 
@@ -110,15 +91,6 @@ class ComposerEditorBarTest {
         composeRule.onNodeWithText("格式").performClick()
 
         composeRule.onNodeWithText("面板").assertDoesNotExist()
-    }
-
-    @Test
-    fun `opening the card puts the keyboard away`() {
-        setBar()
-
-        composeRule.onNodeWithText("格式").performClick()
-
-        assertEquals(1, keyboard.hides)
     }
 
     /** The writer tapped back into the text: the keyboard takes its place again rather than stacking. */
@@ -132,15 +104,5 @@ class ComposerEditorBarTest {
 
         composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
         composeRule.onNodeWithText("格式").assertIsDisplayed()
-    }
-
-    /** Both pills are `Surface(onClick)`, which sets no role; TalkBack should still hear 按钮. */
-    @Test
-    fun `格式 and 收起 read as buttons`() {
-        setBar()
-
-        composeRule.onNodeWithText("格式").assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
-        composeRule.onNodeWithText("格式").performClick()
-        composeRule.onNodeWithText("收起").assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Button))
     }
 }

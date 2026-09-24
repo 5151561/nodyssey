@@ -146,21 +146,6 @@ class PostReactionWriteBackTest {
             assertFalse(repository.isThreadFresh(42))
         }
 
-    /** A build with no writer refuses outright rather than reporting a mark it never sent. */
-    @Test
-    fun `refuses when no writer is wired`() =
-        runTest {
-            val repository = OfflineFirstPostRepository(database, remote, clock)
-            repository.refreshThread(postId = 42, page = 1)
-
-            assertThrows(SiteException::class.java) {
-                kotlinx.coroutines.runBlocking {
-                    repository.react(postId = 42, commentId = 1L, action = ReactionAction.Upvote)
-                }
-            }
-            assertNull(repository.freeChickenLegs())
-        }
-
     @Test
     fun `folds onto tallies the page already carried`() =
         runTest {

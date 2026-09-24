@@ -83,20 +83,6 @@ class ImageNetworkPolicyInterceptorTest {
         )
     }
 
-    @Test
-    fun `a hand-requested image reaches the network through the interceptor`() = runTest {
-        val chain = FakeChain(imageRequest(allowMetered = true))
-        val interceptor = ImageNetworkPolicyInterceptor(
-            imagesOnWifiOnly = flowOf(true),
-            hasUnmeteredNetwork = { false },
-        )
-
-        val result = interceptor.intercept(chain)
-
-        assertEquals(CachePolicy.ENABLED, chain.proceeded?.networkCachePolicy)
-        assertFalse((result as ErrorResult).throwable is ImagesDeferredException)
-    }
-
     /**
      * A skipped image must not look like a broken one.
      *

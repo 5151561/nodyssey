@@ -6,7 +6,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -21,9 +20,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * 复制 and 引用 on a bubble (7f).
+ * 复制 on a bubble (7f).
  *
- * The bug these exist for: the only way to copy a message used to be the text selection the Markdown
+ * The bug this exists for: the only way to copy a message used to be the text selection the Markdown
  * renderer brought with it, so whether a message could be copied at all was decided by the *sender's*
  * MD switch — mine were selectable, a plain-text one from the other side was not. Both bubbles are
  * therefore asserted, and the plain one is the regression.
@@ -35,10 +34,7 @@ class MessageBubbleActionsTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val quoted = mutableListOf<String>()
-    private val unquoted = mutableListOf<String>()
-
-    private fun setScreen(quotes: List<MessageBubble> = emptyList()) {
+    private fun setScreen() {
         composeRule.setContent {
             PlazaTheme {
                 MessageThreadScreen(
@@ -47,7 +43,6 @@ class MessageBubbleActionsTest {
                         uid = 4471,
                         userName = "iwil",
                         nowMillis = NOW,
-                        quotes = quotes,
                         messages =
                         listOf(
                             MessageBubble(
@@ -81,8 +76,8 @@ class MessageBubbleActionsTest {
                     onRetryLoad = {},
                     onSend = {},
                     onRetrySend = {},
-                    onQuote = { quoted += it.content },
-                    onRemoveQuote = { unquoted += it },
+                    onQuote = {},
+                    onRemoveQuote = {},
                     onPickImages = {},
                     onRemoveAttachment = {},
                     onRetryAttachment = {},
@@ -113,37 +108,6 @@ class MessageBubbleActionsTest {
         composeRule.onNodeWithText("复制").performClick()
 
         assertEquals("那大概什么时候", clipboardText())
-    }
-
-    @Test
-    fun `引用 hands the bubble to the composer`() {
-        setScreen()
-
-        composeRule.onNodeWithText("改名的事我问过管理").performTouchInput { longClick() }
-        composeRule.onNodeWithText("引用").performClick()
-
-        assertEquals(listOf("改名的事我问过管理"), quoted)
-    }
-
-    /** 3e: the quotation waits over the bar, says whose it is, and can be taken back. */
-    @Test
-    fun `a pending quote shows as a card over the bar with its own ✕`() {
-        val bubble =
-            MessageBubble(
-                id = "1",
-                isMine = false,
-                content = "改名的事我问过管理",
-                isMarkdown = false,
-                sentAtMillis = NOW - 60_000L,
-                sentAtText = null,
-                status = SendStatus.SENT,
-            )
-        setScreen(quotes = listOf(bubble))
-
-        composeRule.onNodeWithText("引用 iwil").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("取消引用").performClick()
-
-        assertEquals(listOf("1"), unquoted)
     }
 
     private fun clipboardText(): String? {

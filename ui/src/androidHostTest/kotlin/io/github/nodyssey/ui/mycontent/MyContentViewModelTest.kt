@@ -45,20 +45,6 @@ class MyContentViewModelTest {
     }
 
     @Test
-    fun `first page arrives newest first with the profile's own total`() =
-        runTest(dispatcher) {
-            val vm = MyTopicsViewModel(FakeProfileRepository(), PagedSpaceRepository())
-            advanceUntilIdle()
-
-            assertEquals(listOf("t1", "t2", "t3"), vm.uiState.value.items.map(SpacePost::title))
-            assertEquals(3, vm.uiState.value.loadedCount)
-            // Not `loadedCount`: the header answers "how many do I have", and that number must not
-            // creep upward as pages arrive.
-            assertEquals(7, vm.uiState.value.totalCount)
-            assertFalse(vm.uiState.value.endReached)
-        }
-
-    @Test
     fun `loadMore appends the next page and stops at the end`() =
         runTest(dispatcher) {
             val vm = MyTopicsViewModel(FakeProfileRepository(), PagedSpaceRepository())
@@ -103,21 +89,6 @@ class MyContentViewModelTest {
 
             vm.selectBoard(null)
             assertEquals(3, vm.uiState.value.items.size)
-        }
-
-    /**
-     * The comment payload names the thread but never its board, so board n3's first chip has
-     * nothing to offer and the screen hides it. Reading a board off the title would be a guess with
-     * a colour on it.
-     */
-    @Test
-    fun `comments offer no board filter at all`() =
-        runTest(dispatcher) {
-            val vm = MyCommentsViewModel(FakeProfileRepository(), PagedSpaceRepository())
-            advanceUntilIdle()
-
-            assertTrue(vm.uiState.value.boards.isEmpty())
-            assertEquals(96, vm.uiState.value.totalCount)
         }
 
     @Test

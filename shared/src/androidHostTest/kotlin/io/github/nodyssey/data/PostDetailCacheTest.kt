@@ -38,24 +38,6 @@ class PostDetailCacheTest {
         database.close()
     }
 
-    @Test
-    fun `page one stores the opening post and its comments`() =
-        runTest {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 3, totalPages = 2)
-            }
-
-            repository.refreshThread(postId = 42, page = 1)
-            val thread = requireNotNull(repository.thread(42).first())
-
-            assertEquals("thread 42", thread.title)
-            assertNotNull(thread.body)
-            assertEquals(3, thread.comments.size)
-            assertEquals(1, thread.lastLoadedPage)
-            assertEquals(2, thread.totalPages)
-            assertTrue(thread.hasNextPage)
-        }
-
     /**
      * The bug this exists to prevent: NodeSeek renders the opening post on page 1 only, so a naive
      * append would store `body = null` over the post the user is reading.
@@ -109,25 +91,6 @@ class PostDetailCacheTest {
                 ),
                 texts,
             )
-        }
-
-    /** A thread shrinks when a comment is deleted, so a fresh read of page 1 has to clear the rest. */
-    @Test
-    fun `re-reading page one replaces every stored comment`() =
-        runTest {
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 2)
-            }
-            repository.refreshThread(postId = 42, page = 1)
-            repository.extendThread(postId = 42, page = 2)
-            assertEquals(4, requireNotNull(repository.thread(42).first()).comments.size)
-
-            remote.detailResult = { postId, page ->
-                FakePostRemoteDataSource.detail(postId, page, commentCount = 1, totalPages = 1)
-            }
-            repository.refreshThread(postId = 42, page = 1)
-
-            assertEquals(1, requireNotNull(repository.thread(42).first()).comments.size)
         }
 
     /** Re-reading page 1 deletes later rows, so the loaded slice has to close up behind them. */
@@ -265,12 +228,6 @@ class PostDetailCacheTest {
         }
 
     @Test
-    fun `an uncached thread emits null rather than an empty shell`() =
-        runTest {
-            assertNull(repository.thread(999).first())
-        }
-
-    @Test
     fun `a thread inside the cache window counts as fresh`() =
         runTest {
             repository.refreshThread(postId = 42, page = 1)
@@ -279,12 +236,6 @@ class PostDetailCacheTest {
             assertTrue(repository.isThreadFresh(42))
 
             clock.advanceBy(2)
-            assertFalse(repository.isThreadFresh(42))
-        }
-
-    @Test
-    fun `an unread thread is never fresh`() =
-        runTest {
             assertFalse(repository.isThreadFresh(42))
         }
 

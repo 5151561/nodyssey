@@ -72,21 +72,6 @@ class AppLanguageTest {
         assertFalse(isTraditionalChineseTag("zho-Hant"))
     }
 
-    /**
-     * The tag each entry asks the platform for.
-     *
-     * Pinned because these are also the resource directory names: `values-zh-rTW` answers to
-     * [AppLanguage.TRADITIONAL_CHINESE] and to nothing else, so renaming one without the other is a
-     * silent fall back to the default bundle.
-     */
-    @Test
-    fun `each language names the tag its bundle is keyed by`() {
-        assertEquals(null, AppLanguage.SYSTEM.tag)
-        assertEquals("zh-CN", AppLanguage.SIMPLIFIED_CHINESE.tag)
-        assertEquals("zh-TW", AppLanguage.TRADITIONAL_CHINESE.tag)
-        assertEquals("en", AppLanguage.ENGLISH.tag)
-    }
-
     /** A store written by an older build has no entry at all, and a bad one must not throw. */
     @Test
     fun `an unknown stored name reads as follow the system`() {

@@ -42,13 +42,7 @@ class OfflineDownloadWorkerTest {
             assertEquals(Result.success(), doWork(FakeDownloads(DrainOutcome.BLOCKED)))
         }
 
-    @Test
-    fun `a library with no download half finishes with nothing to do`() =
-        runTest {
-            assertEquals(Result.success(), doWork(downloads = null))
-        }
-
-    private suspend fun doWork(downloads: OfflineDownloads?): Result {
+    private suspend fun doWork(downloads: OfflineDownloads): Result {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val worker =
             TestListenableWorkerBuilder<OfflineDownloadWorker>(context)

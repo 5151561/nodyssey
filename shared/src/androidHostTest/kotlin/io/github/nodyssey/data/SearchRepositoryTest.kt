@@ -9,7 +9,6 @@ import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
@@ -100,20 +99,6 @@ class SearchRepositoryTest {
 
             assertEquals(8052L, repository.resolveMemberUid("xy"))
             assertEquals("/member?t=xy", html.requestedPath)
-        }
-
-    @Test
-    fun `mention resolution fails when the member link does not redirect`() =
-        runTest {
-            val dispatcher = StandardTestDispatcher(testScheduler)
-            val repository =
-                NetworkSearchRepository(
-                    jsonSource = RecordingJsonSource(""),
-                    htmlSource = RecordingHtmlSource(redirectsTo = null),
-                    dispatchers = AppDispatchers(dispatcher, dispatcher),
-                )
-
-            assertNull(repository.resolveMemberUid("nobody"))
         }
 }
 

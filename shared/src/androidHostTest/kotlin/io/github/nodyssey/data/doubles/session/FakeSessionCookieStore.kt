@@ -19,9 +19,6 @@ import io.github.plaza.core.net.SessionCookieStore
 class FakeSessionCookieStore : SessionCookieStore {
     private val cookies = LinkedHashMap<String, LinkedHashMap<String, String>>()
 
-    var flushes: Int = 0
-        private set
-
     override fun cookieHeader(url: String): String? =
         cookies[url]
             ?.entries
@@ -38,7 +35,5 @@ class FakeSessionCookieStore : SessionCookieStore {
 
     override suspend fun removeAll() = cookies.clear()
 
-    override fun flush() {
-        flushes++
-    }
+    override fun flush() = Unit
 }

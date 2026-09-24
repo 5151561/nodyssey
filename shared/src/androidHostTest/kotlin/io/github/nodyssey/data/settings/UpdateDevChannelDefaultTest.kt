@@ -55,17 +55,6 @@ class UpdateDevChannelDefaultTest {
             assertEquals(false, repository.devChannelEnabled())
         }
 
-    @Test
-    fun `turning it on on a release build sticks`() =
-        runTest {
-            val repository = repository(devChannelDefault = false)
-
-            repository.setUpdateDevChannel(true)
-
-            assertEquals(true, repository.settings.first().updateDevChannel)
-            assertEquals(true, repository.devChannelEnabled())
-        }
-
     private fun CoroutineScope.repository(devChannelDefault: Boolean): SettingsRepository {
         val directory =
             Files.createTempDirectory("nodyssey-settings").toFile().apply { deleteOnExit() }

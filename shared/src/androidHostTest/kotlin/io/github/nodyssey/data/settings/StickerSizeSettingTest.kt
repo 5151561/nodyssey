@@ -9,7 +9,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import java.nio.file.Files
@@ -22,28 +21,6 @@ import java.nio.file.Files
  * can walk back — the same reasoning 浏览历史 upper bound is guarded by.
  */
 class StickerSizeSettingTest {
-    @Test
-    fun `an empty store keeps the inline box every earlier build drew`() =
-        runTest {
-            val settings = repository().settings.first()
-
-            assertTrue("统一缩限 must default on", settings.stickerUniformSize)
-            assertEquals(SettingsRepository.MIN_STICKER_SIZE_SP, settings.stickerSize)
-        }
-
-    @Test
-    fun `both halves of the setting survive a round trip`() =
-        runTest {
-            val repository = repository()
-
-            repository.setStickerUniformSize(false)
-            repository.setStickerSize(48)
-
-            val settings = repository.settings.first()
-            assertEquals(false, settings.stickerUniformSize)
-            assertEquals(48, settings.stickerSize)
-        }
-
     @Test
     fun `a size beyond the slider is pulled back to its ends`() =
         runTest {

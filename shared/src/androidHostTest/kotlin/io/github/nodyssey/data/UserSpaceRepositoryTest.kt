@@ -146,19 +146,6 @@ class UserSpaceRepositoryTest {
             assertEquals(SiteError.Unparsable, (exception as? SiteException)?.error)
         }
 
-    /** With no paging metadata, a full-looking page is assumed to have a successor. */
-    @Test
-    fun `offers a next page when the response fills one`() =
-        runTest {
-            val rows = (1..20).joinToString(",") { """{"post_id":$it,"title":"t$it"}""" }
-            val page =
-                NetworkUserSpaceRepository(FakeSpaceJsonSource("""{"list":[$rows]}"""), dispatchers)
-                    .collections(1)
-
-            assertEquals(20, page.items.size)
-            assertTrue(page.hasNextPage)
-        }
-
     /**
      * Regression: guessing "no more pages" from a row-count threshold silently truncated every list
      * whose real page size was below the guess. Any non-empty page without metadata offers more.

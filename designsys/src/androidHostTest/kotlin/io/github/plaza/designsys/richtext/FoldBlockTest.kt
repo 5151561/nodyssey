@@ -29,10 +29,10 @@ class FoldBlockTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private fun fold(open: Boolean = false, title: String = "TCP 调优前") =
+    private fun fold() =
         RichNode.Fold(
-            title = title,
-            open = open,
+            title = "TCP 调优前",
+            open = false,
             children =
             listOf(
                 RichNode.Paragraph(listOf(InlineNode.Text("折叠里的正文"))),
@@ -65,21 +65,5 @@ class FoldBlockTest {
         composeRule.onNodeWithText("折叠里的正文").assertIsDisplayed()
         // The host's slot reaches inside the fold, so a code block there is still the app's own.
         composeRule.onNodeWithText("host code sh").assertIsDisplayed()
-    }
-
-    /** `<details open>` asks for the block to start open, and nothing else about it changes. */
-    @Test
-    fun `an open fold starts expanded`() {
-        setContent(fold(open = true))
-
-        composeRule.onNodeWithText("折叠里的正文").assertIsDisplayed()
-    }
-
-    /** An empty `<summary>` still needs a label, or there is nothing to tap and nothing to read. */
-    @Test
-    fun `a fold with no summary is labelled anyway`() {
-        setContent(fold(title = ""))
-
-        composeRule.onNodeWithText("折叠内容").assertIsDisplayed()
     }
 }

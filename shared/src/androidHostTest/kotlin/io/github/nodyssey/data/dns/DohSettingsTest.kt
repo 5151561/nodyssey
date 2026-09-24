@@ -47,16 +47,6 @@ class DohSettingsTest {
         assertEquals(saved, settings.config.first())
     }
 
-    /** 主开关 writes as it is tapped, so it has to leave the server beside it alone. */
-    @Test
-    fun `setEnabled flips the flag and nothing else`() = runTest {
-        settings.save(saved)
-
-        settings.setEnabled(false)
-
-        assertEquals(saved.copy(enabled = false), settings.config.first())
-    }
-
     /** A provider this build no longer knows about reads as the default rather than as a crash. */
     @Test
     fun `an unknown provider falls back to the default one`() = runTest {

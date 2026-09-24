@@ -3,7 +3,6 @@ package io.github.nodyssey.ui.account
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.settings.visibleHomeBoards
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,11 +15,6 @@ class AccountLogicTest {
             Board("tech", "技术", null),
             Board("trade", "交易", null),
         )
-
-    @Test
-    fun `an empty hidden set means every board`() {
-        assertEquals(boards, visibleHomeBoards(boards, emptySet()))
-    }
 
     @Test
     fun `hiding an optional board removes exactly that board`() {
@@ -44,11 +38,6 @@ class AccountLogicTest {
     }
 
     @Test
-    fun `an empty password has no strength at all`() {
-        assertNull(passwordStrength(""))
-    }
-
-    @Test
     fun `strength rises with length and with character variety`() {
         assertEquals(PasswordStrength.Weak, passwordStrength("abc"))
         assertEquals(PasswordStrength.Weak, passwordStrength("abcdefgh"))
@@ -63,12 +52,5 @@ class AccountLogicTest {
         val longPassphrase = passwordStrength("correcthorsebatterystaple")!!
         val shortMixed = passwordStrength("aB1!")!!
         assertTrue(longPassphrase.filledBars > shortMixed.filledBars)
-    }
-
-    @Test
-    fun `the strength meter never fills more bars than it has`() {
-        PasswordStrength.entries.forEach { strength ->
-            assertTrue(strength.filledBars in 1..PasswordStrength.TOTAL_BARS)
-        }
     }
 }

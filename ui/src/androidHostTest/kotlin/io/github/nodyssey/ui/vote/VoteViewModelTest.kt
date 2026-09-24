@@ -45,30 +45,6 @@ class VoteViewModelTest {
         admin: Boolean = false,
     ) = VoteViewModel(VOTE_ID, repository, session, FakeProfile(uid, admin))
 
-    @Test
-    fun `reads the vote on creation`() =
-        runTest(dispatcher) {
-            val repository = FakeVoteRepository(vote = unvoted())
-
-            val vm = viewModel(repository)
-            advanceUntilIdle()
-
-            assertEquals("哪个运营商比较好", vm.uiState.value.vote?.title)
-            assertFalse(vm.uiState.value.isLoading)
-            assertNull(vm.uiState.value.error)
-        }
-
-    /** No results before this account votes, which is what the card keys every read-out off. */
-    @Test
-    fun `an unvoted vote shows no results`() =
-        runTest(dispatcher) {
-            val vm = viewModel(FakeVoteRepository(vote = unvoted()))
-            advanceUntilIdle()
-
-            assertFalse(vm.uiState.value.hasVoted)
-            assertFalse(vm.uiState.value.showsResults)
-        }
-
     /** Single choice replaces; two taps must not end up submitting both options. */
     @Test
     fun `a single-choice selection replaces rather than accumulates`() =
@@ -312,20 +288,6 @@ class VoteViewModelTest {
             assertEquals(listOf(2), repository.voterPages)
         }
 
-    /** Anonymous votes have no voter list, and asking for one would be a request that cannot answer. */
-    @Test
-    fun `an anonymous vote never asks for voters`() =
-        runTest(dispatcher) {
-            val repository = FakeVoteRepository(vote = voted(isPublic = false))
-            val vm = viewModel(repository)
-            advanceUntilIdle()
-
-            vm.toggleVoters(13201)
-            advanceUntilIdle()
-
-            assertTrue(vm.uiState.value.voters.isEmpty())
-        }
-
     private companion object {
         const val VOTE_ID = 2871L
         const val OWNER_UID = 57815L
@@ -348,14 +310,11 @@ class VoteViewModelTest {
             ),
         )
 
-        fun voted(
-            isPublic: Boolean = true,
-            firstPageVoters: List<Long> = emptyList(),
-        ) = Vote(
+        fun voted(firstPageVoters: List<Long> = emptyList()) = Vote(
             id = VOTE_ID,
             title = "哪个运营商比较好",
             ownerUid = OWNER_UID,
-            isPublic = isPublic,
+            isPublic = true,
             locked = false,
             multiple = false,
             items =

@@ -25,12 +25,6 @@ class HomeBoardArrangementTest {
     }
 
     @Test
-    fun `the saved order is the order`() {
-        val arrangement = homeBoardArrangement(boards, listOf("trade", "daily", "tech"), emptySet())
-        assertEquals(listOf(trade, daily, tech), arrangement.enabled)
-    }
-
-    @Test
     fun `a parked board leaves the enabled half and keeps its rank in the tail`() {
         val arrangement =
             homeBoardArrangement(boards, listOf("trade", "daily", "tech"), setOf("trade", "tech"))

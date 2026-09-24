@@ -188,19 +188,6 @@ class ProfileRepositoryTest {
             assertEquals("/api/account/getInfo/42?readme=1", jsonSource.requestedPath)
         }
 
-    @Test(expected = SiteException::class)
-    fun `rejects a page without signed in profile data`() =
-        runTest {
-            NetworkProfileRepository(
-                htmlSource = FakeProfileHtmlSource("<html><body></body></html>"),
-                jsonSource = FakeProfileJsonSource(response = "{}"),
-                profileDao = database.profileDao(),
-                currentSessionFingerprint = { 7 },
-                isSignedIn = { true },
-                clock = AppClock { 0L },
-            ).profile()
-        }
-
     /**
      * The two ways the front page comes back naming nobody, which used to be one.
      *

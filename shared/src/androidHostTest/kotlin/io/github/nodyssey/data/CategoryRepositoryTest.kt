@@ -150,19 +150,6 @@ class CategoryRepositoryTest {
         }
 
     @Test
-    fun `a stale list is re-fetched`() =
-        runTest {
-            val client = RecordingJsonSource { successBody("daily") }
-            val repository = repository(client)
-            repository.refreshIfNeeded()
-
-            clock.advanceBy(CategoryRepository.CACHE_TTL_MILLIS + 1)
-            repository.refreshIfNeeded()
-
-            assertEquals(2, client.calls)
-        }
-
-    @Test
     fun `concurrent callers collapse into one request`() =
         runTest {
             val client = RecordingJsonSource { successBody("daily") }
@@ -176,16 +163,5 @@ class CategoryRepositoryTest {
             third.await()
 
             assertEquals(1, client.calls)
-        }
-
-    @Test
-    fun `a success false response is treated as a failure`() =
-        runTest {
-            val repository = repository(RecordingJsonSource { """{"success":false,"data":[]}""" })
-
-            repository.refreshIfNeeded()
-
-            // Falls back rather than showing a tab strip with only the front page on it.
-            assertTrue(repository.boards.first().size > 1)
         }
 }

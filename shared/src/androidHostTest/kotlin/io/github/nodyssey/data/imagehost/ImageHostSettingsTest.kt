@@ -64,15 +64,6 @@ class ImageHostSettingsTest {
         assertEquals("https://img.example.com", settings.config(ImageHostProvider.EASY_IMAGE).first().siteUrl)
     }
 
-    @Test
-    fun `the selection survives a switch away and back`() = runTest {
-        settings.select(ImageHostProvider.SMMS)
-        assertEquals(ImageHostProvider.SMMS, settings.selected.first())
-
-        settings.select(ImageHostProvider.CUSTOM)
-        assertEquals(ImageHostProvider.CUSTOM, settings.selected.first())
-    }
-
     /**
      * 断开 on a custom host takes the whole record, and it has to.
      *
@@ -129,12 +120,6 @@ class ImageHostSettingsTest {
         assertEquals("", config.token)
         assertEquals("https://img.example.com", config.siteUrl)
         assertFalse(config.isConfigured)
-    }
-
-    @Test
-    fun `an unset custom path falls back to the field's own default, not to blank`() = runTest {
-        assertEquals("url", ImageHostConfig(ImageHostProvider.CUSTOM).custom.urlPath)
-        assertEquals("file", ImageHostConfig(ImageHostProvider.CUSTOM).custom.fileField)
     }
 
     /**

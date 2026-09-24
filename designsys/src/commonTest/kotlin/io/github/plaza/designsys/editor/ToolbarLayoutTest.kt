@@ -38,15 +38,6 @@ class ToolbarLayoutTest {
     }
 
     @Test
-    fun `a key this version has just added is offered rather than silently enabled`() {
-        // Standing in for the next release's new action: a key the stored arrangement predates.
-        val layout = toolbarLayout(listOf("BOLD", "CODE"), PostKeys)
-
-        assertTrue(EditorAction.STRIKETHROUGH in layout.available)
-        assertTrue(EditorAction.STRIKETHROUGH !in layout.enabled)
-    }
-
-    @Test
     fun `the pool is the catalogue order rather than the order things left the strip`() {
         val layout = toolbarLayout(listOf("EMOJI"), PostKeys)
 

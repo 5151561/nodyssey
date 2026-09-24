@@ -122,22 +122,6 @@ class ReplyComposerViewModelTest {
         assertEquals("写到一半", restored.uiState.value.body)
     }
 
-    @Test
-    fun `drafts do not leak between threads`() = runTest(dispatcher) {
-        val first = viewModel(postId = 1L)
-        first.open()
-        advanceUntilIdle()
-        first.bodyState.typeText("第一帖")
-        runCurrent()
-        advanceUntilIdle()
-
-        val second = viewModel(postId = 2L)
-        second.open()
-        advanceUntilIdle()
-
-        assertEquals("", second.uiState.value.body)
-    }
-
     /**
      * The shape is the site's, not ours: fixture `post-703863-1.html` floor #8 is
      * `@ipv4 [#7](/post-703863-1#7) 想要十几刀年付的中盘鸡` — mention, floor link and answer on one

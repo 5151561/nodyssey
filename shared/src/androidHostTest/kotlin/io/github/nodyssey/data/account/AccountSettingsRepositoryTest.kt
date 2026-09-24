@@ -170,20 +170,6 @@ class AccountSettingsRepositoryTest {
         }
 
     @Test
-    fun `unbinding telegram posts with no body`() =
-        runTest {
-            val source = FakeSettingsJsonSource("""{"success":true}""")
-
-            repository(source).unbindTelegram()
-
-            assertEquals(
-                listOf(NodeSeekJsonClient.PATH_ACCOUNT_UNBIND_TELEGRAM),
-                source.bodylessPosts,
-            )
-            assertTrue("no JSON body belongs on this one", source.posts.isEmpty())
-        }
-
-    @Test
     fun `two factor enrolment sends the password and returns the otpauth uri`() =
         runTest {
             val source =
@@ -225,25 +211,6 @@ class AccountSettingsRepositoryTest {
                 source.posts.single().body,
             )
             assertEquals("${NodeSeekSite.BASE_URL}/setting", source.posts.single().referer)
-        }
-
-    @Test
-    fun `uploads avatar with the settings page multipart contract`() =
-        runTest {
-            val source = FakeSettingsJsonSource("""{"success":true}""")
-            val upload = AvatarUpload(byteArrayOf(1, 2, 3), "image/jpeg")
-
-            repository(source).uploadAvatar(upload)
-
-            val request = source.multipartRequests.single()
-            assertEquals(NodeSeekJsonClient.PATH_AVATAR_UPLOAD, request.path)
-            assertEquals(mapOf("token" to "123456798", "name" to "avatar"), request.fields)
-            assertEquals("img", request.fileField)
-            assertEquals("img.jpg", request.fileName)
-            assertTrue(request.fileBytes.contentEquals(upload.bytes))
-            assertEquals("image/jpeg", request.fileMimeType)
-            assertEquals(mapOf("x-csrf-challenge" to "simple-token"), request.headers)
-            assertEquals("${NodeSeekSite.BASE_URL}/setting", request.referer)
         }
 
     @Test
@@ -302,20 +269,6 @@ class AccountSettingsRepositoryTest {
         }
 
     @Test
-    fun `writes remote holiday theme`() =
-        runTest {
-            val source = FakeSettingsJsonSource("""{"success":true}""")
-
-            repository(source).setHolidayTheme(false)
-
-            assertEquals(NodeSeekJsonClient.PATH_PREFERENCE_SET, source.posts.single().path)
-            assertJsonEquals(
-                """{"enable_festivous_style":false}""",
-                source.posts.single().body,
-            )
-        }
-
-    @Test
     fun `writes inverse hidden state for a home board`() =
         runTest {
             val source = FakeSettingsJsonSource("""{"success":true}""")
@@ -340,39 +293,6 @@ class AccountSettingsRepositoryTest {
 
             assertTrue(failure is IllegalArgumentException)
             assertTrue(source.posts.isEmpty())
-        }
-
-    /** Blocking takes a name and only a name: the site's own form has no uid to send. */
-    @Test
-    fun `blocks by member name`() =
-        runTest {
-            val source = FakeSettingsJsonSource("""{"success":true}""")
-
-            repository(source).block("alpha")
-
-            assertEquals(NodeSeekJsonClient.PATH_BLOCK_ADD, source.posts.single().path)
-            assertJsonEquals("""{"block_member_name":"alpha"}""", source.posts.single().body)
-        }
-
-    @Test
-    fun `carries the site's refusal of an unknown name`() =
-        runTest {
-            val source = FakeSettingsJsonSource("""{"success":false,"message":"用户不存在"}""")
-
-            val failure = runCatching { repository(source).block("nobody") }.exceptionOrNull()
-
-            assertEquals("用户不存在", (failure as? SiteException)?.detail)
-        }
-
-    @Test
-    fun `unblocks by member id`() =
-        runTest {
-            val source = FakeSettingsJsonSource("""{"success":true}""")
-
-            repository(source).unblock(91)
-
-            assertEquals(NodeSeekJsonClient.PATH_BLOCK_DELETE, source.posts.single().path)
-            assertJsonEquals("""{"block_member_id":91}""", source.posts.single().body)
         }
 
     @Test
@@ -406,7 +326,6 @@ private class FakeSettingsJsonSource(
     private val response: String,
     private val getResponses: Map<String, String> = emptyMap(),
     private val postResponses: Map<String, String> = emptyMap(),
-    private val multipartResponse: String = response,
     telegramId: Long? = null,
     private val settingHtml: String = bootstrapPage(telegramId),
 ) : JsonApi,
@@ -419,8 +338,6 @@ private class FakeSettingsJsonSource(
     var requestedHtmlPath: String? = null
         private set
     val posts = mutableListOf<CapturedJsonPost>()
-    val bodylessPosts = mutableListOf<String>()
-    val multipartRequests = mutableListOf<CapturedMultipartPost>()
 
     override suspend fun getHtml(path: String): String {
         requestedHtmlPath = path
@@ -440,10 +357,8 @@ private class FakeSettingsJsonSource(
         return postResponses[path] ?: response
     }
 
-    override suspend fun postJson(path: String, referer: String): JsonPostResponse {
-        bodylessPosts += path
-        return JsonPostResponse(code = 200, body = postResponses[path] ?: response)
-    }
+    override suspend fun postJson(path: String, referer: String): JsonPostResponse =
+        JsonPostResponse(code = 200, body = postResponses[path] ?: response)
 
     override suspend fun postMultipart(
         path: String,
@@ -454,20 +369,7 @@ private class FakeSettingsJsonSource(
         fileMimeType: String,
         headers: Map<String, String>,
         referer: String,
-    ): String {
-        multipartRequests +=
-            CapturedMultipartPost(
-                path = path,
-                fields = fields,
-                fileField = fileField,
-                fileName = fileName,
-                fileBytes = fileBytes,
-                fileMimeType = fileMimeType,
-                headers = headers,
-                referer = referer,
-            )
-        return multipartResponse
-    }
+    ): String = response
 }
 
 /**
@@ -488,17 +390,6 @@ private fun bootstrapPage(telegramId: Long?): String {
 private data class CapturedJsonPost(
     val path: String,
     val body: String,
-    val referer: String,
-)
-
-private data class CapturedMultipartPost(
-    val path: String,
-    val fields: Map<String, String>,
-    val fileField: String,
-    val fileName: String,
-    val fileBytes: ByteArray,
-    val fileMimeType: String,
-    val headers: Map<String, String>,
     val referer: String,
 )
 

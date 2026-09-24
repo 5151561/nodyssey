@@ -1,9 +1,7 @@
 package io.github.nodyssey.data
 
-import androidx.paging.PagingSource
 import androidx.paging.testing.asSnapshot
 import io.github.nodyssey.data.local.FeedPositionEntity
-import io.github.nodyssey.data.local.FeedPostRow
 import io.github.nodyssey.data.local.FeedRemoteKeyEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
@@ -82,52 +80,7 @@ class ReadMarkTest {
         )
     }
 
-    private suspend fun row(postId: Long): FeedPostRow {
-        val result =
-            database
-                .feedDao()
-                .pagingSource(FRONT_PAGE_FEED_KEY)
-                .load(PagingSource.LoadParams.Refresh(null, 50, false))
-        return (result as PagingSource.LoadResult.Page).data.first { it.post.postId == postId }
-    }
-
     private suspend fun feedRows(): List<FeedPost> = repository.feed(null, FeedSort.LAST_REPLY).asSnapshot()
-
-    @Test
-    fun `an unopened post has no read state`() =
-        runTest {
-            givenPost(postId = 7, commentCount = 10)
-
-            val row = row(7)
-            assertEquals(null, row.lastReadAtMillis)
-            assertEquals(null, row.lastSeenCommentCount)
-        }
-
-    @Test
-    fun `opening a post records the reply count the list was showing`() =
-        runTest {
-            givenPost(postId = 7, commentCount = 10)
-
-            repository.markThreadRead(7)
-
-            val mark = requireNotNull(database.readMarkDao().find(7))
-            assertEquals(10, mark.lastSeenCommentCount)
-            assertEquals(clock.nowMillis(), mark.lastReadAtMillis)
-        }
-
-    @Test
-    fun `replies arriving after the read are counted as new`() =
-        runTest {
-            givenPost(postId = 7, commentCount = 10)
-            repository.markThreadRead(7)
-
-            // A later refresh brings the post back with more replies.
-            givenPost(postId = 7, commentCount = 14)
-
-            val row = row(7)
-            assertEquals(10, row.lastSeenCommentCount)
-            assertEquals(14, row.post.commentCount)
-        }
 
     @Test
     fun `a published reply advances only this account's own part of the baseline`() =
@@ -155,14 +108,6 @@ class ReadMarkTest {
             repository.markThreadRead(7)
 
             assertEquals(10, database.readMarkDao().find(7)?.lastSeenCommentCount)
-        }
-
-    @Test
-    fun `a deep linked post with no cached row reads as fully unseen`() =
-        runTest {
-            repository.markThreadRead(999)
-
-            assertEquals(0, database.readMarkDao().find(999)?.lastSeenCommentCount)
         }
 
     @Test

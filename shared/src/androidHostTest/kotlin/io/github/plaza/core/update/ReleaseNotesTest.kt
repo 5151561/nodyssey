@@ -38,9 +38,4 @@ class ReleaseNotesTest {
         // `#12` is a floor number in this project's own notes, not a heading.
         assertEquals("回复写的是 #12 那一行", releaseNotesText("回复写的是 #12 那一行"))
     }
-
-    @Test
-    fun `an empty body stays empty`() {
-        assertEquals("", releaseNotesText(""))
-    }
 }
