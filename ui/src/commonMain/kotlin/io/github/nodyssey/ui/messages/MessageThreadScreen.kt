@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.messages
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -143,16 +142,19 @@ import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
-import io.github.plaza.designsys.editor.applyMarkdown
-import io.github.plaza.designsys.editor.deleteBackwards
+import io.github.plaza.designsys.editor.dispatch
+import io.github.plaza.designsys.editor.emojiPanelScope
 import io.github.plaza.designsys.editor.icon
-import io.github.plaza.designsys.editor.insertText
 import io.github.plaza.designsys.editor.label
+import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorder
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.stringResource
@@ -237,7 +239,7 @@ fun MessageThreadScreen(
 ) {
     val webUrl = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(state.uid)
     var customizing by rememberSaveable { mutableStateOf(false) }
-    var panel by rememberSaveable { mutableStateOf(ComposerPanel.NONE) }
+    val editorState = rememberMarkdownEditorState()
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -306,8 +308,7 @@ fun MessageThreadScreen(
             MessageComposer(
                 draftState = draftState,
                 state = state,
-                panel = panel,
-                onPanelChange = { panel = it },
+                editorState = editorState,
                 onSend = onSend,
                 onRemoveQuote = onRemoveQuote,
                 onPickImages = onPickImages,
@@ -361,7 +362,7 @@ private fun ThreadTopBar(
         Surface(
             shape = LayerCardShape,
             color = layers.raised,
-            border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+            border = layers.cardBorderStroke,
             modifier = Modifier.fillMaxWidth().floatShadow(LayerCardShape, layers.shadows),
         ) {
             TopAppBar(
@@ -562,12 +563,8 @@ private fun MessageBubbleRow(
                 .then(if (message.isMine) Modifier else Modifier.cardShadow(shape, layers.shadows))
                 .clip(shape)
                 .background(if (message.isMine) MaterialTheme.colorScheme.primaryContainer else layers.card)
-                .then(
-                    layers.cardBorder
-                        ?.takeUnless { message.isMine }
-                        ?.let { Modifier.border(1.dp, it, shape) }
-                        ?: Modifier,
-                ).combinedClickable(
+                .then(if (message.isMine) Modifier else Modifier.cardBorder(layers, shape))
+                .combinedClickable(
                     // Nothing on a plain tap: the bubble is not a destination, and the whole point of
                     // the gesture is that it is the *long* press. It goes through `combinedClickable`
                     // rather than a raw `pointerInput` for what that brings with it — the ripple that
@@ -624,11 +621,9 @@ private fun MessageBubbleRow(
 /**
  * 复制 and 引用, on the long press: 3e's white menu card under the bubble.
  *
- * A Material [DropdownMenu] in the redesign's colours. This was an inverse-surface pill above the
- * bubble for a while, because the old grey menu hung off the bubble like the overflow of a screen
- * that was not there; 3e asks for the menu again, as a raised white card with an icon per action,
- * and the menu already knows how to sit under its anchor, flip above it near the bottom of the
- * window, and close on back or on a tap elsewhere.
+ * A Material [DropdownMenu] in the redesign's colours — 3e draws it as a raised white card with an
+ * icon per action, and the menu already knows how to sit under its anchor, flip above it near the
+ * bottom of the window, and close on back or on a tap elsewhere.
  *
  * Copies the message's source rather than what is on screen: a bubble that renders `[看这个](/post-1-1)`
  * as one blue word is a bubble whose link survives only in the Markdown, and 引用 quotes that same
@@ -651,7 +646,7 @@ private fun BubbleMenu(
         containerColor = layers.raised,
         // Paper draws no shadow; the outline is what separates the card from the thread there.
         shadowElevation = if (layers.shadows) 8.dp else 0.dp,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
         modifier = Modifier.widthIn(min = MENU_MIN_WIDTH),
     ) {
         BubbleMenuItem(
@@ -705,9 +700,8 @@ private fun MessageStatusLine(
         modifier =
         if (message.status == SendStatus.FAILED) {
             // The whole line is the one target, 「⚠ 发送失败 · 重试」 together: wide enough on its own,
-            // and its words end where every other status line's do. 重试 used to be a 48dp box of
-            // its own, and under a bubble of mine — against the end of the screen — whatever of
-            // that box the word did not fill was empty space pushing the line inwards.
+            // and its words end where every other status line's do. A 48dp box for 重试 alone would
+            // leave empty space under a bubble of mine, pushing the line in from the screen's end.
             Modifier
                 .heightIn(min = Sizes.minTouchTarget)
                 .clickable(onClickLabel = retryLabel, role = Role.Button, onClick = onRetrySend)
@@ -761,18 +755,14 @@ private fun MessageStatusLine(
     }
 }
 
-/** What stands in the keyboard's place under the message bar. */
-internal enum class ComposerPanel { NONE, TOOLS, EMOJI }
-
 /**
  * Everything under the thread: uploads in flight, the quote cards, the message bar, and the panel
  * that takes the keyboard's place when the + key is on (3d, 3e).
  *
- * The + key replaces the formatting strip this bar used to carry above itself. 3e folds the strip,
- * the photo picker and the emoji key into one grid of tiles behind it, so the bar at rest is three
- * things — +, the field, send — and the conversation keeps the height the strip took. The grid is
- * still the strip underneath: its keys are the arranged ones (`state.toolbar`), and the wrench is its
- * last tile.
+ * 3e folds the formatting keys, the photo picker and the emoji key into one grid of tiles behind the +
+ * key, so the bar at rest is three things — +, the field, send — and the conversation keeps the height
+ * a strip of keys would take. The grid's keys are the arranged ones (`state.toolbar`), and the wrench
+ * is its last tile.
  *
  * 3e also draws the site's MD On/Off switch in the grid. It is left out: a message always goes out
  * as Markdown — see where `MessageThreadViewModel` delivers one.
@@ -781,8 +771,7 @@ internal enum class ComposerPanel { NONE, TOOLS, EMOJI }
 private fun MessageComposer(
     draftState: TextFieldState,
     state: MessageThreadUiState,
-    panel: ComposerPanel,
-    onPanelChange: (ComposerPanel) -> Unit,
+    editorState: MarkdownEditorState,
     onSend: () -> Unit,
     onRemoveQuote: (String) -> Unit,
     onPickImages: (List<PickedImage>) -> Unit,
@@ -799,18 +788,12 @@ private fun MessageComposer(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val fieldFocus = remember { FocusRequester() }
-    var recentEmoji by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    // The grid is this bar's format card, and the emoji panel takes its place as it does under the
+    // post editor's: [MarkdownEditorState] keeps the two exclusive.
+    val panelOpen = editorState.formatOpen || editorState.emojiOpen
     // The panel stands in for the keyboard, and a keyboard is the one thing back is always expected
     // to dismiss before it leaves the screen.
-    PlazaBackHandler(enabled = panel != ComposerPanel.NONE) { onPanelChange(ComposerPanel.NONE) }
-
-    val openPanel: (ComposerPanel) -> Unit = { next ->
-        // Focus goes with the keyboard: a field that kept it would bring the keyboard straight back
-        // up over the panel on the next recomposition, and tapping the field is how the panel closes.
-        focusManager.clearFocus()
-        keyboard?.hide()
-        onPanelChange(next)
-    }
+    PlazaBackHandler(enabled = panelOpen) { editorState.closePanels() }
 
     Column(Modifier.fillMaxWidth()) {
         AttachmentTray(
@@ -848,45 +831,51 @@ private fun MessageComposer(
         MessageInputBar(
             draftState = draftState,
             canSend = state.canSend,
-            panelOpen = panel != ComposerPanel.NONE,
+            panelOpen = panelOpen,
             onTogglePanel = {
-                if (panel == ComposerPanel.NONE) openPanel(ComposerPanel.TOOLS) else onPanelChange(ComposerPanel.NONE)
+                if (panelOpen) {
+                    editorState.closePanels()
+                } else {
+                    // Focus goes with the keyboard: a field that kept it would bring the keyboard
+                    // straight back up over the grid on the next recomposition, and tapping the field
+                    // is how the grid closes.
+                    focusManager.clearFocus()
+                    keyboard?.hide()
+                    editorState.toggleFormat()
+                }
             },
             fieldFocus = fieldFocus,
-            onFieldFocused = { onPanelChange(ComposerPanel.NONE) },
+            onFieldFocused = { editorState.closePanels() },
             onSend = onSend,
         )
-        when (panel) {
-            ComposerPanel.NONE -> Unit
-
-            ComposerPanel.TOOLS ->
-                ToolGrid(
-                    state = state,
-                    onAction = { action ->
-                        when (action) {
-                            EditorAction.IMAGE -> pickImages()
-
-                            EditorAction.EMOJI -> onPanelChange(ComposerPanel.EMOJI)
-
-                            else -> {
-                                draftState.edit { applyMarkdown(action) }
-                                // Straight back to the field: the placeholder the key inserted is
-                                // selected, and the next keystroke is meant to replace it.
-                                onPanelChange(ComposerPanel.NONE)
-                                fieldFocus.requestFocus()
-                            }
-                        }
-                    },
-                    onCustomize = onCustomize,
-                )
-
-            ComposerPanel.EMOJI ->
-                NodeSeekEmojiPanel(
-                    onInsert = { text -> draftState.edit { insertText(text) } },
-                    onBackspace = { draftState.edit { deleteBackwards() } },
-                    recent = recentEmoji,
-                    onRecentChange = { recentEmoji = it },
-                )
+        if (editorState.formatOpen) {
+            ToolGrid(
+                state = state,
+                onAction = { action ->
+                    editorState.dispatch(
+                        action = action,
+                        bodyState = draftState,
+                        onPickImages = pickImages,
+                        // Straight back to the field: the placeholder the key inserted is selected,
+                        // and the next keystroke is meant to replace it.
+                        onFormatted = {
+                            editorState.closePanels()
+                            fieldFocus.requestFocus()
+                        },
+                        hideKeyboard = { keyboard?.hide() },
+                    )
+                },
+                onCustomize = onCustomize,
+            )
+        }
+        if (editorState.emojiOpen) {
+            val panel = editorState.emojiPanelScope(draftState)
+            NodeSeekEmojiPanel(
+                onInsert = panel.onInsert,
+                onBackspace = panel.onBackspace,
+                recent = panel.recent,
+                onRecentChange = panel.onRecentChange,
+            )
         }
     }
 }
@@ -988,7 +977,7 @@ private fun MessageDraftField(
             Surface(
                 shape = RoundedCornerShape(INPUT_CONTROL_SIZE / 2),
                 color = layers.raised,
-                border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+                border = layers.cardBorderStroke,
                 modifier = Modifier.cardShadow(RoundedCornerShape(INPUT_CONTROL_SIZE / 2), layers.shadows),
             ) {
                 Box(
@@ -1097,7 +1086,7 @@ private fun ToolTile(
                 .clip(MaterialTheme.shapes.largeIncreased)
                 .background(layers.raised)
                 .indication(interactionSource, ripple())
-                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, MaterialTheme.shapes.largeIncreased) } ?: Modifier),
+                .cardBorder(layers, MaterialTheme.shapes.largeIncreased),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1129,7 +1118,7 @@ private fun ThreadMenu(onOpenBrowser: () -> Unit) {
             shape = MaterialTheme.shapes.largeIncreased,
             containerColor = layers.raised,
             shadowElevation = if (layers.shadows) 8.dp else 0.dp,
-            border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+            border = layers.cardBorderStroke,
         ) {
             DropdownMenuItem(
                 text = { Text(stringResource(Res.string.action_open_in_browser)) },

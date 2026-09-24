@@ -3,7 +3,6 @@ package io.github.nodyssey.ui.account
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.settings.visibleHomeBoards
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test

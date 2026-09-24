@@ -58,9 +58,8 @@ import io.github.nodyssey.ui.resources.settings_wallpaper_unreadable_hint
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
-import io.github.nodyssey.ui.settings.SettingsRow
-import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -162,7 +161,7 @@ fun DynamicColorScreen(
  * the chosen one generates, and the two switches.
  *
  * The candidates and the ramps carry the card's 16dp inset themselves; the two switch rows bring
- * their own, being the same [SettingsRow]s every other card uses.
+ * their own, being the same [GroupedRow]s every other card uses.
  */
 @Composable
 internal fun DynamicColorContent(
@@ -223,7 +222,7 @@ internal fun DynamicColorContent(
         }
 
         Column {
-            SettingsRow(
+            GroupedRow(
                 title = stringResource(Res.string.settings_wallpaper_system_palette),
                 subtitle =
                 stringResource(
@@ -244,12 +243,12 @@ internal fun DynamicColorContent(
                     )
                 },
             )
-            SettingsRow(
+            GroupedRow(
                 title = stringResource(Res.string.settings_wallpaper_auto_update),
                 subtitle = stringResource(Res.string.settings_wallpaper_auto_update_hint),
                 checked = settings.wallpaperAutoUpdate,
                 onCheckedChange = onAutoUpdateChange,
-                bottom = true,
+                last = true,
                 trailing = { GroupedListItemSwitch(checked = settings.wallpaperAutoUpdate) },
             )
         }

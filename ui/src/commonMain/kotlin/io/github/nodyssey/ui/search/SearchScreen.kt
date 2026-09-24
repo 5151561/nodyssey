@@ -1,7 +1,5 @@
 package io.github.nodyssey.ui.search
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,16 +48,10 @@ import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -85,8 +76,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -158,6 +147,8 @@ import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorder
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
@@ -445,7 +436,7 @@ private fun SearchInputRow(
             Modifier
                 .weight(1f)
                 .cardShadow(CircleShape, layers.shadows)
-                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier)
+                .cardBorder(layers, CircleShape)
                 .focusRequester(focusRequester),
             placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             shape = CircleShape,
@@ -613,7 +604,7 @@ private fun ResultScopeRow(
                 label = { Text(stringResource(Res.string.search_all_boards)) },
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                 colors = FilterChipDefaults.filterChipColors(containerColor = layers.raised),
-                border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+                border = layers.cardBorderStroke,
             )
         }
         Box(Modifier.weight(1f))
@@ -1122,7 +1113,7 @@ private fun BoardChip(
             selectedContainerColor = MaterialTheme.colorScheme.primary,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
         ),
-        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = LocalPlazaLayers.current.cardBorderStroke,
     )
 }
 

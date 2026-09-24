@@ -7,11 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,7 +25,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -45,7 +42,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.contentPreview
@@ -73,10 +69,11 @@ import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
-import io.github.plaza.designsys.theme.floatShadow
+import io.github.plaza.designsys.theme.fabLift
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -159,26 +156,21 @@ internal fun ConversationList(
 
         // The content overload rather than `icon`/`text`: that one wraps its label in an animation
         // container that does not surface the text to semantics, and the button would announce
-        // itself unnamed. Its own elevation is off because the float shadow draws the lift in the
-        // page's hue, as every floating control in the redesign does.
-        val fabShape = FloatingActionButtonDefaults.extendedFabShape
+        // itself unnamed.
         ExtendedFloatingActionButton(
             onClick = onNewConversation,
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+            elevation = PlazaFabElevation,
             modifier =
             Modifier
                 .align(Alignment.BottomEnd)
                 .padding(Spacing.lg)
-                .floatShadow(fabShape, LocalPlazaLayers.current.shadows),
+                .fabLift(),
         ) {
             Icon(Icons.Default.Edit, contentDescription = null)
             Spacer(Modifier.width(10.dp))
-            Text(
-                text = stringResource(Res.string.messages_new_conversation),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            )
+            Text(stringResource(Res.string.messages_new_conversation))
         }
     }
 

@@ -1,7 +1,6 @@
 package io.github.nodyssey.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -119,16 +116,16 @@ import io.github.nodyssey.ui.resources.proxy_test_failure_timeout
 import io.github.nodyssey.ui.resources.proxy_test_failure_tls
 import io.github.nodyssey.ui.resources.proxy_type_http
 import io.github.nodyssey.ui.resources.proxy_type_socks
+import io.github.plaza.designsys.component.IconBadge
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
-import io.github.plaza.designsys.component.SectionNote
+import io.github.plaza.designsys.component.SectionNotes
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -244,18 +241,15 @@ fun NetworkCheckScreen(
                 }
             }
 
-            Column(
-                modifier = Modifier.padding(top = Spacing.xs),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                SectionNote(
-                    stringResource(Res.string.network_check_hint_title),
-                    modifier = Modifier.semantics { heading() },
-                )
-                SectionNote(stringResource(Res.string.network_check_hint_layers))
-                SectionNote(stringResource(Res.string.network_check_hint_custom_tab))
-                SectionNote(stringResource(Res.string.network_check_hint_scope))
-            }
+            SectionNotes(
+                title = stringResource(Res.string.network_check_hint_title),
+                lines =
+                listOf(
+                    stringResource(Res.string.network_check_hint_layers),
+                    stringResource(Res.string.network_check_hint_custom_tab),
+                    stringResource(Res.string.network_check_hint_scope),
+                ),
+            )
         }
     }
 }
@@ -287,18 +281,15 @@ private fun CheckSummaryCard(state: NetworkCheckUiState) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            Surface(
-                color = if (failed) scheme.errorContainer else scheme.tertiaryContainer,
+            IconBadge(
+                containerColor = if (failed) scheme.errorContainer else scheme.tertiaryContainer,
                 contentColor = if (failed) scheme.onErrorContainer else scheme.onTertiaryContainer,
-                shape = ControlShape,
-                modifier = Modifier.size(48.dp),
+                size = 48.dp,
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    when {
-                        state.running || forum == null -> PlazaSpinner(strokeWidth = 2.dp, size = 20.dp)
-                        failed -> Icon(PlazaIcons.ErrorCircle, contentDescription = null)
-                        else -> Icon(Icons.Default.CheckCircle, contentDescription = null)
-                    }
+                when {
+                    state.running || forum == null -> PlazaSpinner(strokeWidth = 2.dp, size = 20.dp)
+                    failed -> Icon(PlazaIcons.ErrorCircle, contentDescription = null)
+                    else -> Icon(Icons.Default.CheckCircle, contentDescription = null)
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {

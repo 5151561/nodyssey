@@ -1,7 +1,6 @@
 package io.github.nodyssey.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,9 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,9 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -65,15 +59,18 @@ import io.github.nodyssey.ui.resources.notify_telegram_body
 import io.github.nodyssey.ui.resources.notify_telegram_title
 import io.github.nodyssey.ui.resources.notify_wifi_only
 import io.github.nodyssey.ui.resources.notify_wifi_only_hint
+import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.IconBadge
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.groupedListItemColors
+import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -190,21 +187,20 @@ fun NotificationSettingsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(SettingsItemGap)) {
                 SectionLabel(stringResource(Res.string.notify_check_section))
                 SettingsGroup {
-                    SettingsRow(
-                        leading = { Icon(PlazaIcons.Schedule, contentDescription = null) },
+                    GroupedRow(
+                        icon = PlazaIcons.Schedule,
                         title = stringResource(Res.string.notify_frequency),
                         subtitle =
                         stringResource(
                             Res.string.notify_frequency_every,
                             stringResource(pollMinutesLabel(settings.notificationPollMinutes)),
                         ),
-                        top = true,
+                        first = true,
                         enabled = enabled,
                         onClick = { frequencySheet = true },
-                        chevron = true,
                     )
-                    SettingsRow(
-                        leading = { Icon(PlazaIcons.Wifi, contentDescription = null) },
+                    GroupedRow(
+                        icon = PlazaIcons.Wifi,
                         title = stringResource(Res.string.notify_wifi_only),
                         subtitle = stringResource(Res.string.notify_wifi_only_hint),
                         checked = settings.notificationsWifiOnly,
@@ -212,11 +208,11 @@ fun NotificationSettingsScreen(
                         enabled = enabled,
                         trailing = { GroupedListItemSwitch(checked = settings.notificationsWifiOnly, enabled = enabled) },
                     )
-                    SettingsRow(
-                        leading = { Icon(PlazaIcons.Bedtime, contentDescription = null) },
+                    GroupedRow(
+                        icon = PlazaIcons.Bedtime,
                         title = stringResource(Res.string.notify_quiet_hours),
                         subtitle = stringResource(Res.string.notify_quiet_hours_hint),
-                        bottom = true,
+                        last = true,
                         checked = settings.notificationQuietHours,
                         onCheckedChange = onQuietHoursChange,
                         enabled = enabled,
@@ -228,19 +224,19 @@ fun NotificationSettingsScreen(
                 SettingsGroup {
                     // One row for the two site groups, because one comment is filed under both and
                     // the app posts one notification for it — see `NotificationChannels`.
-                    SettingsRow(
+                    GroupedRow(
                         title = stringResource(Res.string.notifications_interactions),
-                        top = true,
-                        leading = { Icon(PlazaIcons.AlternateEmail, contentDescription = null) },
+                        first = true,
+                        icon = PlazaIcons.AlternateEmail,
                         checked = settings.notifyInteractions,
                         onCheckedChange = onNotifyInteractionsChange,
                         enabled = enabled,
                         trailing = { GroupedListItemSwitch(checked = settings.notifyInteractions, enabled = enabled) },
                     )
-                    SettingsRow(
+                    GroupedRow(
                         title = stringResource(Res.string.notifications_messages),
-                        bottom = true,
-                        leading = { Icon(Icons.Default.Email, contentDescription = null) },
+                        last = true,
+                        icon = Icons.Default.Email,
                         checked = settings.notifyMessages,
                         onCheckedChange = onNotifyMessagesChange,
                         enabled = enabled,
@@ -276,20 +272,13 @@ private fun TelegramCard(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Surface(
-                color = scheme.tertiaryContainer,
-                contentColor = scheme.onTertiaryContainer,
-                shape = ControlShape,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                }
+            IconBadge(containerColor = scheme.tertiaryContainer, contentColor = scheme.onTertiaryContainer) {
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     stringResource(Res.string.notify_telegram_title),
-                    style = settingsRowTitleStyle().copy(fontWeight = FontWeight.SemiBold),
+                    style = groupedRowTitleStyle().copy(fontWeight = FontWeight.SemiBold),
                 )
                 Text(
                     stringResource(Res.string.notify_telegram_body),
@@ -343,32 +332,19 @@ private fun FrequencySheet(
             Column(Modifier.selectableGroup()) {
                 SettingsRepository.POLL_MINUTE_CHOICES.forEach { minutes ->
                     val isSelected = minutes == selected
-                    Row(
-                        modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 56.dp)
-                            .selectable(
-                                selected = isSelected,
-                                role = Role.RadioButton,
-                                onClick = { onSelect(minutes) },
-                            ),
-                        verticalAlignment = Alignment.CenterVertically,
+                    ChoiceRow(
+                        label =
+                        stringResource(Res.string.notify_frequency_every, stringResource(pollMinutesLabel(minutes))),
+                        selected = isSelected,
+                        onSelect = { onSelect(minutes) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        textStyle =
+                        groupedRowTitleStyle().copy(
+                            fontSize = 16.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        RadioButton(selected = isSelected, onClick = null)
-                        Text(
-                            stringResource(
-                                Res.string.notify_frequency_every,
-                                stringResource(pollMinutesLabel(minutes)),
-                            ),
-                            style =
-                            settingsRowTitleStyle().copy(
-                                fontSize = 16.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            ),
-                        )
-                    }
+                    )
                 }
             }
         }

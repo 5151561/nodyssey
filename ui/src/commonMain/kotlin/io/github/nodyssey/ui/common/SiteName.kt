@@ -19,6 +19,3 @@ import io.github.nodyssey.core.ActiveSite
  * whichever forum this app is showing.
  */
 val siteName: String get() = ActiveSite.current.displayName
-
-/** The forum's initials — the tile on the sign-in card. See [io.github.nodyssey.core.Site.mark]. */
-val siteMark: String get() = ActiveSite.current.mark

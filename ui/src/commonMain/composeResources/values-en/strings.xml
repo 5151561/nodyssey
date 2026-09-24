@@ -134,7 +134,6 @@
     <string name="post_auto_paging">Keep loading pages</string>
     <string name="post_reply_action">Reply</string>
     <string name="post_edit_action">Edit</string>
-    <string name="post_quote_action">Quote</string>
     <string name="post_floor_actions">Floor actions</string>
     <string name="post_reply_to">Reply to %1$s</string>
     <string name="post_quote_floor">Quote this floor</string>
@@ -146,12 +145,10 @@
     <string name="page_jump_page_of">Page %1$d of %2$d</string>
     <string name="page_jump_title">Jump to a page</string>
     <string name="page_jump_input">Page number (1–%1$d)</string>
-    <string name="page_jump_total_pages">%1$d pages</string>
     <string name="page_jump_by_page">Page</string>
     <string name="page_jump_by_floor">Floor</string>
     <string name="page_jump_floor_input">Floor (#0–#%1$d)</string>
     <string name="page_jump_latest_read">Last read, page %1$d</string>
-    <string name="page_jump_latest_read_floor">Last read %1$s</string>
     <string name="page_jump_latest">To the latest</string>
     <string name="page_jump_newest">Newest</string>
     <string name="page_jump_to">Go to</string>
@@ -207,7 +204,6 @@
     <string name="search_history_empty">No searches yet</string>
     <string name="search_history_scope">Posts · all boards</string>
     <string name="search_user_history_scope">Users</string>
-    <string name="search_history_board_scope">Posts · %1$s</string>
     <string name="search_user_topics">%1$d topics</string>
     <string name="search_user_comments">%1$d comments</string>
     <string name="search_user_joined">Joined %1$s</string>
@@ -225,8 +221,6 @@
     <string name="search_remove_recent">Remove from history: %1$s</string>
 
     <string name="notifications_mark_all_read">Mark all read</string>
-    <string name="notifications_mentions">Mentions</string>
-    <string name="notifications_replies">Thread replies</string>
     <string name="notifications_messages">Messages</string>
     <string name="notifications_interactions">Interactions</string>
     <string name="notifications_empty">Nothing here for now</string>
@@ -277,13 +271,11 @@
     <string name="profile_stars">Stardust</string>
     <string name="profile_level">Level</string>
     <string name="profile_level_remaining">%2$d drumsticks to Lv%1$d</string>
-    <string name="profile_attendance">Check in today · claim drumsticks</string>
     <string name="profile_attendance_checking">Checking today’s check-in…</string>
     <string name="profile_attendance_done">Checked in today · see the leaderboard</string>
     <string name="profile_attendance_title">Check in</string>
     <string name="profile_attendance_modes">Random, or a flat 5 drumsticks</string>
     <string name="profile_attendance_board">Leaderboard</string>
-    <string name="profile_account_settings">Account settings</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
@@ -291,7 +283,6 @@
     <string name="settings_theme_system">Follow the system</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_theme_entry_hint">Colour source, presets and palette style</string>
     <string name="settings_theme_mode">Light or dark</string>
     <string name="settings_one_hand">One-handed mode</string>
     <string name="settings_one_hand_hint">Second-level screens get a pull-down title bar taking up to two fifths of the screen; off is an ordinary one</string>
@@ -306,10 +297,8 @@
     <string name="settings_color_source">Colour source</string>
     <string name="settings_color_source_preset">Preset</string>
     <string name="settings_color_source_wallpaper">Dynamic colour</string>
-    <string name="settings_color_source_wallpaper_value">From the wallpaper</string>
     <string name="settings_color_source_custom">Custom</string>
 
-    <string name="settings_presets">Presets</string>
     <string name="settings_preset_graphite">Graphite teal</string>
     <string name="settings_preset_miku">Teal × grey × pink</string>
     <string name="settings_preset_twins">Yellow × orange × charcoal</string>
@@ -789,8 +778,6 @@
     <string name="profile_sign_in">Sign in to %1$s</string>
     <string name="profile_sign_in_hint">Done in the in-app browser; the app never keeps your password</string>
     <string name="profile_guest_section">Open to guests too</string>
-    <string name="profile_guest_settings_hint">Theme, text size, reading preferences</string>
-    <string name="profile_guest_tools_hint">Recommended reading, partner shops, sister sites</string>
 
     <string name="status_signed_in_title">Signed in to %1$s</string>
     <string name="status_signed_in_body">The app now asks for content as you, so members-only boards open straight away. Bookmarks, notifications and checking in all work.</string>
@@ -820,7 +807,6 @@
     <string name="space_tab_comments">Comments</string>
     <string name="space_tab_collections">Bookmarks</string>
     <string name="space_stat_joined_days">Days here</string>
-    <string name="space_stat_level">Level</string>
     <string name="space_stat_chicken">Drumsticks</string>
     <string name="space_stat_topics">Posts</string>
     <string name="space_stat_comments">Comments</string>
@@ -840,7 +826,6 @@
 
     <string name="assets_title">Account and growth</string>
     <string name="assets_current_level">Current level</string>
-    <string name="assets_level_progress">Drumsticks %1$d / %2$d</string>
     <string name="assets_level_remaining">%1$d drumsticks to Lv %2$d</string>
     <string name="assets_level_no_threshold">The level is the drumstick total</string>
     <string name="assets_daily_title">Today’s allowance</string>
@@ -848,16 +833,12 @@
     <string name="assets_quota_comment">Drumsticks from commenting today</string>
     <string name="assets_quota_attendance">Drumsticks from checking in today</string>
     <string name="assets_quota_feeding">Free drumsticks to give away today</string>
-    <string name="assets_chicken_count">Drumsticks %1$d</string>
     <string name="assets_quota_hint">Today’s figures did not come through this time; only the ceilings are reliable.</string>
     <string name="assets_chicken">Drumsticks</string>
     <string name="assets_stars">Stardust</string>
     <string name="assets_ledger">Ledger</string>
     <string name="assets_ledger_transfer">Ledger / transfer</string>
-    <string name="assets_sign_in">Check in today · claim drumsticks</string>
     <string name="assets_sign_in_choice_title">Check in</string>
-    <string name="assets_sign_in_random">Random · take your chances</string>
-    <string name="assets_sign_in_fixed">A flat 5 drumsticks</string>
     <string name="assets_sign_in_random_label">Random</string>
     <string name="assets_sign_in_random_value">Try your luck</string>
     <string name="assets_sign_in_fixed_label">Fixed</string>
@@ -875,7 +856,6 @@
 
     <string name="credit_title">Drumstick ledger</string>
     <string name="credit_balance">Drumsticks</string>
-    <string name="credit_level_progress">Lv%1$d progress %2$d / %3$d</string>
     <string name="credit_entry_total">Total %1$d</string>
     <string name="credit_unit_level">drumsticks · Lv%1$d</string>
     <string name="credit_progress_remaining">%1$d / %2$d · %3$d more to Lv%4$d</string>
@@ -1020,10 +1000,6 @@
     <string name="ruling_page_cap">The site publishes only the first %1$d pages; anything earlier has to be read on the web</string>
 
     <string name="profile_space">My space</string>
-    <string name="profile_collections">My bookmarks</string>
-    <string name="profile_history">Reading history</string>
-    <string name="profile_assets">Account and growth</string>
-    <string name="profile_follow">Following and followers</string>
     <string name="profile_tools">Community tools</string>
 
     <string name="vote_placeholder_title">Poll</string>
@@ -1303,10 +1279,8 @@
     <string name="sign_in_verify_not_required">No human check needed this time</string>
 
     <string name="sign_in_2fa_title">Two-step verification</string>
-    <string name="sign_in_2fa_headline">Enter the six-digit code</string>
     <string name="sign_in_2fa_body">Open your authenticator and enter the current code for %1$s. Codes change every 30 seconds.</string>
     <string name="sign_in_2fa_countdown">%1$d seconds left on this code</string>
-    <string name="sign_in_2fa_code">Code</string>
     <string name="sign_in_2fa_submit">Verify and sign in</string>
     <string name="sign_in_2fa_rejected">That code is wrong — try again</string>
     <string name="sign_in_2fa_note">This step only appears for an account with two-factor verification on; without it the sign-in API returns the session straight away.</string>

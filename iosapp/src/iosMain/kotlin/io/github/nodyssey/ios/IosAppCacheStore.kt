@@ -8,7 +8,6 @@ import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
 
 /**

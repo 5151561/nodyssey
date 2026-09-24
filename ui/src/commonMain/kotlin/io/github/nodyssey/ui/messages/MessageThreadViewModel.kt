@@ -2,7 +2,6 @@ package io.github.nodyssey.ui.messages
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -29,7 +28,6 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.editor.EditorAction
-import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.ToolbarLayout
 import io.github.plaza.designsys.editor.appendBlock
 import io.github.plaza.designsys.editor.editFromViewModel

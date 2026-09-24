@@ -1,8 +1,6 @@
 package io.github.nodyssey.di
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import coil3.SingletonImageLoader
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.NodysseyRelease

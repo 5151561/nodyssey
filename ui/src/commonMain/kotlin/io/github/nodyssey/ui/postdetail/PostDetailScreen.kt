@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.postdetail
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,39 +24,27 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -65,7 +52,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -84,7 +70,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -99,7 +84,6 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.style.TextOverflow
@@ -152,8 +136,6 @@ import io.github.nodyssey.ui.resources.dislike_dialog_title
 import io.github.nodyssey.ui.resources.page_jump_at_page
 import io.github.nodyssey.ui.resources.page_jump_at_page_floor
 import io.github.nodyssey.ui.resources.page_jump_latest
-import io.github.nodyssey.ui.resources.page_jump_latest_read
-import io.github.nodyssey.ui.resources.page_jump_latest_read_floor
 import io.github.nodyssey.ui.resources.page_jump_resume_title
 import io.github.nodyssey.ui.resources.post_auto_paging
 import io.github.nodyssey.ui.resources.post_badge_awarded
@@ -175,7 +157,6 @@ import io.github.nodyssey.ui.resources.post_floor_actions
 import io.github.nodyssey.ui.resources.post_link_copied
 import io.github.nodyssey.ui.resources.post_open_original
 import io.github.nodyssey.ui.resources.post_page_progress
-import io.github.nodyssey.ui.resources.post_quote_action
 import io.github.nodyssey.ui.resources.post_quote_floor
 import io.github.nodyssey.ui.resources.post_reaction_chicken
 import io.github.nodyssey.ui.resources.post_reaction_cost
@@ -189,7 +170,6 @@ import io.github.nodyssey.ui.resources.post_reaction_spent
 import io.github.nodyssey.ui.resources.post_reply_action
 import io.github.nodyssey.ui.resources.post_reply_to
 import io.github.nodyssey.ui.richtext.PostRichContent
-import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.AppendSpinner
@@ -197,7 +177,6 @@ import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardGap
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
@@ -210,13 +189,15 @@ import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostTitle
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asSignature
-import io.github.plaza.designsys.theme.floatShadow
+import io.github.plaza.designsys.theme.cardBorderStroke
+import io.github.plaza.designsys.theme.fabLift
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -920,8 +901,6 @@ private fun DetailBottomActions(
         // The screen's own FAB rather than the toolbar's: 回复 is the one action here that must stay
         // where the thumb last left it, and Material's toolbar rounds its FAB up to 80dp the moment
         // the bar collapses. Shrinking to an icon is the whole of the change it makes now.
-        // Material's own elevation is switched off and the layer's float shadow drawn instead — see
-        // [floatShadow]: the FAB is one step above the cards, in the page's hue rather than black.
         ExtendedFloatingActionButton(
             text = { Text(stringResource(Res.string.post_reply_action)) },
             icon = {
@@ -934,8 +913,8 @@ private fun DetailBottomActions(
             expanded = toolbarExpanded,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-            modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows),
+            elevation = PlazaFabElevation,
+            modifier = Modifier.fabLift(),
         )
     }
 }
@@ -1923,7 +1902,7 @@ private fun ReactionPill(
             disabledContainerColor = if (spent) container else container.copy(alpha = DISABLED_PILL_ALPHA),
             disabledContentColor = if (spent) content else content.copy(alpha = DISABLED_PILL_ALPHA),
         ),
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
         contentPadding = PaddingValues(horizontal = 14.dp),
         modifier = Modifier.height(ReactionPillHeight),
     ) {
@@ -2336,7 +2315,7 @@ private fun ReactionTile(
         containerColor = container,
         contentColor = ink,
         enabled = onClick != null && !spent && !pending,
-        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = LocalPlazaLayers.current.cardBorderStroke,
         contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.sm, top = 14.dp, bottom = Spacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),

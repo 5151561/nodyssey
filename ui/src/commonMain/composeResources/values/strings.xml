@@ -148,7 +148,6 @@
     <!-- Own floors only. Takes 回复's place on them, as it does on the site — there is no replying
          to yourself there either. -->
     <string name="post_edit_action">编辑</string>
-    <string name="post_quote_action">引用</string>
     <!-- 楼层互动面板（点 ⋯ 或长按一层楼）：五件套里不常用的收在这里 -->
     <string name="post_floor_actions">楼层操作</string>
     <string name="post_reply_to">回复 %1$s</string>
@@ -165,15 +164,12 @@
     <string name="page_jump_of_total">/%1$d</string>
     <string name="page_jump_title">跳转到页</string>
     <string name="page_jump_input">页码（1–%1$d）</string>
-    <string name="page_jump_total_pages">共 %1$d 页</string>
     <!-- The chip that swaps the page scroller for a number to type -->
     <string name="page_jump_by_page">页码</string>
     <string name="page_jump_by_floor">楼层</string>
     <string name="page_jump_floor_input">楼层（#0–#%1$d）</string>
     <!-- Carries its own page number: it is the one destination here whose page the reader cannot guess -->
     <string name="page_jump_latest_read">上次阅读 第 %1$d 页</string>
-    <!-- The thread knows the floor as well as the page, and it is both shorter and more exact -->
-    <string name="page_jump_latest_read_floor">上次阅读 %1$s</string>
     <!-- Thread only: its newest is the foot of the last page, which is not where a page number lands -->
     <string name="page_jump_latest">到最新</string>
     <!-- The feed newest is page 1: its page numbers drift as posts arrive, so there is no last page to go to -->
@@ -245,7 +241,6 @@
     <string name="search_history_empty">还没有搜索记录</string>
     <string name="search_history_scope">帖子 · 全部版块</string>
     <string name="search_user_history_scope">用户</string>
-    <string name="search_history_board_scope">帖子 · %1$s</string>
     <!-- The meta line under a user search result: UID Lv 主题 评论 · joined with " · " in code -->
     <string name="search_user_topics">主题 %1$d</string>
     <string name="search_user_comments">评论 %1$d</string>
@@ -271,8 +266,6 @@
     <!-- Unread counts past the cap. Without the +, a capped 150 reads as an exact 99. -->
     <string name="unread_count_capped">%1$d+</string>
     <string name="notifications_mark_all_read">全部已读</string>
-    <string name="notifications_mentions">@我</string>
-    <string name="notifications_replies">回复主题</string>
     <string name="notifications_messages">私信</string>
     <!-- The chip over the merged list: 回复 and @我 are one tab in the App -->
     <string name="notifications_interactions">互动</string>
@@ -343,14 +336,12 @@
     <string name="profile_level">等级</string>
     <!-- 我的 · 账户卡上等级条的说明 -->
     <string name="profile_level_remaining">距 Lv%1$d 还差 %2$d 鸡腿</string>
-    <string name="profile_attendance">今日签到 · 领鸡腿</string>
     <string name="profile_attendance_checking">正在检查今日签到…</string>
     <string name="profile_attendance_done">今日已签到 · 查看签到榜</string>
     <!-- 2b 签到横幅：主标题、未签时的副标题（不写随机区间——站点没公布）、行尾的签到榜按钮 -->
     <string name="profile_attendance_title">签到</string>
     <string name="profile_attendance_modes">随机或固定 5 个鸡腿</string>
     <string name="profile_attendance_board">签到榜</string>
-    <string name="profile_account_settings">账号设置</string>
 
     <!-- Settings -->
     <string name="settings_title">设置</string>
@@ -359,7 +350,6 @@
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_theme_light">浅色</string>
     <string name="settings_theme_dark">深色</string>
-    <string name="settings_theme_entry_hint">配色来源、预设与色彩风格</string>
     <string name="settings_theme_mode">明暗</string>
     <string name="settings_one_hand">单手模式</string>
     <string name="settings_one_hand_hint">二级页面用可下拉的大标题栏，最多占四成屏幕；关掉是普通标题栏</string>
@@ -387,11 +377,9 @@
     <string name="settings_color_source">配色来源</string>
     <string name="settings_color_source_preset">预设</string>
     <string name="settings_color_source_wallpaper">动态取色</string>
-    <string name="settings_color_source_wallpaper_value">跟随壁纸</string>
     <string name="settings_color_source_custom">自定义</string>
 
     <!-- 主题 · 预设与我的主题 -->
-    <string name="settings_presets">预设</string>
     <string name="settings_preset_graphite">石墨青</string>
     <string name="settings_preset_miku">青×灰×粉</string>
     <string name="settings_preset_twins">黄×橙×黑灰</string>
@@ -936,8 +924,6 @@
     <string name="profile_sign_in">登录 %1$s</string>
     <string name="profile_sign_in_hint">在内置浏览器中完成，应用不保存你的密码</string>
     <string name="profile_guest_section">游客也可以用</string>
-    <string name="profile_guest_settings_hint">主题模式、字号、浏览偏好</string>
-    <string name="profile_guest_tools_hint">推荐阅读、合作商家、友站</string>
 
     <string name="status_signed_in_title">已登录 %1$s</string>
     <string name="status_signed_in_body">应用现在会带着你的登录状态请求内容，内版这类版块可以直接看了。收藏、通知和签到都能用了。</string>
@@ -971,7 +957,6 @@
     <string name="space_tab_comments">评论</string>
     <string name="space_tab_collections">收藏</string>
     <string name="space_stat_joined_days">加入天数</string>
-    <string name="space_stat_level">等级</string>
     <string name="space_stat_chicken">鸡腿</string>
     <string name="space_stat_topics">主题帖</string>
     <string name="space_stat_comments">评论</string>
@@ -998,7 +983,6 @@
     <!-- 8a 等级卡左上角的小标题 -->
     <string name="assets_current_level">当前等级</string>
     <string name="assets_level">Lv %1$d</string>
-    <string name="assets_level_progress">鸡腿 %1$d / %2$d</string>
     <string name="assets_level_remaining">还差 %1$d 鸡腿到 Lv %2$d</string>
     <string name="assets_level_no_threshold">等级进度即鸡腿总数</string>
     <string name="assets_daily_title">今日额度</string>
@@ -1008,16 +992,12 @@
     <string name="assets_quota_feeding">今日免费投喂额度</string>
     <string name="assets_quota_value">%1$d / %2$d</string>
     <string name="assets_quota_value_unknown">— / %1$d</string>
-    <string name="assets_chicken_count">鸡腿 %1$d</string>
     <string name="assets_quota_hint">今日额度这次没读到，只剩上限是准的。</string>
     <string name="assets_chicken">鸡腿</string>
     <string name="assets_stars">星辰</string>
     <string name="assets_ledger">流水</string>
     <string name="assets_ledger_transfer">流水 / 转账</string>
-    <string name="assets_sign_in">今日签到 · 领鸡腿</string>
     <string name="assets_sign_in_choice_title">今日签到</string>
-    <string name="assets_sign_in_random">随机数量 · 拼手气</string>
-    <string name="assets_sign_in_fixed">固定 5 个鸡腿</string>
     <!-- 9a 签到方式的两块磁贴：标题 + 一行说明。随机那块不写区间，站点没公布 -->
     <string name="assets_sign_in_random_label">随机</string>
     <string name="assets_sign_in_random_value">拼手气</string>
@@ -1044,7 +1024,6 @@
     <string name="credit_title">鸡腿流水</string>
     <string name="credit_balance">当前鸡腿</string>
     <string name="credit_level">Lv%1$d</string>
-    <string name="credit_level_progress">Lv%1$d 进度 %2$d / %3$d</string>
     <string name="credit_entry_total">总计 %1$d</string>
     <!-- 8b 余额头：大数字旁的单位与等级；进度说明；列表上方的两个列名 -->
     <string name="credit_unit_level">鸡腿 · Lv%1$d</string>
@@ -1208,10 +1187,6 @@
 
     <!-- Profile menu entries added by the 8/9 batch -->
     <string name="profile_space">我的主页</string>
-    <string name="profile_collections">我的收藏</string>
-    <string name="profile_history">浏览历史</string>
-    <string name="profile_assets">账户与成长</string>
-    <string name="profile_follow">关注与粉丝</string>
     <string name="profile_tools">社区工具</string>
 
     <!-- 投票帖 — a vote lives in the body as an `nsapp://vote?id=N` marker and is fetched separately -->
@@ -1532,10 +1507,8 @@
     <string name="sign_in_verify_not_required">本次无需人机验证</string>
 
     <string name="sign_in_2fa_title">两步验证</string>
-    <string name="sign_in_2fa_headline">输入 6 位验证码</string>
     <string name="sign_in_2fa_body">打开验证器 App，输入 %1$s 当前的动态码。验证码 30 秒刷新一次。</string>
     <string name="sign_in_2fa_countdown">当前验证码剩余 %1$d 秒</string>
-    <string name="sign_in_2fa_code">验证码</string>
     <string name="sign_in_2fa_submit">验证并登录</string>
     <string name="sign_in_2fa_rejected">验证码不对，再试一次</string>
     <string name="sign_in_2fa_note">只有账号开启了双因素验证才会出现这一步；未开启则登录接口直接返回会话。</string>

@@ -1,7 +1,5 @@
 package io.github.nodyssey.ui.search
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,8 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -40,13 +36,11 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.BoardTag
-import io.github.nodyssey.ui.common.LockBadge
-import io.github.nodyssey.ui.common.NodeSeekIcons
+import io.github.nodyssey.ui.common.PostBadges
 import io.github.nodyssey.ui.common.TITLE_BADGE_SIZE
-import io.github.nodyssey.ui.common.lockBadgeDescription
+import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.credit_level
-import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_new_reply_count
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.search_user_comments
@@ -55,7 +49,6 @@ import io.github.nodyssey.ui.resources.search_user_topics
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
@@ -95,7 +88,7 @@ internal fun SearchPostCard(
         HighlightedText(
             text = summary.title,
             query = highlight,
-            style = resultTitleStyle(),
+            style = postCardTitleStyle(sizeSp = 16f, lineHeightSp = 24f),
             // A read thread keeps its card and dims its title, the same as the feed does.
             color = if (post.isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
@@ -117,17 +110,7 @@ internal fun SearchPostCard(
                     ResultMeta(it)
                 }
             }
-            if (summary.isLocked) {
-                LockBadge(level = summary.lockLevel, description = lockBadgeDescription(summary.lockLevel))
-            }
-            if (summary.isAwarded) {
-                Icon(
-                    NodeSeekIcons.Award,
-                    contentDescription = stringResource(Res.string.post_badge_awarded),
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(textScaledSize(TITLE_BADGE_SIZE)),
-                )
-            }
+            PostBadges(summary)
             // The unread delta replaces the total once the thread has been read, as on the feed.
             if (post.newCommentCount > 0) {
                 Text(
@@ -142,19 +125,6 @@ internal fun SearchPostCard(
         }
     }
 }
-
-@Composable
-private fun resultTitleStyle(): TextStyle {
-    // 16/24 on the artboard, scaled off the type scale so the reading-size preference reaches it.
-    val base = MaterialTheme.typography.titleMedium
-    return base.copy(
-        fontSize = base.fontSize * RESULT_TITLE_SCALE,
-        lineHeight = base.fontSize * RESULT_TITLE_SCALE * RESULT_TITLE_LINE_HEIGHT,
-    )
-}
-
-private const val RESULT_TITLE_SCALE = 16f / 15f
-private const val RESULT_TITLE_LINE_HEIGHT = 24f / 16f
 
 @Composable
 private fun ResultMeta(

@@ -2,11 +2,9 @@ package io.github.nodyssey.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,17 +17,13 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.dns.DnsResolution
 import io.github.nodyssey.data.dns.DohConfigProblem
@@ -68,12 +62,13 @@ import io.github.nodyssey.ui.resources.doh_url_placeholder
 import io.github.nodyssey.ui.resources.doh_url_required
 import io.github.nodyssey.ui.resources.doh_webview_hint
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
-import io.github.plaza.designsys.component.SectionNote
+import io.github.plaza.designsys.component.SectionNotes
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -165,12 +160,12 @@ fun DohSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             SettingsGroup {
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Dns, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Dns,
                     title = stringResource(Res.string.doh_master_title),
                     subtitle = stringResource(Res.string.doh_master_hint),
-                    top = true,
-                    bottom = true,
+                    first = true,
+                    last = true,
                     checked = state.enabled,
                     onCheckedChange = onEnabledChange,
                     trailing = { GroupedListItemSwitch(checked = state.enabled) },
@@ -182,7 +177,7 @@ fun DohSettingsScreen(
                 SectionLabel(stringResource(Res.string.doh_provider_title))
                 SettingsGroup {
                     DohProvider.entries.forEachIndexed { index, provider ->
-                        SettingsRow(
+                        GroupedRow(
                             title = dohProviderLabel(provider),
                             // The address itself, rather than a description of it: it is the one
                             // thing about a resolver worth checking, and 自定义 is the row where it
@@ -191,8 +186,8 @@ fun DohSettingsScreen(
                                 stringResource(Res.string.doh_provider_custom_hint)
                             },
                             subtitleMonospace = provider.url.isNotEmpty(),
-                            top = index == 0,
-                            bottom = index == DohProvider.entries.lastIndex,
+                            first = index == 0,
+                            last = index == DohProvider.entries.lastIndex,
                             enabled = state.enabled,
                             selected = provider == state.provider,
                             onClick = { onProviderChange(provider) },
@@ -205,6 +200,7 @@ fun DohSettingsScreen(
                                     enabled = state.enabled,
                                 )
                             },
+                            showChevron = false,
                         )
                     }
                 }
@@ -255,11 +251,11 @@ fun DohSettingsScreen(
                 if (canChooseRecordTypes || canFallBack) {
                     SettingsGroup {
                         if (canChooseRecordTypes) {
-                            SettingsRow(
+                            GroupedRow(
                                 title = stringResource(Res.string.doh_ipv6_title),
                                 subtitle = stringResource(Res.string.doh_ipv6_hint),
-                                top = true,
-                                bottom = !canFallBack,
+                                first = true,
+                                last = !canFallBack,
                                 enabled = state.enabled,
                                 checked = state.includeIPv6,
                                 onCheckedChange = onIncludeIPv6Change,
@@ -267,11 +263,11 @@ fun DohSettingsScreen(
                             )
                         }
                         if (canFallBack) {
-                            SettingsRow(
+                            GroupedRow(
                                 title = stringResource(Res.string.doh_fallback_title),
                                 subtitle = stringResource(Res.string.doh_fallback_hint),
-                                top = !canChooseRecordTypes,
-                                bottom = true,
+                                first = !canChooseRecordTypes,
+                                last = true,
                                 enabled = state.enabled,
                                 checked = state.fallbackToSystem,
                                 onCheckedChange = onFallbackChange,
@@ -315,24 +311,19 @@ fun DohSettingsScreen(
                 )
             }
 
-            Column(
-                modifier = Modifier.padding(top = Spacing.xs),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                SectionNote(
-                    stringResource(Res.string.doh_limits_title),
-                    modifier = Modifier.semantics { heading() },
-                )
-                SectionNote(stringResource(Res.string.doh_limits_hint))
-                // Where there is no fallback switch, there is no fallback — the platform blocks
-                // cleartext resolution outright while this is on, and defers to an encrypted
-                // resolver the system already has. Someone about to turn it on should know both.
-                if (!state.capabilities.canFallBackToSystem) {
-                    SectionNote(stringResource(Res.string.doh_limits_encrypted_only_hint))
-                }
-                SectionNote(stringResource(Res.string.doh_proxy_hint))
-                SectionNote(stringResource(Res.string.doh_webview_hint))
-            }
+            SectionNotes(
+                title = stringResource(Res.string.doh_limits_title),
+                lines =
+                listOfNotNull(
+                    stringResource(Res.string.doh_limits_hint),
+                    // Where there is no fallback switch, there is no fallback — the platform blocks
+                    // cleartext resolution outright while this is on, and defers to an encrypted
+                    // resolver the system already has. Someone about to turn it on should know both.
+                    stringResource(Res.string.doh_limits_encrypted_only_hint).takeUnless { state.capabilities.canFallBackToSystem },
+                    stringResource(Res.string.doh_proxy_hint),
+                    stringResource(Res.string.doh_webview_hint),
+                ),
+            )
         }
     }
 }

@@ -1,7 +1,7 @@
 package io.github.nodyssey.ui.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,47 +10,42 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.plaza.designsys.component.GroupCard
 import io.github.plaza.designsys.component.GroupedListItem
-import io.github.plaza.designsys.component.GroupedRowTrailing
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaSpinner
-import io.github.plaza.designsys.component.groupShape
-import io.github.plaza.designsys.component.groupedListItemColors
+import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -72,18 +67,11 @@ internal val SettingsPagePadding =
 /** Between one card and the next, and between a section label and its card. */
 internal val SettingsItemGap = 8.dp
 
-/** A row's title: 15sp medium, one step under a list title so eight rows still fit a screen. */
-@Composable
-internal fun settingsRowTitleStyle(): TextStyle =
-    MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
-
 /** A row whose control needs its own line — a slider, a segmented button, a preview block. */
 @Composable
 internal fun SettingsBlock(
     title: String,
     top: Boolean = false,
-    bottom: Boolean = false,
-    icon: (@Composable () -> Unit)? = null,
     subtitle: String? = null,
     /** The control's current reading, in the primary colour at the end of the title line — 「16sp」. */
     value: String? = null,
@@ -99,14 +87,13 @@ internal fun SettingsBlock(
 ) {
     GroupedListItem(
         first = top,
-        last = bottom,
-        leadingContent = icon,
+        last = false,
         headlineContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
             ) {
-                Text(title, style = settingsRowTitleStyle(), modifier = Modifier.weight(1f))
+                Text(title, style = groupedRowTitleStyle(), modifier = Modifier.weight(1f))
                 value?.let {
                     Text(
                         it,
@@ -130,67 +117,58 @@ internal fun SettingsBlock(
 }
 
 /**
- * A single-line row: leading icon, title, optional second line, optional trailing control.
+ * A row whose choices open in a menu rather than as rows of their own — 语言, 色彩风格 — with its
+ * answer on the second line.
  *
- * [contentColor] exists for the one destructive row in the family (退出登录), which is the same shape
- * as its neighbours and differs only in colour — a separate composable for it would duplicate the
- * layout to change two tints.
+ * The menu hangs off the trailing icon and nothing wider, because a `DropdownMenu` is anchored to its
+ * *parent* layout node — `Popup` reads `parentLayoutCoordinates`, not the position of its own
+ * zero-sized node. Put it a level up and the anchor becomes the whole row, so the menu opens at the
+ * row's bottom left however the enclosing box is aligned; with the icon as its parent, the menu ends
+ * tucked under the control that opened it.
  */
 @Composable
-internal fun SettingsRow(
+internal fun <T> SettingsMenuRow(
+    icon: ImageVector,
     title: String,
-    modifier: Modifier = Modifier,
-    top: Boolean = false,
-    bottom: Boolean = false,
-    subtitle: String? = null,
-    onClick: (() -> Unit)? = null,
-    /**
-     * Set on a row that is one of several choices, so the row reads as a radio button rather than as
-     * a button that happens to have one drawn in it. Takes [onClick] as its action.
-     */
-    selected: Boolean? = null,
-    checked: Boolean? = null,
-    onCheckedChange: ((Boolean) -> Unit)? = null,
+    subtitle: String,
+    choices: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    last: Boolean = false,
     enabled: Boolean = true,
-    contentColor: Color = Color.Unspecified,
-    /**
-     * A chevron at the trailing edge, for a row that opens a page of its own. Off by default because
-     * the family also holds rows that act in place — 清除缓存, 退出登录 — and a chevron on those
-     * promises a screen that never comes.
-     */
-    chevron: Boolean = false,
-    /** For a subtitle that is an address or a value to be read character by character — a URL. */
-    subtitleMonospace: Boolean = false,
-    leading: (@Composable () -> Unit)? = null,
-    trailing: @Composable () -> Unit = {},
+    menuIcon: ImageVector = Icons.Default.ArrowDropDown,
 ) {
-    GroupedListItem(
-        first = top,
-        last = bottom,
-        modifier = modifier,
-        onClick = onClick,
-        selected = selected,
-        checked = checked,
-        onCheckedChange = onCheckedChange,
+    var expanded by remember { mutableStateOf(false) }
+    GroupedRow(
+        icon = icon,
+        title = title,
+        subtitle = subtitle,
+        last = last,
         enabled = enabled,
-        colors = groupedListItemColors(contentColor),
-        leadingContent = leading,
-        headlineContent = { Text(title, style = settingsRowTitleStyle()) },
-        supportingContent =
-        subtitle?.let {
-            {
-                Text(
-                    it,
-                    style =
-                    if (subtitleMonospace) {
-                        LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace)
-                    } else {
-                        LocalTextStyle.current
-                    },
-                )
+        onClick = { expanded = true },
+        showChevron = false,
+        trailing = {
+            Box {
+                Icon(menuIcon, contentDescription = null)
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    choices.forEach { (choice, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                expanded = false
+                                onSelect(choice)
+                            },
+                            // A tick rather than a radio: a menu shows one row at a time as the finger
+                            // moves down it, and a column of empty circles reads as a form rather than
+                            // as a list with one answer already in it.
+                            trailingIcon = {
+                                if (choice == selected) Icon(Icons.Default.Check, contentDescription = null)
+                            },
+                        )
+                    }
+                }
             }
         },
-        trailingContent = { GroupedRowTrailing(trailing = trailing, showChevron = chevron) },
     )
 }
 
@@ -200,7 +178,7 @@ internal fun SettingsRow(
  */
 internal const val DISABLED_ALPHA = 0.38f
 
-/** A text field on a settings card: one line, its label inside, in the kit's in-card field style. */
+/** A text field on a settings card: one line unless told otherwise, its label inside, in the kit's in-card field style. */
 @Composable
 internal fun SettingsTextField(
     value: String,
@@ -214,13 +192,14 @@ internal fun SettingsTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     textStyle: TextStyle = LocalTextStyle.current,
+    singleLine: Boolean = true,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
-        singleLine = true,
+        singleLine = singleLine,
         isError = isError,
         textStyle = textStyle,
         label = { Text(label) },

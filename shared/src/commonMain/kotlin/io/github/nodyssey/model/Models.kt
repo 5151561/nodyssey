@@ -1,6 +1,5 @@
 package io.github.nodyssey.model
 
-import io.github.plaza.core.ansi.AnsiSpan
 import io.github.plaza.core.richtext.RichNode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

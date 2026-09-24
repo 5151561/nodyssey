@@ -14,12 +14,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_community_hint
 import io.github.nodyssey.ui.resources.about_community_title
@@ -91,6 +90,8 @@ fun CommunityToolsScreen(
             )
         },
     ) { padding ->
+        // bodyLarge, a step above GroupedRow's default title.
+        val titleStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -105,6 +106,7 @@ fun CommunityToolsScreen(
                 Column {
                     GroupedRow(
                         title = stringResource(Res.string.tools_award),
+                        titleStyle = titleStyle,
                         subtitle = stringResource(Res.string.tools_award_subtitle),
                         icon = PlazaIcons.MenuBook,
                         first = true,
@@ -112,12 +114,14 @@ fun CommunityToolsScreen(
                     )
                     GroupedRow(
                         title = stringResource(Res.string.tools_providers),
+                        titleStyle = titleStyle,
                         subtitle = stringResource(Res.string.tools_providers_subtitle),
                         icon = Icons.Default.ShoppingCart,
                         onClick = onProviders,
                     )
                     GroupedRow(
                         title = stringResource(Res.string.tools_friends),
+                        titleStyle = titleStyle,
                         subtitle = stringResource(Res.string.tools_friends_subtitle),
                         icon = PlazaIcons.Link,
                         last = true,
@@ -131,6 +135,7 @@ fun CommunityToolsScreen(
                 Column {
                     GroupedRow(
                         title = stringResource(Res.string.tools_lucky),
+                        titleStyle = titleStyle,
                         subtitle = stringResource(Res.string.tools_lucky_subtitle),
                         icon = PlazaIcons.Casino,
                         first = true,
@@ -138,6 +143,7 @@ fun CommunityToolsScreen(
                     )
                     GroupedRow(
                         title = stringResource(Res.string.tools_invite),
+                        titleStyle = titleStyle,
                         subtitle = stringResource(Res.string.tools_invite_subtitle),
                         icon = PlazaIcons.ConfirmationNumber,
                         last = true,
@@ -150,6 +156,7 @@ fun CommunityToolsScreen(
                 SectionLabel(stringResource(Res.string.tools_group_watch))
                 GroupedRow(
                     title = stringResource(Res.string.tools_ruling),
+                    titleStyle = titleStyle,
                     subtitle = stringResource(Res.string.tools_ruling_subtitle),
                     icon = PlazaIcons.Gavel,
                     first = true,
@@ -160,6 +167,7 @@ fun CommunityToolsScreen(
 
             GroupedRow(
                 title = stringResource(Res.string.about_community_title),
+                titleStyle = titleStyle,
                 subtitle = stringResource(Res.string.about_community_hint),
                 icon = Icons.Default.Info,
                 first = true,

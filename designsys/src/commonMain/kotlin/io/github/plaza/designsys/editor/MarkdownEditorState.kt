@@ -1,8 +1,5 @@
 package io.github.plaza.designsys.editor
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -12,16 +9,13 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.unit.Dp
-import io.github.plaza.designsys.component.PlazaBackHandler
+
 /**
  * What an emoji panel needs from the editor it hangs under.
  *
  * The panel itself is not shared: its groups are whatever stickers a particular site serves, and the
  * shortcode it inserts is that site's syntax. What *is* shared is the wiring — insert at the caret,
- * backspace, and a recents list that outlives the panel — so the strip passes this to a slot and lets
+ * backspace, and a recents list that outlives the panel — so the editor passes this to a slot and lets
  * the host supply the panel.
  */
 @Stable
@@ -33,9 +27,9 @@ class EmojiPanelScope internal constructor(
 )
 
 /**
- * What the formatting strip remembers between frames — and, for the emoji recents, between screens.
+ * What an editor's panels remember between frames — and, for the emoji recents, between screens.
  *
- * Hoisted out of the strip because both halves outlive it: the panel leaves the composition every time
+ * Hoisted out of the bar because both halves outlive it: the panel leaves the composition every time
  * it closes, taking any recents it held with it, and the reply sheet's whole toolbar leaves whenever
  * the sheet is dismissed. Whoever owns the editor owns this, and it is saved rather than remembered so
  * a rotation does not lose the emoji someone just picked.
@@ -51,10 +45,11 @@ class MarkdownEditorState(
         private set
 
     /**
-     * Whether [ComposerEditorBar] is showing its 格式 card in place of the quick bar.
+     * Whether the editor's card of formatting keys is open in the keyboard's place — [ComposerEditorBar]'s
+     * 格式 card, the message bar's tool grid.
      *
      * Hoisted with the rest for the same reason: a rotation mid-edit should come back to the card the
-     * writer had open. [MarkdownEditorBar] has no such card and never sets it.
+     * writer had open.
      */
     var formatOpen by mutableStateOf(formatOpen)
         private set
@@ -70,12 +65,12 @@ class MarkdownEditorState(
         if (emojiOpen) formatOpen = false
     }
 
-    internal fun toggleFormat() {
+    fun toggleFormat() {
         formatOpen = !formatOpen
         if (formatOpen) emojiOpen = false
     }
 
-    fun closeEmoji() {
+    internal fun closeEmoji() {
         emojiOpen = false
     }
 
@@ -104,70 +99,12 @@ fun rememberMarkdownEditorState(): MarkdownEditorState =
     rememberSaveable(saver = MarkdownEditorState.Saver) { MarkdownEditorState() }
 
 /**
- * The formatting strip, its emoji panel, and the wiring between them and a [TextFieldState].
- *
- * Every editor in the app has the same three-part shape — keys on the keyboard's top edge, the panel
- * they open below, and a text field somewhere above — and used to spell out the same dispatch by hand:
- * toggle the panel, hide the IME, close the panel again on the next formatting key, apply the markup.
- * That is the part worth having once. What each surface still declares for itself is its [actions],
- * whatever [trailing] control sits at the end of the strip, and where [onPickImages] takes the one
- * key that opens something the host owns rather than rewriting text.
- *
- * [content] is emitted between the strip and the panel — the message bar's own input row goes there,
- * so the panel takes the keyboard's place under it rather than pushing it off the screen. The post and
- * reply editors leave it empty, and the two sit flush.
- */
-@Composable
-fun MarkdownEditorBar(
-    actions: List<EditorAction>,
-    bodyState: TextFieldState,
-    editorState: MarkdownEditorState,
-    modifier: Modifier = Modifier,
-    showDivider: Boolean = true,
-    keySize: Dp = EditorToolbarDefaults.KeySize,
-    /** The host owns the photo picker, so [EditorAction.IMAGE] comes back out rather than acting. */
-    onPickImages: () -> Unit = {},
-    /** Runs after markup is applied — the post editor puts focus back in the body with it. */
-    onFormatted: () -> Unit = {},
-    /** Adds the wrench at the end of the keys. Only the two surfaces with an arranged strip pass it. */
-    onCustomize: (() -> Unit)? = null,
-    /** Rides at the end of the keys, ahead of the wrench; see [EditorToolbar]. */
-    appMenu: (@Composable () -> Unit)? = null,
-    trailing: @Composable RowScope.() -> Unit = {},
-    /** Drawn in the keyboard's place while [EditorAction.EMOJI] is lit. Empty means no emoji key. */
-    emojiPanel: @Composable (EmojiPanelScope) -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit = {},
-) {
-    val keyboard = LocalSoftwareKeyboardController.current
-    // The panel stands in for the keyboard, and a keyboard is the one thing back is always expected to
-    // dismiss before it leaves the screen.
-    PlazaBackHandler(enabled = editorState.emojiOpen) { editorState.closeEmoji() }
-
-    Column(modifier) {
-        EditorToolbar(
-            actions = actions,
-            active = if (editorState.emojiOpen) setOf(EditorAction.EMOJI) else emptySet(),
-            showDivider = showDivider,
-            keySize = keySize,
-            onCustomize = onCustomize,
-            appMenu = appMenu,
-            onAction = { action ->
-                editorState.dispatch(action, bodyState, onPickImages, onFormatted) { keyboard?.hide() }
-            },
-            trailing = trailing,
-        )
-        content()
-        if (editorState.emojiOpen) emojiPanel(editorState.emojiPanelScope(bodyState))
-    }
-}
-
-/**
- * What a key does, for both bars: toggle the panel, hand the picker back, or rewrite the text.
+ * What a key does, for every editor: toggle the panel, hand the picker back, or rewrite the text.
  *
  * [hideKeyboard] runs only when the emoji panel has just opened — the panel takes the keyboard's
  * place, and the two stacked leave two lines of the text visible.
  */
-internal fun MarkdownEditorState.dispatch(
+fun MarkdownEditorState.dispatch(
     action: EditorAction,
     bodyState: TextFieldState,
     onPickImages: () -> Unit,
@@ -190,7 +127,8 @@ internal fun MarkdownEditorState.dispatch(
     }
 }
 
-internal fun MarkdownEditorState.emojiPanelScope(bodyState: TextFieldState) =
+/** The emoji panel's wiring into [bodyState] and these recents. */
+fun MarkdownEditorState.emojiPanelScope(bodyState: TextFieldState) =
     EmojiPanelScope(
         onInsert = { text -> bodyState.edit { insertText(text) } },
         onBackspace = { bodyState.edit { deleteBackwards() } },

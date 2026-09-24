@@ -1,6 +1,5 @@
 package io.github.plaza.designsys.editor
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +47,8 @@ import io.github.plaza.designsys.resources.composer_emoji_recent
 import io.github.plaza.designsys.resources.composer_emoji_recent_empty
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorder
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.ceil
@@ -223,7 +224,7 @@ private fun GroupPill(
         shape = CircleShape,
         color = if (selected) MaterialTheme.colorScheme.inverseSurface else layers.raised,
         contentColor = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurface,
-        border = if (selected) null else layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = if (selected) null else layers.cardBorderStroke,
         modifier = Modifier.height(32.dp),
     ) {
         Box(Modifier.padding(horizontal = Spacing.md), contentAlignment = Alignment.Center) {
@@ -299,7 +300,7 @@ private fun BackspaceKey(
             .cardShadow(shape, layers.shadows)
             .clip(shape)
             .background(layers.raised)
-            .then(layers.cardBorder?.let { Modifier.border(1.dp, it, shape) } ?: Modifier)
+            .cardBorder(layers, shape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,

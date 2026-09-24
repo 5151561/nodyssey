@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -20,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,7 +43,7 @@ import io.github.nodyssey.ui.resources.account_title
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_sign_out
 import io.github.nodyssey.ui.settings.SettingsGroup
-import io.github.nodyssey.ui.settings.SettingsRow
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -134,51 +132,46 @@ fun AccountSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             SettingsGroup {
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.account_profile_title),
                     subtitle = stringResource(Res.string.account_profile_summary),
-                    top = true,
+                    first = true,
                     onClick = onOpenProfileFields,
                     leading = { RowIcon(Icons.Default.AccountCircle) },
-                    trailing = { Chevron() },
                 )
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.account_security_title),
                     subtitle = stringResource(Res.string.account_security_summary),
                     onClick = onOpenSecurity,
                     leading = { RowIcon(Icons.Default.Lock) },
-                    trailing = { Chevron() },
                 )
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.account_contact_title),
                     subtitle = stringResource(Res.string.account_contact_summary),
                     onClick = onOpenContact,
                     leading = { RowIcon(Icons.Default.Email) },
-                    trailing = { Chevron() },
                 )
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.account_block_title),
                     subtitle =
                     state.blockedCount?.let { stringResource(Res.string.account_blocked_count, it) },
                     onClick = onOpenBlockList,
                     leading = { RowIcon(PlazaIcons.Block) },
-                    trailing = { Chevron() },
                 )
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.account_preferences_title),
                     subtitle = stringResource(Res.string.account_preferences_summary),
-                    bottom = true,
+                    last = true,
                     onClick = onOpenPreferences,
                     leading = { RowIcon(Icons.Default.Settings) },
-                    trailing = { Chevron() },
                 )
             }
 
             SettingsGroup {
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.action_sign_out),
-                    top = true,
-                    bottom = true,
+                    first = true,
+                    last = true,
                     onClick = onSignOut,
                     contentColor = MaterialTheme.colorScheme.error,
                     leading = {
@@ -189,6 +182,7 @@ fun AccountSettingsScreen(
                             modifier = Modifier.size(20.dp),
                         )
                     },
+                    showChevron = false,
                 )
             }
         }
@@ -199,16 +193,6 @@ fun AccountSettingsScreen(
 private fun RowIcon(icon: ImageVector) {
     Icon(
         imageVector = icon,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(20.dp),
-    )
-}
-
-@Composable
-private fun Chevron() {
-    Icon(
-        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.size(20.dp),

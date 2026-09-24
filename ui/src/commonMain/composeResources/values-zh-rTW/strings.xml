@@ -128,7 +128,6 @@
     <string name="post_auto_paging">自動續頁</string>
     <string name="post_reply_action">回覆</string>
     <string name="post_edit_action">編輯</string>
-    <string name="post_quote_action">引用</string>
     <string name="post_floor_actions">樓層操作</string>
     <string name="post_reply_to">回覆 %1$s</string>
     <string name="post_quote_floor">引用這一樓</string>
@@ -140,12 +139,10 @@
     <string name="page_jump_page_of">第 %1$d / %2$d 頁</string>
     <string name="page_jump_title">跳至指定頁</string>
     <string name="page_jump_input">頁碼（1–%1$d）</string>
-    <string name="page_jump_total_pages">共 %1$d 頁</string>
     <string name="page_jump_by_page">頁碼</string>
     <string name="page_jump_by_floor">樓層</string>
     <string name="page_jump_floor_input">樓層（#0–#%1$d）</string>
     <string name="page_jump_latest_read">上次閱讀 第 %1$d 頁</string>
-    <string name="page_jump_latest_read_floor">上次閱讀 %1$s</string>
     <string name="page_jump_latest">到最新</string>
     <string name="page_jump_newest">最新</string>
     <string name="page_jump_to">跳到第</string>
@@ -201,7 +198,6 @@
     <string name="search_history_empty">還沒有搜尋紀錄</string>
     <string name="search_history_scope">文章 · 全部版塊</string>
     <string name="search_user_history_scope">使用者</string>
-    <string name="search_history_board_scope">文章 · %1$s</string>
     <string name="search_user_topics">主題 %1$d</string>
     <string name="search_user_comments">評論 %1$d</string>
     <string name="search_user_joined">加入 %1$s</string>
@@ -219,8 +215,6 @@
     <string name="search_remove_recent">刪除搜尋紀錄：%1$s</string>
 
     <string name="notifications_mark_all_read">全部已讀</string>
-    <string name="notifications_mentions">@我</string>
-    <string name="notifications_replies">回覆主題</string>
     <string name="notifications_messages">私訊</string>
     <string name="notifications_interactions">互動</string>
     <string name="notifications_empty">這裡暫時沒有通知</string>
@@ -271,13 +265,11 @@
     <string name="profile_stars">星辰</string>
     <string name="profile_level">等級</string>
     <string name="profile_level_remaining">距 Lv%1$d 還差 %2$d 雞腿</string>
-    <string name="profile_attendance">今日簽到 · 領雞腿</string>
     <string name="profile_attendance_checking">正在檢查今日簽到…</string>
     <string name="profile_attendance_done">今日已簽到 · 檢視簽到榜</string>
     <string name="profile_attendance_title">簽到</string>
     <string name="profile_attendance_modes">隨機或固定 5 支雞腿</string>
     <string name="profile_attendance_board">簽到榜</string>
-    <string name="profile_account_settings">帳號設定</string>
 
     <string name="settings_title">設定</string>
     <string name="settings_appearance">外觀</string>
@@ -285,7 +277,6 @@
     <string name="settings_theme_system">跟隨系統</string>
     <string name="settings_theme_light">淺色</string>
     <string name="settings_theme_dark">深色</string>
-    <string name="settings_theme_entry_hint">配色來源、預設與色彩風格</string>
     <string name="settings_theme_mode">明暗</string>
     <string name="settings_one_hand">單手模式</string>
     <string name="settings_one_hand_hint">二級頁面用可下拉的大標題列，最多佔四成螢幕；關掉是普通標題列</string>
@@ -300,10 +291,8 @@
     <string name="settings_color_source">配色來源</string>
     <string name="settings_color_source_preset">預設</string>
     <string name="settings_color_source_wallpaper">動態取色</string>
-    <string name="settings_color_source_wallpaper_value">跟隨桌布</string>
     <string name="settings_color_source_custom">自訂</string>
 
-    <string name="settings_presets">預設</string>
     <string name="settings_preset_graphite">石墨青</string>
     <string name="settings_preset_miku">青×灰×粉</string>
     <string name="settings_preset_twins">黃×橙×黑灰</string>
@@ -783,8 +772,6 @@
     <string name="profile_sign_in">登入 %1$s</string>
     <string name="profile_sign_in_hint">在內建瀏覽器中完成，應用程式不保存你的密碼</string>
     <string name="profile_guest_section">訪客也可以用</string>
-    <string name="profile_guest_settings_hint">主題模式、字級、瀏覽偏好</string>
-    <string name="profile_guest_tools_hint">推薦閱讀、合作商家、友站</string>
 
     <string name="status_signed_in_title">已登入 %1$s</string>
     <string name="status_signed_in_body">應用程式現在會帶著你的登入狀態請求內容，內版這類版塊可以直接看了。收藏、通知和簽到都能用了。</string>
@@ -814,7 +801,6 @@
     <string name="space_tab_comments">評論</string>
     <string name="space_tab_collections">收藏</string>
     <string name="space_stat_joined_days">加入天數</string>
-    <string name="space_stat_level">等級</string>
     <string name="space_stat_chicken">雞腿</string>
     <string name="space_stat_topics">主題文</string>
     <string name="space_stat_comments">評論</string>
@@ -834,7 +820,6 @@
 
     <string name="assets_title">帳戶與成長</string>
     <string name="assets_current_level">目前等級</string>
-    <string name="assets_level_progress">雞腿 %1$d / %2$d</string>
     <string name="assets_level_remaining">還差 %1$d 雞腿到 Lv %2$d</string>
     <string name="assets_level_no_threshold">等級進度即雞腿總數</string>
     <string name="assets_daily_title">今日額度</string>
@@ -842,16 +827,12 @@
     <string name="assets_quota_comment">今日評論可得雞腿</string>
     <string name="assets_quota_attendance">今日簽到獲得雞腿</string>
     <string name="assets_quota_feeding">今日免費餵食額度</string>
-    <string name="assets_chicken_count">雞腿 %1$d</string>
     <string name="assets_quota_hint">今日額度這次沒讀到，只剩上限是準的。</string>
     <string name="assets_chicken">雞腿</string>
     <string name="assets_stars">星辰</string>
     <string name="assets_ledger">明細</string>
     <string name="assets_ledger_transfer">明細 / 轉帳</string>
-    <string name="assets_sign_in">今日簽到 · 領雞腿</string>
     <string name="assets_sign_in_choice_title">今日簽到</string>
-    <string name="assets_sign_in_random">隨機數量 · 拚手氣</string>
-    <string name="assets_sign_in_fixed">固定 5 支雞腿</string>
     <string name="assets_sign_in_random_label">隨機</string>
     <string name="assets_sign_in_random_value">拼手氣</string>
     <string name="assets_sign_in_fixed_label">固定</string>
@@ -869,7 +850,6 @@
 
     <string name="credit_title">雞腿明細</string>
     <string name="credit_balance">目前雞腿</string>
-    <string name="credit_level_progress">Lv%1$d 進度 %2$d / %3$d</string>
     <string name="credit_entry_total">總計 %1$d</string>
     <string name="credit_unit_level">雞腿 · Lv%1$d</string>
     <string name="credit_progress_remaining">%1$d / %2$d · 還差 %3$d 升到 Lv%4$d</string>
@@ -1013,10 +993,6 @@
     <string name="ruling_page_cap">站台只公開前 %1$d 頁，更早的紀錄要到網頁上查</string>
 
     <string name="profile_space">我的主頁</string>
-    <string name="profile_collections">我的收藏</string>
-    <string name="profile_history">瀏覽紀錄</string>
-    <string name="profile_assets">帳戶與成長</string>
-    <string name="profile_follow">追蹤與粉絲</string>
     <string name="profile_tools">社群工具</string>
 
     <string name="vote_placeholder_title">投票</string>
@@ -1296,10 +1272,8 @@
     <string name="sign_in_verify_not_required">本次無需人機驗證</string>
 
     <string name="sign_in_2fa_title">兩步驟驗證</string>
-    <string name="sign_in_2fa_headline">輸入 6 位驗證碼</string>
     <string name="sign_in_2fa_body">開啟驗證器 App，輸入 %1$s 目前的動態碼。驗證碼 30 秒重新整理一次。</string>
     <string name="sign_in_2fa_countdown">目前驗證碼剩餘 %1$d 秒</string>
-    <string name="sign_in_2fa_code">驗證碼</string>
     <string name="sign_in_2fa_submit">驗證並登入</string>
     <string name="sign_in_2fa_rejected">驗證碼不對，再試一次</string>
     <string name="sign_in_2fa_note">只有帳號開啟了雙因素驗證才會出現這一步；未開啟則登入介面直接回傳工作階段。</string>

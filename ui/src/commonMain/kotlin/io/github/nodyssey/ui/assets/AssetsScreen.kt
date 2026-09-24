@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -22,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -88,7 +84,6 @@ import io.github.nodyssey.ui.resources.spend_current_balance
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -247,6 +242,7 @@ fun AssetsScreen(
             // 邀请购码住在社区工具里，和站点的入口位置一致；这里不再重复一份。
             GroupedRow(
                 title = stringResource(Res.string.assets_board),
+                titleStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 subtitle = stringResource(Res.string.assets_board_subtitle),
                 icon = PlazaIcons.Group,
                 first = true,
@@ -414,9 +410,9 @@ private fun LevelCard(state: AssetsUiState) {
 }
 
 /**
- * 今日额度 as one card of rows. Sign-in is its last row, and the only row that is also a control: the
- * big button this screen used to end with is now the row's trailing edge, because today's sign-in *is*
- * today's fourth allowance and reads best beside the other three.
+ * 今日额度 as one card of rows. Sign-in is its last row, and the only row that is also a control — its
+ * button is the row's trailing edge, because today's sign-in *is* today's fourth allowance and reads
+ * best beside the other three.
  */
 @Composable
 private fun DailyQuotaCard(

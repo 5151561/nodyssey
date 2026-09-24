@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.login
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +19,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,14 +52,12 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.sign_in_2fa_body
 import io.github.nodyssey.ui.resources.sign_in_2fa_countdown
-import io.github.nodyssey.ui.resources.sign_in_2fa_headline
 import io.github.nodyssey.ui.resources.sign_in_2fa_note
 import io.github.nodyssey.ui.resources.sign_in_2fa_rejected
 import io.github.nodyssey.ui.resources.sign_in_2fa_submit
 import io.github.nodyssey.ui.resources.sign_in_2fa_title
 import io.github.nodyssey.ui.resources.sign_in_submitting
 import io.github.nodyssey.ui.resources.sign_in_use_web
-import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -135,18 +131,10 @@ fun TwoFactorScreen(
                     .padding(top = Spacing.lg, bottom = Spacing.lg),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xl),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        stringResource(Res.string.sign_in_2fa_title),
-                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 40.sp),
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        stringResource(Res.string.sign_in_2fa_body, state.challenge?.account.orEmpty()),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                AuthHeader(
+                    title = stringResource(Res.string.sign_in_2fa_title),
+                    body = stringResource(Res.string.sign_in_2fa_body, state.challenge?.account.orEmpty()),
+                )
 
                 CodeBoxes(
                     codeState = codeState,

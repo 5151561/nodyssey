@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.mycontent
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +60,7 @@ import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -222,7 +222,7 @@ private fun MenuChip(
             // 墨水屏 the raised tone is the page's own paper and the outline is all that shows a chip.
             shape = MaterialTheme.shapes.medium,
             colors = AssistChipDefaults.assistChipColors(containerColor = LocalPlazaLayers.current.raised),
-            border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
+            border = LocalPlazaLayers.current.cardBorderStroke,
             trailingIcon = {
                 Icon(
                     Icons.Default.ArrowDropDown,

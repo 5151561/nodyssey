@@ -1,23 +1,16 @@
 package io.github.nodyssey.ui.profile
 
-import androidx.paging.PagingData
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.AttendanceResult
 import io.github.nodyssey.data.AttendanceStatus
-import io.github.nodyssey.data.FeedPost
-import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.GrowthSnapshot
 import io.github.nodyssey.data.ProfileRepository
-import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.UserProfile
 import io.github.nodyssey.data.session.FakeSessionCookieStore
 import io.github.nodyssey.data.session.SessionRepository
-import io.github.nodyssey.model.FeedSort
-import io.github.nodyssey.model.ReactionAction
-import io.github.nodyssey.model.ThreadSnapshot
 import io.github.plaza.core.net.SessionCookies
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -27,7 +20,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain

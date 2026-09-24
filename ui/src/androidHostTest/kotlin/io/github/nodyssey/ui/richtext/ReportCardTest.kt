@@ -18,7 +18,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
-import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.report.QualityReportParser
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.plaza.core.ansi.AnsiDecoder

@@ -1,15 +1,12 @@
 package io.github.nodyssey.ui.postlist
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,44 +15,31 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -64,7 +48,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -90,13 +73,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -119,15 +97,14 @@ import io.github.nodyssey.ui.common.CollapsingHeader
 import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.LocalThreadTransition
-import io.github.nodyssey.ui.common.LockBadge
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
-import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
+import io.github.nodyssey.ui.common.PostBadges
 import io.github.nodyssey.ui.common.SiteErrorState
-import io.github.nodyssey.ui.common.TITLE_BADGE_SIZE
-import io.github.nodyssey.ui.common.lockBadgeDescription
+import io.github.nodyssey.ui.common.compactCount
+import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
@@ -138,13 +115,11 @@ import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
-import io.github.nodyssey.ui.resources.action_search
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.action_switch_site
 import io.github.nodyssey.ui.resources.feed_page_size_note
 import io.github.nodyssey.ui.resources.home_search_hint
 import io.github.nodyssey.ui.resources.page_jump_newest
-import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_badge_pinned
 import io.github.nodyssey.ui.resources.post_new_reply_count
 import io.github.nodyssey.ui.resources.post_read_marker
@@ -159,7 +134,6 @@ import io.github.nodyssey.ui.resources.tab_profile
 import io.github.nodyssey.ui.settings.rememberSiteSwitch
 import io.github.nodyssey.ui.settings.siteSwitchRestartsApp
 import io.github.plaza.designsys.component.AppendSpinner
-import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardGap
@@ -169,19 +143,19 @@ import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PrefetchAvatars
 import io.github.plaza.designsys.component.SkeletonBar
-import io.github.plaza.designsys.component.ThreadRow
-import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
-import io.github.plaza.designsys.component.textScaledSize
 import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardBorder
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
-import io.github.plaza.designsys.theme.floatShadow
+import io.github.plaza.designsys.theme.fabLift
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -629,8 +603,8 @@ fun PostListScreen(
                         Icon(Icons.Default.Edit, contentDescription = null)
                     },
                     text = { Text(stringResource(Res.string.action_create_post)) },
-                    modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows),
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
+                    modifier = Modifier.fabLift(),
+                    elevation = PlazaFabElevation,
                 )
             }
         },
@@ -875,8 +849,8 @@ private fun FeedPageBar(
             expanded = expanded,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-            modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows),
+            elevation = PlazaFabElevation,
+            modifier = Modifier.fabLift(),
         )
     }
 }
@@ -980,7 +954,7 @@ private fun AccountButton(
                     .clip(CircleShape)
                     .background(LocalPlazaLayers.current.raised)
                     // The search pill's outline, for the same reason: on 墨水屏 it is the only edge.
-                    .then(LocalPlazaLayers.current.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier),
+                    .cardBorder(LocalPlazaLayers.current, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.Person, contentDescription = null, modifier = Modifier.size(22.dp))
@@ -1002,7 +976,7 @@ private fun SearchPill(
         onClick = onClick,
         shape = CircleShape,
         color = layers.raised,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
         modifier = modifier
             .height(Sizes.minTouchTarget)
             .cardShadow(CircleShape, layers.shadows),
@@ -1043,7 +1017,7 @@ private fun SortButton(
                 .size(Sizes.minTouchTarget)
                 .cardShadow(CircleShape, layers.shadows)
                 // As the search pill beside it: on 墨水屏 the raised tone is the page's paper.
-                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier),
+                .cardBorder(layers, CircleShape),
             colors =
             IconButtonDefaults.filledIconButtonColors(
                 containerColor = layers.raised,
@@ -1321,26 +1295,11 @@ internal fun PostRow(
                     summary.lastActiveText?.let { MetaText(it, singleLine = true) }
                 }
             }
-            if (summary.isLocked) {
-                LockBadge(
-                    level = summary.lockLevel,
-                    description = lockBadgeDescription(summary.lockLevel),
-                )
-            }
-            if (showAwardBadge && summary.isAwarded) {
-                Icon(
-                    NodeSeekIcons.Award,
-                    contentDescription = stringResource(Res.string.post_badge_awarded),
-                    // The warm role rather than primary: 加精 is a mark the site puts on a thread, not
-                    // an action this app offers, and the site draws it orange.
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(textScaledSize(TITLE_BADGE_SIZE)),
-                )
-            }
+            PostBadges(summary, showAward = showAwardBadge)
         }
         Text(
             text = summary.title,
-            style = cardTitleStyle(),
+            style = postCardTitleStyle(),
             color = if (post.isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
             maxLines = 2,
@@ -1419,35 +1378,7 @@ private fun PinnedRow(
 /** 32dp: the avatar at the head of a feed card, beside a two-line name-and-board block. */
 private val CardAvatarSize = 32.dp
 
-/**
- * The card title: 17/25, the list's one large line. Scaled from `titleMedium` rather than fixed, so the
- * reading-size preference — which is carried in the type scale — reaches it.
- */
-@Composable
-private fun cardTitleStyle(): TextStyle {
-    val base = MaterialTheme.typography.titleMedium
-    return base.copy(
-        fontSize = base.fontSize * CARD_TITLE_SCALE,
-        lineHeight = base.fontSize * CARD_TITLE_SCALE * CARD_TITLE_LINE_HEIGHT,
-    )
-}
-
-private const val CARD_TITLE_SCALE = 17f / 15f
 private const val AUTHOR_SCALE = 13f / 12f
-private const val CARD_TITLE_LINE_HEIGHT = 25f / 17f
-
-/** 3400 → 3.4k: the view count is a magnitude, and the card's foot has room for four characters. */
-internal fun compactCount(value: Int): String =
-    when {
-        value < 1_000 -> value.toString()
-
-        value < 10_000 -> {
-            val tenths = value / 100
-            if (tenths % 10 == 0) "${tenths / 10}k" else "${tenths / 10}.${tenths % 10}k"
-        }
-
-        else -> "${value / 1_000}k"
-    }
 
 /**
  * Applies [modifier] only when [condition] holds.

@@ -124,6 +124,7 @@ import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.paddingWithKeyboard
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
@@ -823,7 +824,7 @@ private fun ComposerChip(
         contentColor = if (filled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
         border = when {
             error -> BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-            else -> layers.cardBorder?.let { BorderStroke(1.dp, it) }
+            else -> layers.cardBorderStroke
         },
         modifier = Modifier.height(32.dp),
     ) {

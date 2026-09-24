@@ -10,7 +10,6 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.model.FeedSort
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
-import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.After

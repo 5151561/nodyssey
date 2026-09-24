@@ -22,15 +22,15 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The emoji key's contract with whatever panel a host supplies.
  *
- * The strip used to name one particular app's panel outright. Now it takes a slot, and a slot that
- * is never invoked fails silently — the key lights up and nothing appears, which is exactly the
- * regression these cover. The insert and backspace wiring is tested here too, because it is the part
- * the host cannot get right on its own: it has no reference to the buffer being edited.
+ * The panel is a slot, and a slot that is never invoked fails silently — the key lights up and
+ * nothing appears, which is exactly the regression these cover. The insert and backspace wiring is
+ * tested here too, because it is the part the host cannot get right on its own: it has no reference
+ * to the buffer being edited.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "w360dp-h800dp")
-class MarkdownEditorBarTest {
+class EmojiPanelSlotTest {
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -39,7 +39,7 @@ class MarkdownEditorBarTest {
     private fun setBar(panel: @Composable (EmojiPanelScope) -> Unit) {
         composeRule.setContent {
             PlazaTheme {
-                MarkdownEditorBar(
+                ComposerEditorBar(
                     actions = listOf(EditorAction.BOLD, EditorAction.EMOJI),
                     bodyState = bodyState,
                     editorState = rememberMarkdownEditorState(),

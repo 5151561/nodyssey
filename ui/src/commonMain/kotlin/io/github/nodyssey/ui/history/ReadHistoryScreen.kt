@@ -1,7 +1,6 @@
 package io.github.nodyssey.ui.history
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,11 +8,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -59,7 +56,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.ui.common.BoardTag
@@ -89,25 +85,18 @@ import io.github.nodyssey.ui.resources.history_subtitle
 import io.github.nodyssey.ui.resources.history_title
 import io.github.nodyssey.ui.resources.history_undo
 import io.github.nodyssey.ui.resources.history_untitled
-import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.TimeFormat
-import io.github.plaza.designsys.component.AvatarCapOffset
 import io.github.plaza.designsys.component.ChoiceRow
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
-import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.StatusView
-import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
-import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.groupSlice
-import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme

@@ -7,7 +7,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.FeedPost

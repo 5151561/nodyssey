@@ -13,7 +13,6 @@ import io.github.nodyssey.data.local.writeTransaction
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostListPage
 import io.github.plaza.core.AppClock
-import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CancellationException
 
 /**

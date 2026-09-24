@@ -40,10 +40,10 @@ import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.SkippedImagePlaceholder
-import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.component.rememberTerminalText
 import io.github.plaza.designsys.editor.EditorAction
@@ -135,27 +135,18 @@ fun GalleryContent() {
 
                 Section("列表行") {
                     // `listAvatarSize` measures two type styles with a `TextMeasurer` and stacks
-                    // the results, so a row that lines up here is a font metric that survived the
-                    // move off Android's text stack.
-                    ThreadRow(
-                        onClick = {},
-                        leading = { UserAvatar(url = null, name = "苏", size = 36.dp) },
-                        title = { ThreadRowTitle(AnnotatedString("这台小鸡跑 Kotlin/Native 编译要多久")) },
-                        meta = {
-                            MetaText("苏打水")
-                            MetaText("2 小时前")
-                            MetaText("回复 18")
-                        },
-                    )
-                    ThreadRow(
-                        onClick = {},
-                        leading = { UserAvatar(url = null, name = "K", size = 36.dp) },
-                        title = { ThreadRowTitle(AnnotatedString("桌面端也能跑同一套组件了")) },
-                        meta = {
-                            MetaText("kmp")
-                            MetaText("刚刚")
-                        },
-                    )
+                    // the results, so an avatar that lines up here is a font metric that survived
+                    // the move off Android's text stack.
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        UserAvatar(url = null, name = "苏", size = listAvatarSize())
+                        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                            ThreadRowTitle(AnnotatedString("这台小鸡跑 Kotlin/Native 编译要多久"))
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                MetaText("苏打水")
+                                MetaText("2 小时前")
+                            }
+                        }
+                    }
                 }
 
                 Section("设置行") {
@@ -170,7 +161,6 @@ fun GalleryContent() {
                     EditorToolbar(
                         actions = EditorAction.entries.take(8),
                         onAction = {},
-                        onCustomize = {},
                     )
                 }
 

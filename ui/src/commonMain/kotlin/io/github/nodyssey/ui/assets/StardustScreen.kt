@@ -27,7 +27,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -119,11 +118,11 @@ import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
-import io.github.plaza.designsys.theme.floatShadow
+import io.github.plaza.designsys.theme.fabLift
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -258,15 +257,12 @@ fun StardustScreen(
             // No uid means the profile call has not answered — nobody to send from and no balance to
             // check the amount against, so the form would be a form that cannot submit.
             if (state.uid != null) {
-                // The layer system's float shadow rather than Material's elevation, which draws one
-                // hard ambient shadow in the platform's colour; see `LayerCard` for the same trade.
-                val shape = FloatingActionButtonDefaults.extendedFabShape
                 ExtendedFloatingActionButton(
                     onClick = onOpenTransfer,
                     icon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
                     text = { Text(stringResource(Res.string.transfer_action)) },
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                    modifier = Modifier.floatShadow(shape, LocalPlazaLayers.current.shadows),
+                    elevation = PlazaFabElevation,
+                    modifier = Modifier.fabLift(),
                 )
             }
         },

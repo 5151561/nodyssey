@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,13 +28,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -52,7 +47,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.AnnotatedString
@@ -62,7 +56,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
@@ -104,7 +97,6 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
-import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
@@ -288,9 +280,8 @@ fun NotificationsScreen(
                     },
                 )
                 /*
-                 * Tabs rather than the filter chips this row used to be.
-                 *
-                 * The groups are pages now, and a tab row is the control that says so: the indicator
+                 * Tabs rather than filter chips: the groups are pages, and a tab row is the control
+                 * that says so — the indicator
                  * is attached to the page underneath and moves with it, which a row of pills has no
                  * way to draw. Fixed rather than scrollable — there are two of them, and a scrollable
                  * row would huddle both at the start with the rest of the width left over.
@@ -525,7 +516,7 @@ internal sealed interface NotificationListRow {
         override val key get() = "day-${bucket.name}"
     }
 
-    /** [first] and [last] say which slice of its day's card the row draws; see [CardSliceRow]. */
+    /** [first] and [last] say which slice of its day's card the row draws; see [GroupedListItem]. */
     data class Item(
         val item: ForumNotification,
         val first: Boolean,
@@ -567,7 +558,7 @@ internal fun notificationRows(
 /**
  * One interaction: who, what, where, when — and a dot while it is unread (5a).
  *
- * Unread no longer tints the row: on a white card a tinted band reads as a selection. The dot at the
+ * Unread does not tint the row: on a white card a tinted band reads as a selection. The dot at the
  * end, the full-strength sentence and the thread title in primary carry it instead, and a read row
  * falls back to grey throughout.
  */
@@ -715,11 +706,16 @@ private fun NotificationTab.label(): String =
 private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
 
-/** 5a's measurements: a 40dp avatar 14dp in from the card's edge, 12dp from the sentence. */
+/** 5a's avatar size. */
 private val NOTIFICATION_AVATAR = 40.dp
-internal val ROW_PADDING_H = 14.dp
-internal val ROW_GAP = 12.dp
 private val UNREAD_DOT = 8.dp
+
+/**
+ * Where the quiet group labels over a list of cards sit — 今天, 更早, 全部私信. Grey rather than the
+ * settings' primary: they only say where one run of the same list ends, and 5a draws them in the grey
+ * of the time stamps under the rows.
+ */
+internal val ListGroupLabelPadding = PaddingValues(start = 8.dp, top = 14.dp, bottom = 6.dp)
 
 /** How far the page colour reaches down over a list that has scrolled under the header. */
 private val TOP_FADE = 20.dp

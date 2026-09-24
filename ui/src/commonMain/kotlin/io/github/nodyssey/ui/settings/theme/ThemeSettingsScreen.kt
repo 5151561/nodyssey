@@ -19,8 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -77,13 +75,13 @@ import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_preview
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsItemGap
+import io.github.nodyssey.ui.settings.SettingsMenuRow
 import io.github.nodyssey.ui.settings.SettingsPagePadding
-import io.github.nodyssey.ui.settings.SettingsRow
-import io.github.nodyssey.ui.settings.settingsRowTitleStyle
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -285,7 +283,7 @@ private fun ColorSourceHeader(
         modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = 14.dp, bottom = Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(stringResource(Res.string.settings_color_source), style = settingsRowTitleStyle())
+        Text(stringResource(Res.string.settings_color_source), style = groupedRowTitleStyle())
         ChoiceSegments(
             labels = choices.map { it.second },
             selectedIndex = choices.indexOfFirst { it.first == settings.colorSource },
@@ -387,7 +385,7 @@ private fun CustomSeedRow(
     ) {
         Box(Modifier.size(40.dp).clip(CircleShape).background(seed))
         Column(Modifier.weight(1f)) {
-            Text(name ?: seed.toHexString(), style = settingsRowTitleStyle())
+            Text(name ?: seed.toHexString(), style = groupedRowTitleStyle())
             if (name != null) {
                 Text(
                     seed.toHexString(),
@@ -427,7 +425,7 @@ private fun MyThemesBlock(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(Res.string.settings_my_themes),
-                style = settingsRowTitleStyle(),
+                style = groupedRowTitleStyle(),
                 modifier = Modifier.weight(1f),
             )
             Text(
@@ -509,35 +507,15 @@ private fun PaletteStyleRow(
     onSelect: (PaletteStyle) -> Unit,
     enabled: Boolean,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    SettingsRow(
-        leading = { Icon(PlazaIcons.Tonality, contentDescription = null) },
+    SettingsMenuRow(
+        icon = PlazaIcons.Tonality,
         title = stringResource(Res.string.settings_palette_style),
         subtitle = stringResource(paletteStyleLabel(selected)),
-        bottom = true,
+        choices = PaletteStyleChoices.map { it to stringResource(paletteStyleLabel(it)) },
+        selected = selected,
+        onSelect = onSelect,
+        last = true,
         enabled = enabled,
-        onClick = { expanded = true },
-        trailing = {
-            // Anchored to the arrow for the same reason 语言's menu is on 设置: a `DropdownMenu` hangs
-            // off its parent layout node, and the parent here is only the arrow.
-            Box {
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    PaletteStyleChoices.forEach { style ->
-                        DropdownMenuItem(
-                            text = { Text(stringResource(paletteStyleLabel(style))) },
-                            onClick = {
-                                expanded = false
-                                onSelect(style)
-                            },
-                            trailingIcon = {
-                                if (style == selected) Icon(Icons.Default.Check, contentDescription = null)
-                            },
-                        )
-                    }
-                }
-            }
-        },
     )
 }
 

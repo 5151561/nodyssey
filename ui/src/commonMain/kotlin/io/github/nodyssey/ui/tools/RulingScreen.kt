@@ -1,29 +1,22 @@
 package io.github.nodyssey.ui.tools
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,8 +35,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -52,7 +43,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.RulingAction
@@ -60,7 +50,6 @@ import io.github.nodyssey.data.RulingKind
 import io.github.nodyssey.data.RulingRecord
 import io.github.nodyssey.data.RulingTarget
 import io.github.nodyssey.ui.common.JumpDestination
-import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.SiteErrorState
@@ -102,14 +91,12 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.GroupedListItem
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
@@ -426,10 +413,8 @@ private const val APPEND_LOOKAHEAD = 4
 private val RAIL_CLEARANCE = 112.dp
 
 /**
- * One decision, as one row of the log's card.
- *
- * The icon disc that used to lead the row is gone: it sorted decisions into five kinds, and the
- * badges now say the same thing verb by verb, in colour, where the eye already is.
+ * One decision, as one row of the log's card. No leading icon: the badges sort decisions verb by
+ * verb, in colour, where the eye already is.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

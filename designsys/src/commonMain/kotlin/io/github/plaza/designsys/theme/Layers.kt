@@ -1,7 +1,12 @@
 package io.github.plaza.designsys.theme
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -15,10 +20,10 @@ import androidx.compose.ui.unit.dp
 /**
  * The three depths every screen is drawn at: the page, the cards on it, and what floats over both.
  *
- * This is the whole of the 轻盈层叠 direction. A screen no longer separates its rows with dividers on
- * one flat surface; the page recedes to a grey (`surfaceContainer`), content sits on the brightest
- * surface there is with a shadow barely strong enough to register, and floating controls — the FAB,
- * a menu — sit one step higher. Front-to-back order does the grouping that lines used to.
+ * This is the whole of the 轻盈层叠 direction. Rather than rows split by dividers on one flat surface,
+ * the page recedes to a grey (`surfaceContainer`), content sits on the brightest surface there is
+ * with a shadow barely strong enough to register, and floating controls — the FAB, a menu — sit one
+ * step higher. Front-to-back order does the grouping.
  *
  * Material has no single role for "the page" or "a card on it", and which role plays each part is
  * not the same in every mode, which is why this is its own object rather than a set of call-site
@@ -55,6 +60,19 @@ data class PlazaLayers(
     /** An outline for cards, where shadows cannot be drawn and tone cannot separate them (墨水屏). */
     val cardBorder: Color?,
 )
+
+/**
+ * [PlazaLayers.cardBorder] as the 1dp stroke a `Surface`, a chip or a `Card` takes — null wherever
+ * there is no outline to draw, which is everywhere but 墨水屏.
+ */
+val PlazaLayers.cardBorderStroke: BorderStroke?
+    get() = cardBorder?.let { BorderStroke(1.dp, it) }
+
+/** [PlazaLayers.cardBorder] around a node that takes no border of its own; nothing where there is none. */
+fun Modifier.cardBorder(
+    layers: PlazaLayers,
+    shape: Shape,
+): Modifier = layers.cardBorder?.let { border(1.dp, it, shape) } ?: this
 
 /**
  * Derives the layers from whichever scheme won — seed, character palette, system or 墨水屏 — so a
@@ -147,3 +165,16 @@ fun Modifier.floatShadow(
             .dropShadow(shape, Shadow(radius = 4.dp, color = ShadowInk, offset = DpOffset(0.dp, 2.dp), alpha = 0.12f))
             .dropShadow(shape, Shadow(radius = 24.dp, color = ShadowInk, offset = DpOffset(0.dp, 10.dp), alpha = 0.16f))
     }
+
+/** An extended FAB's elevation in the layer system: none of Material's own. See [fabLift]. */
+val PlazaFabElevation: FloatingActionButtonElevation
+    @Composable get() = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+
+/**
+ * An extended FAB's lift in the layer system: the [floatShadow] of its shape, in place of the Material
+ * elevation [PlazaFabElevation] switches off. Material's draws one hard ambient shadow in the
+ * platform's colour; this one sits a step above the cards, in the page's hue, like every other
+ * floating control. Every extended FAB takes the pair.
+ */
+@Composable
+fun Modifier.fabLift(): Modifier = floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows)

@@ -1,7 +1,6 @@
 package io.github.nodyssey.core.html
 
 import com.fleeksoft.ksoup.Ksoup
-import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import kotlin.test.Test
 import kotlin.test.assertEquals

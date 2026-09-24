@@ -19,7 +19,6 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.ui.common.siteName
@@ -80,7 +79,6 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
-import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.theme.LocalPlazaExtraColors
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.StatusShapes

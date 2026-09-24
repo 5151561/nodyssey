@@ -6,7 +6,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import io.github.nodyssey.core.html.AnsiParser
 import io.github.plaza.core.ansi.AnsiDecoder
 import io.github.plaza.designsys.component.rememberTerminalText
 import org.junit.Assert.assertEquals

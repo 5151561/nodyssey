@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,9 +35,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,23 +53,22 @@ import io.github.plaza.designsys.resources.composer_format_open
 import io.github.plaza.designsys.resources.composer_toolbar_customize
 import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * The post and reply editors' bar: "先写，后排版" (boards 1d, 1e, 2c).
  *
- * [MarkdownEditorBar] puts every key on the keyboard's top edge all the time. These two editors
- * stopped doing that: most of what a topic or a reply needs is typed, not formatted, and a strip of
- * eight glyphs above the keyboard asks the writer to think about Markdown before they have written a
- * sentence. What stays out is the short list of things that are *inserted* — a picture, a sticker,
- * an @ — on a rounded quick bar, with a 格式 pill at its end. The pill swaps the bar for a card of
- * the eight formatting keys, big enough to hit without looking, and 收起 swaps it back.
+ * Most of what a topic or a reply needs is typed, not formatted, so what sits on the keyboard's top
+ * edge is the short list of things that are *inserted* — a picture, a sticker, an @ — on a rounded
+ * quick bar, with a 格式 pill at its end. The pill swaps the bar for a card of the eight formatting
+ * keys, big enough to hit without looking, and 收起 swaps it back.
  *
- * [actions] is still the writer's own arrangement (the wrench panel edits it), so someone who wants
- * 加粗 one tap away can pin it to the bar; the defaults simply no longer do. The card always offers
- * all of [FormatKeys] in a fixed order, because it is a grid, and a grid whose cells move depending
- * on a setting elsewhere is one you have to read every time you open it.
+ * [actions] is the writer's own arrangement (the wrench panel edits it), so someone who wants 加粗 one
+ * tap away can pin it to the bar. The card always offers all of [FormatKeys] in a fixed order, because
+ * it is a grid, and a grid whose cells move depending on a setting elsewhere is one you have to read
+ * every time you open it.
  *
  * The card stays open across taps — bold, then a link, is one visit — and the writer closes it.
  * Opening the emoji panel closes it too; see [MarkdownEditorState.toggleEmoji]. Like that panel it
@@ -78,8 +77,8 @@ import org.jetbrains.compose.resources.stringResource
  * most of a phone's height, and what does not fit is the card's bottom row or the text being
  * formatted.
  *
- * The wrench ([onCustomize]) moved into the card's footer: the bar's width is spoken for by the
- * pill, and the card is where the writer has already stopped to arrange things.
+ * The wrench ([onCustomize]) sits in the card's footer: the bar's width is spoken for by the pill, and
+ * the card is where the writer has already stopped to arrange things.
  */
 @Composable
 fun ComposerEditorBar(
@@ -149,7 +148,7 @@ fun ComposerEditorBar(
 }
 
 /** The eight keys the 格式 card offers, in the order of board 1e's two rows. */
-val FormatKeys: List<EditorAction> =
+private val FormatKeys: List<EditorAction> =
     listOf(
         EditorAction.BOLD,
         EditorAction.STRIKETHROUGH,
@@ -184,22 +183,28 @@ private fun QuickBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 actions.forEach { action ->
-                    BarKey(
+                    // Round rather than the strip's rounded square, because the bar they sit on is a pill.
+                    ToolbarKey(
                         icon = action.icon,
                         contentDescription = stringResource(action.label),
                         checkable = action.opensPanel,
                         selected = action in active,
                         onClick = { onAction(action) },
+                        shape = IconButtonDefaults.standardShape,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
                 appMenu?.invoke()
             }
+            // Surface's click overload sets no role, so the two pills here state theirs.
             Surface(
                 onClick = onOpenFormat,
                 shape = CircleShape,
                 color = layers.raised,
-                border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
-                modifier = Modifier.padding(start = 4.dp).height(40.dp),
+                border = layers.cardBorderStroke,
+                modifier = Modifier.padding(start = 4.dp).height(40.dp).semantics { role = Role.Button },
             ) {
                 Row(
                     modifier = Modifier.padding(start = 10.dp, end = 14.dp),
@@ -220,46 +225,6 @@ private fun QuickBar(
 }
 
 /**
- * One key on the quick bar. A panel key is a checkbox; every other key is a button — the same split
- * as [EditorToolbar]'s keys, for the same reason: TalkBack should hear 表情 as 已选中 / 未选中 and
- * never hear 提到某人 as a checkbox. Round rather than the strip's rounded square, because the bar
- * they sit on is a pill.
- */
-@Composable
-private fun BarKey(
-    icon: ImageVector,
-    contentDescription: String,
-    checkable: Boolean,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val modifier = Modifier.size(KeySize)
-    val content: @Composable () -> Unit = {
-        Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(24.dp))
-    }
-    if (checkable) {
-        IconToggleButton(
-            checked = selected,
-            onCheckedChange = { onClick() },
-            modifier = modifier,
-            colors = IconButtonDefaults.iconToggleButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            ),
-            content = content,
-        )
-    } else {
-        IconButton(
-            onClick = onClick,
-            modifier = modifier,
-            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-            content = content,
-        )
-    }
-}
-
-/**
  * Board 1e: the formatting keys as a floating card in the quick bar's place.
  *
  * It floats (the float shadow, the raised colour) where the bar it replaces is recessed, because it
@@ -275,7 +240,7 @@ private fun FormatCard(
     Surface(
         color = layers.raised,
         shape = LayerCardShape,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
         modifier = Modifier.fillMaxWidth().padding(BarMargin).floatShadow(LayerCardShape, layers.shadows),
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -328,7 +293,7 @@ private fun FormatCard(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.inverseSurface,
                     contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    modifier = Modifier.height(32.dp),
+                    modifier = Modifier.height(32.dp).semantics { role = Role.Button },
                 ) {
                     Row(Modifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(

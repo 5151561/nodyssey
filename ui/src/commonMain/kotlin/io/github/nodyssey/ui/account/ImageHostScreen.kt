@@ -13,12 +13,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,15 +35,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +54,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -154,15 +148,15 @@ import io.github.nodyssey.ui.resources.imagehost_upload_url_placeholder
 import io.github.nodyssey.ui.resources.status_network_title
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
-import io.github.nodyssey.ui.settings.settingsRowTitleStyle
+import io.github.nodyssey.ui.settings.SettingsTextField
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
-import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.TonalTag
+import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -372,7 +366,7 @@ private fun ProviderCard(
     onSelect: (ImageHostProvider) -> Unit,
 ) {
     LayerCard(modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(Res.string.imagehost_section_provider), style = settingsRowTitleStyle())
+        Text(stringResource(Res.string.imagehost_section_provider), style = groupedRowTitleStyle())
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -431,7 +425,7 @@ private fun ConnectionCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(Res.string.imagehost_section_connection),
-                style = settingsRowTitleStyle(),
+                style = groupedRowTitleStyle(),
                 modifier = Modifier.weight(1f),
             )
             TonalTag(
@@ -651,20 +645,15 @@ private fun HostField(
     singleLine: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
 ) {
-    OutlinedTextField(
+    SettingsTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        singleLine = singleLine,
+        label = stringResource(labelRes),
+        placeholder = stringResource(placeholderRes),
         isError = isError,
-        label = { Text(stringResource(labelRes)) },
-        placeholder = { Text(stringResource(placeholderRes)) },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        shape = PlazaFieldDefaults.shape,
-        colors = PlazaFieldDefaults.colors(inCard = true),
-        supportingText = {
-            Text(stringResource(if (isError && errorRes != null) errorRes else helperRes))
-        },
+        supportingText = stringResource(if (isError && errorRes != null) errorRes else helperRes),
+        keyboardType = keyboardType,
+        singleLine = singleLine,
     )
 }
 

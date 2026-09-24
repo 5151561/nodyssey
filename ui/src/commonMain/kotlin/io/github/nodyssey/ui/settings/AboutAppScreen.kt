@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -103,14 +101,16 @@ import io.github.plaza.core.update.UpdateCheck
 import io.github.plaza.core.update.UpdateDownload
 import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
+import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.IconBadge
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.TonalTag
+import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -326,15 +326,15 @@ private fun AboutRow(
     top: Boolean = false,
     bottom: Boolean = false,
 ) {
-    SettingsRow(
+    GroupedRow(
         title = title,
         subtitle = subtitle,
         subtitleMonospace = subtitle?.contains("github.com") == true,
-        top = top,
-        bottom = bottom,
+        first = top,
+        last = bottom,
         onClick = onClick,
-        chevron = !external,
-        leading = { Icon(icon, contentDescription = null) },
+        showChevron = !external,
+        icon = icon,
         trailing = {
             if (external) {
                 Icon(
@@ -466,19 +466,15 @@ private fun UpdateCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                IconBadge(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = ControlShape,
-                    modifier = Modifier.size(44.dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(PlazaIcons.Download, contentDescription = null)
-                    }
+                    Icon(PlazaIcons.Download, contentDescription = null)
                 }
                 Text(
                     stringResource(Res.string.about_update_new_version, release.versionName),
-                    style = settingsRowTitleStyle().copy(fontWeight = FontWeight.SemiBold),
+                    style = groupedRowTitleStyle().copy(fontWeight = FontWeight.SemiBold),
                     modifier = Modifier.weight(1f),
                 )
                 // Only ever set when 接收 dev 版更新 is on, and said out loud there: the card otherwise

@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,10 +36,8 @@ import io.github.nodyssey.ui.resources.assets_board_self
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing

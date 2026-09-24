@@ -13,7 +13,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +39,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +60,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -91,6 +88,8 @@ import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorder
+import io.github.plaza.designsys.theme.cardBorderStroke
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -297,10 +296,7 @@ internal fun BoardStrip(
                         // 墨水屏 draws the raised tone as the page's own paper, and the outline is all
                         // that shows a key there; the lit tick needs none.
                         .then(
-                            LocalPlazaLayers.current.cardBorder
-                                ?.takeUnless { editing }
-                                ?.let { Modifier.border(1.dp, it, MaterialTheme.shapes.medium) }
-                                ?: Modifier,
+                            if (editing) Modifier else Modifier.cardBorder(LocalPlazaLayers.current, MaterialTheme.shapes.medium),
                         ),
                     shape = MaterialTheme.shapes.medium,
                     colors =
@@ -738,7 +734,7 @@ private fun BoardPill(
         ),
         // Only the card outline, and only where there is one: on 墨水屏 the raised tone is the page's
         // paper, so without it an unselected board was a word floating on the page.
-        border = LocalPlazaLayers.current.cardBorder?.takeUnless { selected }?.let { BorderStroke(1.dp, it) },
+        border = LocalPlazaLayers.current.cardBorderStroke?.takeUnless { selected },
     )
 }
 

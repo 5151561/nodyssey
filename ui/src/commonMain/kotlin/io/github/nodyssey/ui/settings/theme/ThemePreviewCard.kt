@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.settings.theme
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,6 +42,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
 import org.jetbrains.compose.resources.stringResource
 
@@ -72,7 +72,7 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
         modifier = modifier.cardShadow(shape, layers.shadows).fillMaxWidth().clearAndSetSemantics {},
         color = layers.card,
         shape = shape,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
     ) {
         Column {
             Column(

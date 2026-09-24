@@ -107,15 +107,6 @@ enum class Site(
     ),
     ;
 
-    /**
-     * The two-letter tile the sign-in card leads with.
-     *
-     * Derived here rather than kept as a string resource, which is what it used to be: `NS` is not
-     * copy and has no translation — it is the site's initials, and a second site makes that a fact
-     * about the site rather than a constant of the app.
-     */
-    val mark: String get() = displayName.filter { it.isUpperCase() }.take(2)
-
     /** Where a session for this site can legitimately live. HTTPS only; the app never asks over http. */
     val sessionUrls: List<String> get() = hosts.map { "https://$it" }
 

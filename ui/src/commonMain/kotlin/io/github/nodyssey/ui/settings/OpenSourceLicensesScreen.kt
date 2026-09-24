@@ -25,6 +25,7 @@ import io.github.nodyssey.ui.resources.licenses_dependencies_section
 import io.github.nodyssey.ui.resources.licenses_lockfile_note
 import io.github.nodyssey.ui.resources.licenses_summary
 import io.github.nodyssey.ui.resources.settings_licenses
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
@@ -76,25 +77,27 @@ fun OpenSourceLicensesScreen(
             )
             SectionLabel(stringResource(Res.string.licenses_app_section))
             SettingsGroup {
-                SettingsRow(
+                GroupedRow(
                     title = appName(),
                     subtitle = "GNU General Public License v3.0",
-                    top = true,
-                    bottom = true,
+                    first = true,
+                    last = true,
                     onClick = { onOpenUri(APP_LICENSE_URL) },
                     trailing = { LicenseLinkIcon() },
+                    showChevron = false,
                 )
             }
             SectionLabel(stringResource(Res.string.licenses_dependencies_section))
             SettingsGroup {
                 SHIPPED_LIBRARIES.forEachIndexed { index, library ->
-                    SettingsRow(
+                    GroupedRow(
                         title = library.name,
                         subtitle = library.license,
-                        top = index == 0,
-                        bottom = index == SHIPPED_LIBRARIES.lastIndex,
+                        first = index == 0,
+                        last = index == SHIPPED_LIBRARIES.lastIndex,
                         onClick = { onOpenUri(library.sourceUrl) },
                         trailing = { LicenseLinkIcon() },
+                        showChevron = false,
                     )
                 }
             }

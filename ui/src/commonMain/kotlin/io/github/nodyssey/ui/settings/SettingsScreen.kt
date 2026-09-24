@@ -1,9 +1,7 @@
 package io.github.nodyssey.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,12 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,10 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
@@ -122,6 +115,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
@@ -274,8 +268,8 @@ fun SettingsScreen(
                 // and a live preview card is more than a group of eight can carry, and every one of
                 // them changes the screen it is read on. The row says what they add up to — the
                 // colour and the style in force — so the answer is readable without going in.
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Palette, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Palette,
                     title = stringResource(Res.string.settings_theme),
                     // Greyed rather than hidden, the same call 色彩风格 makes on 主题's own screen: a
                     // section that vanished would read as one the app had lost, and every control
@@ -288,13 +282,12 @@ fun SettingsScreen(
                     },
                     enabled = !state.settings.einkMode,
                     onClick = onOpenTheme,
-                    chevron = true,
                     trailing = { ThemeSummaryDot(enabled = !state.settings.einkMode) },
                 )
                 // Under 主题 rather than above it: it overrides 明暗 and replaces 主题, and the two
                 // it greys out read first, the way a master switch reads after what it governs.
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Contrast, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Contrast,
                     title = stringResource(Res.string.settings_eink),
                     subtitle = stringResource(Res.string.settings_eink_hint),
                     checked = state.settings.einkMode,
@@ -304,8 +297,8 @@ fun SettingsScreen(
                 // One switch for every screen that carries the bar rather than one per screen:
                 // whether the title should come down to the thumb is a fact about the hand holding
                 // the phone, and it does not change between 收藏 and 设置.
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.PanTool, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.PanTool,
                     title = stringResource(Res.string.settings_one_hand),
                     subtitle = stringResource(Res.string.settings_one_hand_hint),
                     checked = state.settings.oneHandMode,
@@ -343,8 +336,8 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Mood, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Mood,
                     title = stringResource(Res.string.settings_sticker_uniform),
                     subtitle = stringResource(Res.string.settings_sticker_uniform_hint),
                     checked = state.settings.stickerUniformSize,
@@ -385,9 +378,9 @@ fun SettingsScreen(
             SectionLabel(stringResource(Res.string.settings_content))
             SettingsGroup {
                 appLinkHandlingEnabled?.let { enabled ->
-                    SettingsRow(
-                        top = true,
-                        leading = { Icon(PlazaIcons.Link, contentDescription = null) },
+                    GroupedRow(
+                        first = true,
+                        icon = PlazaIcons.Link,
                         title = stringResource(Res.string.settings_app_links),
                         subtitle =
                         stringResource(
@@ -398,7 +391,6 @@ fun SettingsScreen(
                             },
                         ),
                         onClick = onOpenAppLinkSettings,
-                        chevron = true,
                     )
                 }
                 SettingsBlock(
@@ -413,23 +405,23 @@ fun SettingsScreen(
                         onSelected = onReportFormatChange,
                     )
                 }
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.LastPage, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.LastPage,
                     title = stringResource(Res.string.settings_home_page_bar),
                     subtitle = stringResource(Res.string.settings_home_page_bar_hint),
                     checked = state.settings.homePageBar,
                     onCheckedChange = onHomePageBarChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.homePageBar) },
                 )
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Wifi, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Wifi,
                     title = stringResource(Res.string.settings_wifi_images),
                     subtitle = stringResource(Res.string.settings_wifi_images_hint),
                     checked = state.settings.imagesOnWifiOnly,
                     onCheckedChange = onImagesOnWifiOnlyChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.imagesOnWifiOnly) },
                 )
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.imagehost_title),
                     // 已连接 / 未连接 rather than the host's name: what the row is asked on the way
                     // to writing a post is whether inserting a picture will work at all.
@@ -441,10 +433,9 @@ fun SettingsScreen(
                         },
                     ),
                     onClick = onOpenImageHost,
-                    chevron = true,
-                    leading = { Icon(PlazaIcons.CloudUpload, contentDescription = null) },
+                    icon = PlazaIcons.CloudUpload,
                 )
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.settings_clear_cache),
                     // The figure is the one system settings shows under 缓存, in the units it uses.
                     // Absent until the walk finishes, rather than a 0 that would read as an answer.
@@ -454,45 +445,44 @@ fun SettingsScreen(
                             rememberFileSizeLabel(bytes),
                         )
                     },
-                    bottom = true,
+                    last = true,
                     onClick = onClearCache,
-                    leading = { Icon(Icons.Default.Delete, contentDescription = null) },
+                    icon = Icons.Default.Delete,
                     trailing = {
                         if (state.isClearingCache) {
                             PlazaSpinner(Modifier.describedAsLoading(), size = 22.dp)
                         }
                     },
+                    showChevron = false,
                 )
             }
 
             SectionLabel(stringResource(Res.string.notify_settings_title))
             SettingsGroup {
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.notify_master_title),
                     subtitle = stringResource(Res.string.notify_settings_entry_hint),
-                    top = true,
-                    bottom = true,
+                    first = true,
+                    last = true,
                     onClick = onOpenNotifications,
-                    chevron = true,
-                    leading = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                    icon = Icons.Default.Notifications,
                 )
             }
 
             SectionLabel(stringResource(Res.string.settings_network))
             SettingsGroup {
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.settings_proxy_entry),
                     subtitle = stringResource(Res.string.settings_proxy_entry_hint),
-                    top = true,
-                    bottom = state.dohEnabled == null && !state.hasNetworkCheck,
+                    first = true,
+                    last = state.dohEnabled == null && !state.hasNetworkCheck,
                     onClick = onOpenProxy,
-                    chevron = true,
-                    leading = { Icon(PlazaIcons.VpnLock, contentDescription = null) },
+                    icon = PlazaIcons.VpnLock,
                 )
                 // Absent rather than disabled where the platform cannot apply a DoH server at all —
                 // see [SettingsUiState.dohEnabled], and 默认打开方式 above for the same treatment.
                 state.dohEnabled?.let { enabled ->
-                    SettingsRow(
+                    GroupedRow(
                         title = stringResource(Res.string.settings_doh_entry),
                         subtitle = stringResource(
                             if (enabled) {
@@ -501,62 +491,58 @@ fun SettingsScreen(
                                 Res.string.settings_doh_entry_hint_off
                             },
                         ),
-                        bottom = !state.hasNetworkCheck,
+                        last = !state.hasNetworkCheck,
                         onClick = onOpenDoh,
-                        chevron = true,
-                        leading = { Icon(PlazaIcons.Dns, contentDescription = null) },
+                        icon = PlazaIcons.Dns,
                     )
                 }
                 // Last in the group on purpose: the two above are settings that change how the app
                 // behaves, and this one only reports on them. Absent where the platform has no
                 // implementation — see [SettingsUiState.hasNetworkCheck].
                 if (state.hasNetworkCheck) {
-                    SettingsRow(
+                    GroupedRow(
                         title = stringResource(Res.string.settings_network_check_entry),
                         subtitle = stringResource(Res.string.settings_network_check_entry_hint),
-                        bottom = true,
+                        last = true,
                         onClick = onOpenNetworkCheck,
-                        chevron = true,
-                        leading = { Icon(PlazaIcons.NetworkCheck, contentDescription = null) },
+                        icon = PlazaIcons.NetworkCheck,
                     )
                 }
             }
 
             SectionLabel(stringResource(Res.string.settings_about))
             SettingsGroup {
-                SettingsRow(
+                GroupedRow(
                     title = stringResource(Res.string.settings_about_app),
                     subtitle = state.updateVersionName
                         ?.let { stringResource(Res.string.settings_about_app_update, it) }
                         ?: stringResource(Res.string.settings_version, state.versionName),
-                    top = true,
+                    first = true,
                     onClick = onOpenAbout,
-                    chevron = true,
-                    leading = { Icon(Icons.Default.Info, contentDescription = null) },
+                    icon = Icons.Default.Info,
                     trailing = { if (state.updateVersionName != null) UpdateDot() },
                 )
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Update, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Update,
                     title = stringResource(Res.string.settings_update_on_launch),
                     subtitle = stringResource(Res.string.settings_update_on_launch_hint),
                     checked = state.settings.updateCheckOnLaunch,
                     onCheckedChange = onUpdateCheckOnLaunchChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.updateCheckOnLaunch) },
                 )
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Science, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Science,
                     title = stringResource(Res.string.settings_update_dev_channel),
                     subtitle = stringResource(Res.string.settings_update_dev_channel_hint),
                     checked = state.settings.updateDevChannel,
                     onCheckedChange = onUpdateDevChannelChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.updateDevChannel) },
                 )
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.Gavel, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.Gavel,
                     title = stringResource(Res.string.settings_licenses),
-                    bottom = true,
+                    last = true,
                     onClick = onOpenLicenses,
-                    chevron = true,
                 )
             }
         }
@@ -615,10 +601,9 @@ private fun AppLanguageRow(
     onSelect: (AppLanguage) -> Unit,
 ) {
     val choices = appLanguageChoices()
-    var expanded by remember { mutableStateOf(false) }
     val current = choices.first { it.first == selected }.second
-    SettingsRow(
-        leading = { Icon(PlazaIcons.Translate, contentDescription = null) },
+    SettingsMenuRow(
+        icon = PlazaIcons.Translate,
         title = stringResource(Res.string.settings_language),
         // The answer on the second line, where every other row of 外观 keeps its own. The restart
         // note rides after it only where a change waits for the next launch: Android redraws the
@@ -629,42 +614,11 @@ private fun AppLanguageRow(
         } else {
             current
         },
-        bottom = true,
-        onClick = { expanded = true },
-        trailing = {
-            // The menu hangs off the chevron and nothing wider, because a `DropdownMenu` is
-            // anchored to its *parent* layout node — `Popup` reads `parentLayoutCoordinates`,
-            // not the position of its own zero-sized node. Put it a level up and the anchor
-            // becomes the whole row, so the menu opens at the row's bottom left however the
-            // enclosing box is aligned; this box is the chevron and only the chevron, so the
-            // menu ends where it does, tucked under the control that opened it.
-            Box {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    choices.forEach { (language, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                expanded = false
-                                onSelect(language)
-                            },
-                            // A tick rather than a radio: a menu shows one row at a time as the
-                            // finger moves down it, and a column of empty circles reads as a
-                            // form rather than as a list with one answer already in it.
-                            trailingIcon = {
-                                if (language == selected) {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-        },
+        choices = choices,
+        selected = selected,
+        onSelect = onSelect,
+        last = true,
+        menuIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
     )
 }
 

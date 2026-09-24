@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,26 +13,22 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.proxy.ProxyConfigProblem
 import io.github.nodyssey.data.proxy.ProxyConnectionFailure
@@ -72,11 +67,12 @@ import io.github.nodyssey.ui.resources.proxy_username_label
 import io.github.nodyssey.ui.resources.proxy_webview_hint
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItemSwitch
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
-import io.github.plaza.designsys.component.SectionNote
+import io.github.plaza.designsys.component.SectionNotes
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -167,12 +163,12 @@ fun ProxySettingsScreen(
             verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             SettingsGroup {
-                SettingsRow(
-                    leading = { Icon(PlazaIcons.VpnLock, contentDescription = null) },
+                GroupedRow(
+                    icon = PlazaIcons.VpnLock,
                     title = stringResource(Res.string.proxy_master_title),
                     subtitle = stringResource(Res.string.proxy_master_hint),
-                    top = true,
-                    bottom = true,
+                    first = true,
+                    last = true,
                     checked = state.enabled,
                     onCheckedChange = onEnabledChange,
                     trailing = { GroupedListItemSwitch(checked = state.enabled) },
@@ -242,12 +238,12 @@ fun ProxySettingsScreen(
                 }
 
                 SettingsGroup {
-                    SettingsRow(
-                        leading = { Icon(PlazaIcons.Forum, contentDescription = null) },
+                    GroupedRow(
+                        icon = PlazaIcons.Forum,
                         title = stringResource(Res.string.proxy_scope_title),
                         subtitle = stringResource(Res.string.proxy_scope_hint),
-                        top = true,
-                        bottom = true,
+                        first = true,
+                        last = true,
                         enabled = state.enabled,
                         checked = state.scope == ProxyScope.FORUM_ONLY,
                         onCheckedChange = onForumOnlyChange,
@@ -276,17 +272,10 @@ fun ProxySettingsScreen(
             // Outside the dimmed block on purpose: this is what someone reads *before* deciding what
             // to type, and it is the only place the app admits it speaks neither VLESS nor the
             // WebView's network stack.
-            Column(
-                modifier = Modifier.padding(top = Spacing.xs),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                SectionNote(
-                    stringResource(Res.string.proxy_advanced_title),
-                    modifier = Modifier.semantics { heading() },
-                )
-                SectionNote(stringResource(Res.string.proxy_advanced_hint))
-                SectionNote(stringResource(Res.string.proxy_webview_hint))
-            }
+            SectionNotes(
+                title = stringResource(Res.string.proxy_advanced_title),
+                lines = listOf(stringResource(Res.string.proxy_advanced_hint), stringResource(Res.string.proxy_webview_hint)),
+            )
         }
     }
 }

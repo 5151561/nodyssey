@@ -14,17 +14,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /** A tile's corners unless it says otherwise. */
-val TonalTileShape: Shape = RoundedCornerShape(20.dp)
+private val TonalTileShape: Shape = RoundedCornerShape(20.dp)
 
 /**
  * A tonal block tapped as a whole — a balance, a mark, a choice, a page key — with its content
  * stacked in a column: typically an icon, a title and a supporting line.
  *
  * Material's clickable [Surface] underneath (the selectable overload when [selected] is non-null), so
- * the ripple, the disabled state and the button or selected semantics are Material's. Not a `Card`:
+ * the ripple, the disabled state and the selected semantics are Material's. The button role is
+ * added here: Surface's click overload, unlike `Button`, sets none. Not a `Card`:
  * a card's content column does not receive the tile's minimum height, so a key or a tall choice could
  * not centre what it holds.
  */
@@ -67,7 +71,7 @@ fun TonalTile(
     } else {
         Surface(
             onClick = onClick,
-            modifier = modifier,
+            modifier = modifier.semantics { role = Role.Button },
             enabled = enabled,
             shape = shape,
             color = containerColor,

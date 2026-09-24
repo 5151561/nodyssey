@@ -1,13 +1,16 @@
 package io.github.plaza.designsys.component
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 
 /**
@@ -24,6 +27,8 @@ fun ChoiceRow(
     selected: Boolean,
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
+    textStyle: TextStyle = LocalTextStyle.current,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
 ) {
     Row(
         modifier =
@@ -33,10 +38,12 @@ fun ChoiceRow(
             onClick = onSelect,
         ),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = horizontalArrangement,
     ) {
         RadioButton(selected = selected, onClick = null)
         Text(
             text = label,
+            style = textStyle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),

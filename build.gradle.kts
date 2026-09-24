@@ -37,6 +37,10 @@ val ktlintRules =
         // equally deliberate — so the naming rule is off and code review covers naming instead.
         "ktlint_standard_function-naming" to "disabled",
 
+        // Off by default under intellij_idea. On, so an import goes with its last use rather than
+        // staying behind to suggest a dependency the file no longer has.
+        "ktlint_standard_no-unused-imports" to "enabled",
+
         // Trailing commas keep a diff to one line when a parameter is added.
         "ij_kotlin_allow_trailing_comma" to "true",
         "ij_kotlin_allow_trailing_comma_on_call_site" to "true",

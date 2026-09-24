@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
@@ -35,7 +34,6 @@ import io.github.nodyssey.ui.resources.status_unparsable_title
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
-import io.github.plaza.designsys.theme.Spacing
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 

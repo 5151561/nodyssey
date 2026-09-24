@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -17,13 +16,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -58,18 +55,15 @@ import io.github.nodyssey.ui.resources.help_toolbar_title
 import io.github.nodyssey.ui.resources.onboarding_app_links_action
 import io.github.nodyssey.ui.resources.settings_app_links_hint_on
 import io.github.nodyssey.ui.settings.SettingsGroup
-import io.github.nodyssey.ui.settings.SettingsRow
 import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
 import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
 import io.github.plaza.designsys.component.GroupedListItem
-import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
-import io.github.plaza.designsys.component.groupShape
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -223,13 +217,14 @@ fun HelpScreen(
             }
 
             SettingsGroup {
-                SettingsRow(
-                    top = true,
-                    bottom = true,
-                    leading = { Icon(PlazaIcons.WavingHand, contentDescription = null) },
+                GroupedRow(
+                    first = true,
+                    last = true,
+                    icon = PlazaIcons.WavingHand,
                     title = stringResource(Res.string.help_replay),
                     subtitle = stringResource(Res.string.help_replay_hint),
                     onClick = onReplayGuide,
+                    showChevron = false,
                 )
             }
             Spacer(Modifier.height(Spacing.xl))

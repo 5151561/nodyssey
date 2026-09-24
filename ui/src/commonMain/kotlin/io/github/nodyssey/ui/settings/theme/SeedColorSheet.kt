@@ -45,21 +45,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -430,10 +427,9 @@ internal fun SchemeStrip(
     paletteStyle: PlazaPaletteStyle,
     darkTheme: Boolean,
     modifier: Modifier = Modifier,
-    corner: Dp = 10.dp,
 ) {
     val scheme = remember(seed, darkTheme, paletteStyle) { plazaSeedColorScheme(seed, darkTheme, paletteStyle) }
-    Row(modifier.clip(RoundedCornerShape(corner))) {
+    Row(modifier.clip(RoundedCornerShape(10.dp))) {
         listOf(
             scheme.primary,
             scheme.secondary,

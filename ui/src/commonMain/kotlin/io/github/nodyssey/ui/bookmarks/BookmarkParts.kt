@@ -1,9 +1,5 @@
 package io.github.nodyssey.ui.bookmarks
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,11 +26,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,21 +37,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineState
-import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.describedAsLoading
@@ -93,26 +81,19 @@ import io.github.nodyssey.ui.resources.offline_stop_download
 import io.github.nodyssey.ui.resources.offline_stop_download_progress
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.core.net.SiteError
-import io.github.plaza.designsys.component.AvatarCapOffset
+import io.github.plaza.designsys.component.GroupDividerInset
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.InlineBanner
-import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
-import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaIcons
-import io.github.plaza.designsys.component.PlazaSpinner
-import io.github.plaza.designsys.component.ThreadRow
 import io.github.plaza.designsys.component.ThreadRowTitle
-import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.groupSlice
-import io.github.plaza.designsys.component.listAvatarSize
-import io.github.plaza.designsys.component.materialIcon
+import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.component.textScaledSize
-import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -145,63 +126,61 @@ internal fun BookmarkRow(
     val inSelection = selected != null
     val layers = LocalPlazaLayers.current
     val showsOfflineColumn = offlineAvailable && !inSelection
-    Column(modifier.fillMaxWidth().groupSlice(layers, first, last)) {
-        // Material's interactive list item: it owns the ripple, the long-click TalkBack can announce
-        // and perform, and the leading/trailing geometry. The card behind it is the slice's, so the
-        // item itself is transparent unless it is ticked.
-        ListItem(
-            onClick = onClick,
-            onLongClick = onLongClick,
-            onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
-            colors =
-            ListItemDefaults.colors(
-                containerColor = if (selected == true) layers.inset else Color.Transparent,
-            ),
-            leadingContent =
-            selected?.let { checked ->
-                {
-                    // The row is the touch target — it is what toggles the tick — so the box itself
-                    // is released from Material's 48dp minimum. Left at its default it would claim
-                    // 48dp of a 360dp row and take that width out of the title.
-                    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                        Checkbox(checked = checked, onCheckedChange = null)
-                    }
+    GroupedListItem(
+        first = first,
+        last = last,
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = stringResource(Res.string.bookmarks_select_action),
+        // Transparent unless it is ticked: the card behind the row is the group's.
+        colors = groupedListItemColors(containerColor = if (selected == true) layers.inset else Color.Transparent),
+        // The text's inset whether or not a checkbox leads, so ticking into selection does not move the
+        // hairlines.
+        dividerInset = GroupDividerInset,
+        leadingContent =
+        selected?.let { checked ->
+            {
+                // The row is the touch target — it is what toggles the tick — so the box itself
+                // is released from Material's 48dp minimum. Left at its default it would claim
+                // 48dp of a 360dp row and take that width out of the title.
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                    Checkbox(checked = checked, onCheckedChange = null)
                 }
-            },
-            supportingContent = {
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        itemVerticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        BoardTag(title = entry.categoryTitle, slug = entry.categorySlug)
-                        val replies = entry.commentCount?.let { stringResource(Res.string.post_reply_count, it) }
-                        val byline =
-                            if (inSelection && offlineAvailable) {
-                                // The download column is gone in multi-select, so the state it was
-                                // saying moves onto the meta line — otherwise ticking a row is also the
-                                // moment you stop being able to see which of the six you already have.
-                                listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, offlineSummary(entry.offline))
-                            } else {
-                                listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, replies)
-                            }
-                        if (byline.isNotEmpty()) MetaText(byline.joinToString(META_SEPARATOR), singleLine = true)
-                        if (showsOfflineColumn) (entry.offline as? OfflineState.Stale)?.let { StaleBadge(it.behindReplies) }
-                    }
-                    if (showsOfflineColumn) (entry.offline as? OfflineState.Failed)?.let { FailureLine(it.reason) }
+            }
+        },
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BoardTag(title = entry.categoryTitle, slug = entry.categorySlug)
+                    val replies = entry.commentCount?.let { stringResource(Res.string.post_reply_count, it) }
+                    val byline =
+                        if (inSelection && offlineAvailable) {
+                            // The download column is gone in multi-select, so the state it was
+                            // saying moves onto the meta line — otherwise ticking a row is also the
+                            // moment you stop being able to see which of the six you already have.
+                            listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, offlineSummary(entry.offline))
+                        } else {
+                            listOfNotNull(entry.authorName?.takeIf { it.isNotBlank() }, replies)
+                        }
+                    if (byline.isNotEmpty()) MetaText(byline.joinToString(META_SEPARATOR), singleLine = true)
+                    if (showsOfflineColumn) (entry.offline as? OfflineState.Stale)?.let { StaleBadge(it.behindReplies) }
                 }
-            },
-            trailingContent =
-            if (showsOfflineColumn) {
-                { OfflineStateAction(state = entry.offline, onClick = onOfflineAction) }
-            } else {
-                null
-            },
-        ) {
-            ThreadRowTitle(text = AnnotatedString(entry.title))
-        }
-    }
+                if (showsOfflineColumn) (entry.offline as? OfflineState.Failed)?.let { FailureLine(it.reason) }
+            }
+        },
+        trailingContent =
+        if (showsOfflineColumn) {
+            { OfflineStateAction(state = entry.offline, onClick = onOfflineAction) }
+        } else {
+            null
+        },
+        headlineContent = { ThreadRowTitle(text = AnnotatedString(entry.title)) },
+    )
 }
 
 private const val META_SEPARATOR = " · "
@@ -449,7 +428,7 @@ internal fun BookmarkStaleBanner(
         // strip is only an outline away from invisible.
         containerColor = layers.card,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
         icon = PlazaIcons.LinkOff,
         action = recovery?.let {
             {
@@ -484,7 +463,7 @@ internal fun SelectionToolbar(
         modifier = modifier.fillMaxWidth().padding(Spacing.lg).floatShadow(shape, layers.shadows),
         shape = shape,
         color = layers.raised,
-        border = layers.cardBorder?.let { BorderStroke(1.dp, it) },
+        border = layers.cardBorderStroke,
     ) {
         Row(
             modifier =

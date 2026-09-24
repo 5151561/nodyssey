@@ -12,7 +12,6 @@ import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.theme.LocalEinkMode
@@ -43,14 +42,6 @@ fun PlazaSpinner(
     size: Dp = PlazaSpinnerDefaults.Size,
     strokeWidth: Dp = PlazaSpinnerDefaults.StrokeWidth,
     color: Color = ProgressIndicatorDefaults.circularColor,
-    /**
-     * Passed through and ignored on paper — a still ring has no ends to cap.
-     *
-     * It is here for the one caller that draws this beside a determinate ring of its own and needs
-     * the two to match; without it, that pair would go back to disagreeing whenever it is not the
-     * one being looked at.
-     */
-    strokeCap: StrokeCap = ProgressIndicatorDefaults.CircularIndeterminateStrokeCap,
 ) {
     if (LocalEinkMode.current) {
         // `progressSemantics` by hand: the Material indicator carries it, and a plain Box would
@@ -62,7 +53,6 @@ fun PlazaSpinner(
             modifier = modifier.size(size),
             color = color,
             strokeWidth = strokeWidth,
-            strokeCap = strokeCap,
         )
     }
 }

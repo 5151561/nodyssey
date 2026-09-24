@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,13 +33,10 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,15 +50,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.PagingData
@@ -77,8 +70,10 @@ import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LockBadge
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.lockBadgeDescription
+import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -132,7 +127,6 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
-import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -534,15 +528,7 @@ private const val UNKNOWN_VALUE = "—"
 private fun Int.formatted(): String =
     if (this >= 1_000) toString().reversed().chunked(3).joinToString(",").reversed() else toString()
 
-/**
- * 3a's tabs: a pill segmented control on a recessed track, the selected segment raised and white.
- *
- * A [PrimaryTabRow] underneath rather than a row of hand-drawn pills, so selection semantics, keyboard
- * focus and the indicator's slide are Material's. What it is given is its look: the track as its
- * container, no divider, and an indicator that fills the selected tab as a pill. The indicator is
- * pushed under the labels with `zIndex` — the row places it after the tabs, which would otherwise
- * paint the white pill over the selected label.
- */
+/** 3a's tabs, as [PillTabRow] draws them. */
 @Composable
 private fun SpaceTabs(
     state: UserSpaceUiState,
@@ -797,7 +783,7 @@ internal fun SpacePostRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = post.title,
-                style = spaceCardTitleStyle(),
+                style = postCardTitleStyle(),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 // Not filling, so the lock keeps its place beside the title rather than being
@@ -835,7 +821,7 @@ internal fun SpacePostRow(
             post.viewCount?.let {
                 MetaStat(
                     icon = PlazaIcons.Visibility,
-                    value = it.toString(),
+                    value = compactCount(it),
                     contentDescription = stringResource(Res.string.post_view_count, it),
                 )
             }
@@ -880,23 +866,6 @@ private fun RowMeta(
         modifier = modifier,
     )
 }
-
-/**
- * The home feed's card title, 17/25, scaled from `titleMedium` so the reading-size preference reaches
- * it. A copy of the feed's own rather than a shared one: that one is private to the feed, and the two
- * are meant to match, not to be one knob.
- */
-@Composable
-internal fun spaceCardTitleStyle(): TextStyle {
-    val base = MaterialTheme.typography.titleMedium
-    return base.copy(
-        fontSize = base.fontSize * CARD_TITLE_SCALE,
-        lineHeight = base.fontSize * CARD_TITLE_SCALE * CARD_TITLE_LINE_HEIGHT,
-    )
-}
-
-private const val CARD_TITLE_SCALE = 17f / 15f
-private const val CARD_TITLE_LINE_HEIGHT = 25f / 17f
 
 private fun SpaceTab.labelRes(): StringResource =
     when (this) {

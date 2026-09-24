@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -229,6 +228,7 @@ private fun OfflineManagePanel(
             )
             GroupedRow(
                 title = stringResource(Res.string.offline_retention),
+                titleStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 subtitle = stringResource(Res.string.offline_retention_body),
                 icon = PlazaIcons.Schedule,
                 last = true,

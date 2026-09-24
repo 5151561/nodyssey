@@ -1,7 +1,6 @@
 package io.github.nodyssey.ui.messages
 
 import io.github.plaza.core.TimeFormat
-import io.github.plaza.designsys.component.ThreadRow
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

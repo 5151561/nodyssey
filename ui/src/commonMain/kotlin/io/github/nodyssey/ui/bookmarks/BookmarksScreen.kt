@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.bookmarks
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,21 +10,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -53,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -112,15 +107,15 @@ import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
-import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
-import io.github.plaza.designsys.theme.floatShadow
+import io.github.plaza.designsys.theme.fabLift
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -310,14 +305,12 @@ fun BookmarksScreen(
                 // The content overload rather than the `icon`/`text` one: that overload wraps its
                 // label in an animation container that does not surface the text to semantics, so
                 // the pill announced itself as an unnamed button.
-                val layers = LocalPlazaLayers.current
                 ExtendedFloatingActionButton(
                     onClick = onDownloadPending,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    // The layered shadow instead of Material's own, like every other thing that floats.
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                    modifier = Modifier.floatShadow(FloatingActionButtonDefaults.extendedFabShape, layers.shadows),
+                    elevation = PlazaFabElevation,
+                    modifier = Modifier.fabLift(),
                 ) {
                     Icon(PlazaIcons.DownloadForOffline, contentDescription = null)
                     Spacer(Modifier.width(9.dp))

@@ -1,12 +1,10 @@
 package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardBorder
 import io.github.plaza.designsys.theme.cardShadow
 
 /**
@@ -118,7 +117,7 @@ fun PillTabRow(
                     .padding(4.dp)
                     .cardShadow(CircleShape, layers.shadows)
                     .background(layers.raised, CircleShape)
-                    .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier),
+                    .cardBorder(layers, CircleShape),
             )
         },
     ) {

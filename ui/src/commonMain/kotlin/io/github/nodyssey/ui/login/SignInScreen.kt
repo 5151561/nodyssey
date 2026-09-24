@@ -2,7 +2,6 @@ package io.github.nodyssey.ui.login
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -37,12 +36,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -67,13 +64,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.ActiveSite
-import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.session.SignInOutcome
 import io.github.nodyssey.data.session.SignInRefusal
 import io.github.nodyssey.data.session.TwoFactorChallenge
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.describedAsLoading
-import io.github.nodyssey.ui.common.siteMark
 import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_close
@@ -106,7 +101,6 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
-import io.github.plaza.designsys.component.materialIcon
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -315,7 +309,12 @@ fun SignInScreen(
                 .padding(top = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            SignInHeader(oneTap?.providerName)
+            AuthHeader(
+                title = stringResource(Res.string.sign_in_title, siteName),
+                body =
+                oneTap?.providerName?.let { stringResource(Res.string.sign_in_one_tap_subtitle, it) }
+                    ?: stringResource(Res.string.sign_in_subtitle),
+            )
 
             /*
              * 一键登录, for a site that lets another forum's account in — DeepFlood's 「使用 NodeSeek
@@ -506,27 +505,19 @@ private fun OrRule(text: String) {
     }
 }
 
-/**
- * The headline and the promise underneath it — the top of 8h.
- *
- * The NS tile that used to sit above the headline is gone: at 32sp the site's name in the headline
- * already says whose door this is, and the tile pushed the fields a row further down a screen that
- * the keyboard is about to halve.
- */
+/** The headline and the promise underneath it: the top of 8h, and of 两步验证 after it. */
 @Composable
-private fun SignInHeader(oneTapProvider: String?) {
+internal fun AuthHeader(
+    title: String,
+    body: String,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            stringResource(Res.string.sign_in_title, siteName),
+            title,
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 40.sp),
             fontWeight = FontWeight.Bold,
         )
-        Text(
-            oneTapProvider?.let { stringResource(Res.string.sign_in_one_tap_subtitle, it) }
-                ?: stringResource(Res.string.sign_in_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

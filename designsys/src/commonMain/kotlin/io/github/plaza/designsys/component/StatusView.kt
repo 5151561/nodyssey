@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -107,17 +106,84 @@ fun StatusView(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    StatusBody(
-                        icon = icon,
-                        shape = shape,
-                        containerColor = containerColor,
-                        iconColor = iconColor,
-                        title = title,
-                        description = description,
-                        footnote = footnote,
-                        primaryAction = primaryAction,
-                        secondaryAction = secondaryAction,
+                    Box(
+                        modifier =
+                        Modifier
+                            .size(120.dp)
+                            .clip(shape)
+                            .background(containerColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            // The blob is decoration; the title next to it already says what the state is.
+                            contentDescription = null,
+                            tint = iconColor,
+                            modifier = Modifier.size(52.dp),
+                        )
+                    }
+                    Text(
+                        text = title,
+                        fontSize = 22.sp,
+                        lineHeight = 30.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 22.dp),
                     )
+                    description?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 22.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 14.dp),
+                        )
+                    }
+                    primaryAction?.let {
+                        // Full width and pill-shaped: on a card this narrow the one thing to press should be the
+                        // one thing a thumb cannot miss.
+                        Button(
+                            onClick = it.onClick,
+                            modifier =
+                            Modifier
+                                .padding(top = Spacing.xl)
+                                .fillMaxWidth()
+                                .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                        ) {
+                            it.icon?.let { glyph ->
+                                Icon(glyph, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(Spacing.sm))
+                            }
+                            Text(it.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+                        }
+                    }
+                    secondaryAction?.let {
+                        TextButton(
+                            onClick = it.onClick,
+                            modifier =
+                            Modifier
+                                .padding(top = if (primaryAction == null) Spacing.xl else Spacing.sm)
+                                .fillMaxWidth()
+                                .heightIn(min = Sizes.minTouchTarget),
+                        ) {
+                            it.icon?.let { glyph ->
+                                Icon(glyph, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(Spacing.sm))
+                            }
+                            Text(it.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
+                        }
+                    }
+                    footnote?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall.copy(lineHeight = 18.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = Spacing.lg),
+                        )
+                    }
                 }
             }
         }
@@ -125,98 +191,6 @@ fun StatusView(
 }
 
 private val STATUS_LIFT = 72.dp
-
-@Composable
-private fun StatusBody(
-    icon: ImageVector,
-    shape: Shape,
-    containerColor: Color,
-    iconColor: Color,
-    title: String,
-    description: String?,
-    footnote: String?,
-    primaryAction: StatusAction?,
-    secondaryAction: StatusAction?,
-) {
-    Box(
-        modifier =
-        Modifier
-            .size(120.dp)
-            .clip(shape)
-            .background(containerColor),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            // The blob is decoration; the title next to it already says what the state is.
-            contentDescription = null,
-            tint = iconColor,
-            modifier = Modifier.size(52.dp),
-        )
-    }
-    Text(
-        text = title,
-        fontSize = 22.sp,
-        lineHeight = 30.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(top = 22.dp),
-    )
-    description?.let {
-        Text(
-            text = it,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 22.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 14.dp),
-        )
-    }
-    primaryAction?.let {
-        // Full width and pill-shaped: on a card this narrow the one thing to press should be the
-        // one thing a thumb cannot miss.
-        Button(
-            onClick = it.onClick,
-            modifier =
-            Modifier
-                .padding(top = Spacing.xl)
-                .fillMaxWidth()
-                .heightIn(min = ButtonDefaults.MediumContainerHeight),
-            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-        ) {
-            it.icon?.let { glyph ->
-                Icon(glyph, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(Spacing.sm))
-            }
-            Text(it.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-        }
-    }
-    secondaryAction?.let {
-        TextButton(
-            onClick = it.onClick,
-            modifier =
-            Modifier
-                .padding(top = if (primaryAction == null) Spacing.xl else Spacing.sm)
-                .fillMaxWidth()
-                .heightIn(min = Sizes.minTouchTarget),
-        ) {
-            it.icon?.let { glyph ->
-                Icon(glyph, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(Spacing.sm))
-            }
-            Text(it.label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold))
-        }
-    }
-    footnote?.let {
-        Text(
-            text = it,
-            style = MaterialTheme.typography.labelSmall.copy(lineHeight = 18.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = Spacing.lg),
-        )
-    }
-}
 
 /** Full-screen spinner. Lists use a skeleton instead — a fixed structure fakes faster than a spinner. */
 @Composable

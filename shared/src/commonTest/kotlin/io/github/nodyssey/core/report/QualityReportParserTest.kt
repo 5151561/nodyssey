@@ -1,6 +1,5 @@
 package io.github.nodyssey.core.report
 
-import io.github.nodyssey.core.html.AnsiParser
 import io.github.nodyssey.core.html.Fixtures
 import io.github.plaza.core.ansi.AnsiDecoder
 import kotlin.test.Test

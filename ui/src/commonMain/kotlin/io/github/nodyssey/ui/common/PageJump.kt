@@ -53,9 +53,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -91,6 +93,7 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.cardBorderStroke
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -431,7 +434,7 @@ private fun PageKeys(
                     contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     selected = selected,
                     shape = ControlShape,
-                    border = layers.cardBorder?.takeIf { !selected }?.let { BorderStroke(1.dp, it) },
+                    border = layers.cardBorderStroke?.takeIf { !selected },
                     contentPadding = PaddingValues(0.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -580,6 +583,8 @@ private fun UnitChip(
         modifier = Modifier
             .height(GoButtonSize)
             .semantics {
+                // Surface's click overload sets no role, so it is stated here.
+                role = Role.Button
                 contentDescription = switchLabel
                 stateDescription = unitLabel
             },

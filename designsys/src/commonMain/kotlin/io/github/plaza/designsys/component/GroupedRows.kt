@@ -1,13 +1,9 @@
 package io.github.plaza.designsys.component
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -15,8 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,10 +22,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 
 /**
@@ -96,12 +93,31 @@ fun SectionNote(
 }
 
 /**
+ * A titled run of [SectionNote]s under a page's last group — what a feature cannot do, and why. The
+ * title reads as a heading to a screen reader; on screen it is the same small print as the lines.
+ */
+@Composable
+fun SectionNotes(
+    title: String,
+    lines: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.padding(top = Spacing.xs), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        SectionNote(title, Modifier.semantics { heading() })
+        lines.forEach { SectionNote(it) }
+    }
+}
+
+/**
  * The common case of [GroupedListItem] with plain strings: icon, title, optional second line,
- * optional current value, chevron.
+ * optional current value, optional control, chevron.
  *
  * [value] is the row's current state rendered at the trailing edge — "未开启", "3 人", an avatar. It is
  * deliberately separate from [subtitle]: a value that wrapped onto its own line stopped reading as
  * *this row's* state and started reading as another sentence.
+ *
+ * [selected], [checked] / [onCheckedChange] and [enabled] are [GroupedListItem]'s, passed through; a
+ * switch row carries its [GroupedListItemSwitch] as [trailing].
  */
 @Composable
 fun GroupedRow(
@@ -110,11 +126,26 @@ fun GroupedRow(
     first: Boolean = false,
     last: Boolean = false,
     icon: ImageVector? = null,
-    iconTint: Color? = null,
-    titleColor: Color? = null,
+    leading: (@Composable () -> Unit)? = icon?.let { { Icon(it, contentDescription = null) } },
     subtitle: String? = null,
+    /** For a subtitle that is an address or a value to be read character by character — a URL. */
+    subtitleMonospace: Boolean = false,
     value: String? = null,
     onClick: (() -> Unit)? = null,
+    selected: Boolean? = null,
+    checked: Boolean? = null,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    enabled: Boolean = true,
+    /**
+     * Tints the title and the icon together, for the one destructive row in a group (退出登录) — the
+     * same shape as its neighbours, differing only in colour.
+     */
+    contentColor: Color = Color.Unspecified,
+    titleStyle: TextStyle = groupedRowTitleStyle(),
+    /**
+     * Says the row opens a page of its own. Pass false for a row that acts in place — 清除缓存,
+     * 退出登录 — where a chevron would promise a screen that never comes.
+     */
     showChevron: Boolean = onClick != null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -123,34 +154,27 @@ fun GroupedRow(
         last = last,
         modifier = modifier,
         onClick = onClick,
-        headlineContent = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = titleColor ?: MaterialTheme.colorScheme.onSurface,
-            )
-        },
-        supportingContent = subtitle?.let { { Text(it) } },
-        leadingContent =
-        icon?.let {
+        selected = selected,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        enabled = enabled,
+        colors = groupedListItemColors(contentColor),
+        headlineContent = { Text(text = title, style = titleStyle) },
+        supportingContent =
+        subtitle?.let {
             {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    tint = iconTint ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                val style = LocalTextStyle.current
+                Text(text = it, style = if (subtitleMonospace) style.copy(fontFamily = FontFamily.Monospace) else style)
             }
         },
-        trailingContent =
-        if (value == null && trailing == null && !showChevron) {
-            null
-        } else {
-            {
-                GroupedRowTrailing(value = value, trailing = trailing, showChevron = showChevron)
-            }
-        },
+        leadingContent = leading,
+        trailingContent = { GroupedRowTrailing(value = value, trailing = trailing, showChevron = showChevron) },
     )
 }
+
+/** A [GroupedRow]'s title: 15sp medium, one step under a list title so eight rows still fit a screen. */
+@Composable
+fun groupedRowTitleStyle(): TextStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
 
 /**
  * A row's end: its current value, any control, and the chevron that says the row opens something.
