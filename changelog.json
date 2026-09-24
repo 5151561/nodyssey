@@ -2,6 +2,14 @@
   "schema": 1,
   "versions": [
     {
+      "versionName": "1.2.22-dev.1",
+      "tag": "v1.2.22-dev.1",
+      "publishedOn": "2026-09-24",
+      "preRelease": true,
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.22-dev.1",
+      "notes": "测试版，由 tag `v1.2.22-dev.1` 构建。不是正式版本，可能不稳定。\n\n### 新增\n\n- 加密 DNS 可多选服务商，依次回退（Android）。\n- 首页卡片显示最后回复人。\n- 网络出错时可直达网络自检。\n\n### 改进\n\n- 全新卡片式界面，各页面统一改版。\n- 首页版块编辑分出「未加入首页」。\n- 编辑器格式栏按需展开。\n- 楼层更多操作收进底部面板。\n- 推荐阅读改为连续滚动，可跳页。\n\n### 变更\n\n- 私信去掉 Markdown 开关，始终开启。\n- 首页列表不再显示「已读」字样。\n- 「我的」去掉资产分组，数字直达流水。\n\n### 修复\n\n- 自定义图床断开后仍在使用。\n- 图床密钥没存上仍报「已保存」。\n\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.21...v1.2.22-dev.1"
+    },
+    {
       "versionName": "1.2.21",
       "tag": "v1.2.21",
       "publishedOn": "2026-09-13",
