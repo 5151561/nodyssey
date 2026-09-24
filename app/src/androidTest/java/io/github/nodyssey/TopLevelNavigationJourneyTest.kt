@@ -5,7 +5,6 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -16,7 +15,7 @@ import androidx.compose.ui.test.waitUntilExactlyOneExists
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.nodyssey.ui.resources.Res
-import io.github.nodyssey.ui.resources.action_search
+import io.github.nodyssey.ui.resources.home_search_hint
 import io.github.nodyssey.ui.resources.tab_home
 import io.github.nodyssey.ui.resources.tab_notifications
 import kotlinx.coroutines.runBlocking
@@ -86,8 +85,9 @@ class TopLevelNavigationJourneyTest {
         navigationItem(Res.string.tab_home).assertIsSelected()
     }
 
+    // 搜索 is a field-shaped button carrying its hint as text, not an icon with a description.
     private fun searchAction() =
-        hasContentDescription(runBlocking { getString(Res.string.action_search) }) and hasClickAction()
+        hasText(runBlocking { getString(Res.string.home_search_hint) }) and hasClickAction()
 
     /**
      * The search screen has one field and focuses it on arrival, so waiting for the focused one is
