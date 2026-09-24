@@ -21,17 +21,24 @@ import io.github.plaza.designsys.theme.PlazaLayers
 import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
 
-/** A content card's corners: 24dp, round enough to read as an object lifted off the page. */
-val LayerCardShape: Shape = RoundedCornerShape(24.dp)
+/**
+ * A content card's corner radius: 16dp, still round enough to read as an object lifted off the page.
+ * The Lean round's 2a took it down from 24, with the padding, gap and gutter below, so a phone shows
+ * twice the feed it did; a grouped list's outer corners ([groupShape]) follow it.
+ */
+val LayerCardRadius = 16.dp
+
+/** A content card's corners — see [LayerCardRadius]. */
+val LayerCardShape: Shape = RoundedCornerShape(LayerCardRadius)
 
 /** What a card's content is inset by, unless it says otherwise. */
-private val LayerCardPadding = PaddingValues(16.dp)
+private val LayerCardPadding = PaddingValues(12.dp)
 
 /** The gap between two cards in a list. Enough to see the page between them, not enough to break the list. */
-val LayerCardGap = 10.dp
+val LayerCardGap = 6.dp
 
-/** The page margin a list of cards sits in. Narrower than the 16dp text margin so a card's own padding lines its text up with the page's. */
-val LayerPageGutter = 12.dp
+/** The page margin a list of cards sits in. Narrower than the text margin so a card's own padding lines its text up with the page's. */
+val LayerPageGutter = 8.dp
 
 /**
  * One card on the page — see [io.github.plaza.designsys.theme.PlazaLayers] for why content is drawn

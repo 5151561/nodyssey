@@ -37,9 +37,9 @@ class ReadingSizeTest {
             }
         }
 
-        // 17sp card title, 13sp author, 11sp tag, all at one and a half.
-        assertEquals(25.5f, fontSizeOf("一个标题"), 0.01f)
-        assertEquals(19.5f, fontSizeOf("某人"), 0.01f)
+        // 15sp card title, 12sp author, 11sp tag (Lean 2a), all at one and a half.
+        assertEquals(22.5f, fontSizeOf("一个标题"), 0.01f)
+        assertEquals(18f, fontSizeOf("某人"), 0.01f)
         assertEquals(16.5f, fontSizeOf("日常"), 0.01f)
     }
 

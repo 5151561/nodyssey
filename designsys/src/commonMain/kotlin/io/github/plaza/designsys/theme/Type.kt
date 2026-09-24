@@ -178,9 +178,10 @@ private const val SIGNATURE_SCALE = 0.85f
  */
 val PostTitle =
     TextStyle(
-        fontSize = 20.sp,
-        lineHeight = 28.sp,
+        fontSize = 19.sp,
+        lineHeight = 27.sp,
         fontWeight = FontWeight.Bold,
+        letterSpacing = (-0.2).sp,
         lineBreak = LineBreak.Simple,
     )
 

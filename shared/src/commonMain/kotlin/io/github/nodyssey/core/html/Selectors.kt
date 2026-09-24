@@ -46,6 +46,9 @@ object Selectors {
     const val LIST_COMMENTS = "span.info-comments-count span"
     const val LIST_LAST_ACTIVE = "a.info-last-comment-time time"
 
+    /** Who wrote the reply [LIST_LAST_ACTIVE] dates — the lightning-bolt name beside it. */
+    const val LIST_LAST_COMMENTER = "span.info-last-commenter a"
+
     /** The class moved once already, so fall back to any link into a board. */
     const val LIST_CATEGORY = "a.post-category, div.post-info a[href*=/categories/]"
     const val LIST_PAGER_NEXT = "a.pager-next[href]"

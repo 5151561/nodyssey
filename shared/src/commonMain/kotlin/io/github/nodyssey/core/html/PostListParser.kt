@@ -50,6 +50,7 @@ object PostListParser {
             commentCount = item.selectFirst(Selectors.LIST_COMMENTS)?.text()?.toCountOrNull(),
             lastActiveText = lastActive?.text()?.trim()?.ifBlank { null },
             lastActiveTitle = lastActive?.attr("title")?.ifBlank { null },
+            lastCommenterName = item.selectFirst(Selectors.LIST_LAST_COMMENTER)?.text()?.trim()?.ifBlank { null },
             isPinned = item.selectFirst(Selectors.LIST_PINNED) != null,
             isAwarded = item.selectFirst(Selectors.LIST_AWARDED) != null,
             // The site ships the row and hides it in CSS (`.blocked-post{display:none}`), so the

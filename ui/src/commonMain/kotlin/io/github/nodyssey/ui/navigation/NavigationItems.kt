@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.navigation
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
@@ -9,10 +10,15 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.NotificationsKey
 import io.github.nodyssey.PostListKey
@@ -65,6 +71,9 @@ enum class TopLevelDestination(
  * Icons carry no `contentDescription` on purpose: the item merges its label into one semantics node
  * and the label is already the accessible name, so describing the icon as well makes TalkBack say
  * everything twice.
+ *
+ * The glyph and the label are a step under Material's (20dp, 11sp), as the Lean round's 2a draws the
+ * bar. The indicator is not sized separately: Material pads it around the icon, so it shrinks with it.
  */
 @Composable
 fun NodysseyNavigationItems(
@@ -83,9 +92,20 @@ fun NodysseyNavigationItems(
                 Icon(
                     imageVector = if (selected) destination.selectedIcon else destination.icon,
                     contentDescription = null,
+                    modifier = Modifier.size(NavigationIconSize),
                 )
             },
-            label = { Text(stringResource(destination.label)) },
+            label = {
+                Text(
+                    text = stringResource(destination.label),
+                    // Chrome, sized with the bar rather than with the reading size.
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    ),
+                )
+            },
             badge =
             if (destination == TopLevelDestination.NOTIFICATIONS && unreadCount > 0) {
                 { Badge { Text(unreadCount.coerceAtMost(99).toString()) } }
@@ -99,3 +119,5 @@ fun NodysseyNavigationItems(
         )
     }
 }
+
+private val NavigationIconSize = 20.dp

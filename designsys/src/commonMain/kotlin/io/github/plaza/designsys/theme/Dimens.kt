@@ -30,8 +30,11 @@ object Sizes {
     /** Anything tappable must clear this; Material's own minimum and the brief's hard requirement. */
     val minTouchTarget = 48.dp
 
-    val avatarComment = 28.dp
-    val avatarOriginalPost = 40.dp
+    /** A reply's avatar, beside the whole of its header — the name line and the time under it. */
+    val avatarComment = 30.dp
+
+    /** The opening post's, a hair smaller: in its card the title above it is what carries the weight. */
+    val avatarOriginalPost = 28.dp
     val avatarProfile = 64.dp
 
     /** Beyond this a body column stops being comfortable to read, so it stops growing. */

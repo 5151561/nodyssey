@@ -1,13 +1,14 @@
 package io.github.nodyssey.ui.common
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
@@ -60,12 +62,15 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.core.NodeSeekSite.COMMENTS_PER_PAGE
@@ -89,10 +94,10 @@ import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
-import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.cardBorderStroke
+import io.github.plaza.designsys.theme.floatShadow
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -119,9 +124,13 @@ import org.jetbrains.compose.resources.stringResource
  * scrolling — and a full-width bar for three small controls read as furniture besides. Stacked, the
  * FAB is the screen's own and never resizes, and the keys sit on the side the thumb is already on.
  *
- * [expanded] false retracts 上一页 and 下一页 into the page key, which keeps its size throughout: the
- * page number is what a reader glances at mid-scroll, and it is also the tap that opens
- * [PageJumpSheet], so it is the one key that is never in the way.
+ * One card holding 上一页, the page and 下一页 in reading order, as the Lean round's 2b draws it, rather
+ * than three floating keys: the three are one control, and one lifted shape says so with a third of
+ * the shadow.
+ *
+ * [expanded] false folds 上一页 and 下一页 away into the page, which stays put: the page number is
+ * what a reader glances at mid-scroll, and it is also the tap that opens [PageJumpSheet], so it is the
+ * one part that is never in the way.
  *
  * [page] is the page the reader is *looking at*, which on an appending list is not the last page
  * fetched — the caller derives it from whatever is at the top of the viewport.
@@ -137,131 +146,143 @@ fun PageJumpRail(
     modifier: Modifier = Modifier,
 ) {
     val motionScheme = MaterialTheme.motionScheme
-    // No arrangement spacing: each key paints 40dp inside a 48dp touch slot, and the 4dp of slack
-    // that leaves on every side is exactly the 8dp gap the design draws between two keys. Asking for
-    // 8dp on top of it would space them 16dp apart, and shrinking the slot to close the gap would
-    // put a 40dp target under a thumb.
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        PageKey(
-            onClick = onPageClick,
-            contentDescription = stringResource(Res.string.page_jump_page_of, page, totalPages),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = page.toString(),
-                    style = PageNumberStyle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                )
-                Text(
-                    text = stringResource(Res.string.page_jump_of_total, totalPages),
-                    style = PageTotalStyle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+    val layers = LocalPlazaLayers.current
+    val shape = MaterialTheme.shapes.medium
+    Surface(
+        // The raised layer, not the page's grey: the rail floats over cards and over the gaps
+        // between them, and a card the colour of the gaps disappeared into them there.
+        color = layers.raised,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = shape,
+        // On paper the shadow cannot be drawn, so the outline takes its job over.
+        border = layers.cardBorderStroke,
+        modifier = modifier
+            .width(RailWidth)
+            .floatShadow(shape, layers.shadows),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // Folding towards the page from either side, so the number is where it was.
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(motionScheme.fastSpatialSpec(), Alignment.Bottom) +
+                    fadeIn(motionScheme.defaultEffectsSpec()),
+                exit = shrinkVertically(motionScheme.fastSpatialSpec(), Alignment.Bottom) +
+                    fadeOut(motionScheme.fastEffectsSpec()),
+            ) {
+                RailStep(
+                    icon = Icons.Default.KeyboardArrowUp,
+                    contentDescription = stringResource(Res.string.page_jump_previous),
+                    enabled = page > 1,
+                    onClick = onPrevious,
                 )
             }
-        }
-        // Retracting upwards, into the page key rather than into the FAB below: the two keys belong
-        // to the number they step, and the FAB is not theirs to grow out of.
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(motionScheme.fastSpatialSpec(), Alignment.Top) +
-                fadeIn(motionScheme.defaultEffectsSpec()),
-            exit = shrinkVertically(motionScheme.fastSpatialSpec(), Alignment.Top) +
-                fadeOut(motionScheme.fastEffectsSpec()),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                PageKey(
-                    onClick = onPrevious,
-                    enabled = page > 1,
-                    contentDescription = stringResource(Res.string.page_jump_previous),
-                ) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = null)
-                }
-                PageKey(
-                    onClick = onNext,
-                    enabled = page < totalPages,
+            PageLabel(page = page, totalPages = totalPages, onClick = onPageClick, expanded = expanded)
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(motionScheme.fastSpatialSpec(), Alignment.Top) +
+                    fadeIn(motionScheme.defaultEffectsSpec()),
+                exit = shrinkVertically(motionScheme.fastSpatialSpec(), Alignment.Top) +
+                    fadeOut(motionScheme.fastEffectsSpec()),
+            ) {
+                RailStep(
+                    icon = Icons.Default.KeyboardArrowDown,
                     contentDescription = stringResource(Res.string.page_jump_next),
-                ) {
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-                }
+                    enabled = page < totalPages,
+                    onClick = onNext,
+                )
             }
         }
     }
 }
 
-/** What a key paints. The rest of its [Sizes.minTouchTarget] slot is the gap to the next one. */
-private val PageKeySize = 40.dp
+/** The rail's width, and the height of each step in it. Compose hit-tests each at 48dp regardless. */
+private val RailWidth = 40.dp
 
-/** Enough to lift a key off a list that scrolls under it, and no more — the FAB below owns the corner. */
-private val PageKeyElevation = 2.dp
+private val RailIconSize = 18.dp
+
+/**
+ * The page as `1/3`. Alone in the card once the steps fold away, it keeps the card from shrinking to
+ * a sliver by standing a step's height; between the steps, the steps' own height is its margin.
+ */
+private val RetractedLabelHeight = 32.dp
 
 private const val DISABLED_KEY_ALPHA = 0.38f
 
 private val PageNumberStyle =
     TextStyle(
-        fontSize = 13.sp,
-        lineHeight = 15.sp,
-        fontWeight = FontWeight.Bold,
+        fontSize = 12.sp,
+        lineHeight = 14.sp,
+        fontWeight = FontWeight.SemiBold,
         fontFeatureSettings = TABULAR_FIGURES,
     )
 
-private val PageTotalStyle =
-    TextStyle(
-        fontSize = 9.sp,
-        lineHeight = 11.sp,
-        fontWeight = FontWeight.Medium,
-        fontFeatureSettings = TABULAR_FIGURES,
-    )
-
-/**
- * One key of the rail: 40dp of paint, centred in a touch target that clears Material's minimum.
- *
- * [contentDescription] replaces whatever is inside rather than joining it, so the page key is read
- * as "第 2 / 12 页" and not as the two numbers it is drawn from.
- */
 @Composable
-private fun PageKey(
+private fun PageLabel(
+    page: Int,
+    totalPages: Int,
     onClick: () -> Unit,
+    expanded: Boolean,
+) {
+    val description = stringResource(Res.string.page_jump_page_of, page, totalPages)
+    val total = stringResource(Res.string.page_jump_of_total, totalPages)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val height by animateDpAsState(
+        targetValue = if (expanded) 0.dp else RetractedLabelHeight,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "page-label-height",
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = height)
+            .clickable(role = Role.Button, onClick = onClick)
+            .clearAndSetSemantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = buildAnnotatedString {
+                append(page.toString())
+                withStyle(SpanStyle(color = muted, fontWeight = FontWeight.Medium)) { append(total) }
+            },
+            style = PageNumberStyle,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}
+
+/** 上一页 or 下一页: a glyph in a square the rail's width, greyed rather than hidden at the end of the run. */
+@Composable
+private fun RailStep(
+    icon: ImageVector,
     contentDescription: String,
-    enabled: Boolean = true,
-    content: @Composable () -> Unit,
+    enabled: Boolean,
+    onClick: () -> Unit,
 ) {
     val eink = LocalEinkMode.current
-    Box(modifier = Modifier.size(Sizes.minTouchTarget), contentAlignment = Alignment.Center) {
-        Surface(
-            onClick = onClick,
-            enabled = enabled,
-            shape = ControlShape,
-            // The raised layer, not the page's grey: the rail floats over cards and over the gaps
-            // between them, and a key the colour of the gaps disappeared into them there.
-            color = LocalPlazaLayers.current.raised,
-            // Material's Surface leaves a disabled one looking exactly like a live one, so the end
-            // of the run has to be said here: at page 1 上一页 is still drawn, and still does nothing.
-            contentColor =
+    Box(
+        modifier = Modifier
+            .size(RailWidth)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            // Material leaves a disabled control looking like a live one unless told, so the end of
+            // the run is said here: at page 1 上一页 is still drawn, and still does nothing.
+            tint =
             if (enabled) {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                LocalContentColor.current
             } else {
-                // Half-transparent ink is a grey the panel has to invent; `outlineVariant` is
-                // one it already has, and it is the grey every other muted thing here uses.
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_KEY_ALPHA)
+                // Half-transparent ink is a grey the panel has to invent; `outlineVariant` is one it
+                // already has, and it is the grey every other muted thing here uses.
+                LocalContentColor.current.copy(alpha = DISABLED_KEY_ALPHA)
                     .takeIf { !eink } ?: MaterialTheme.colorScheme.outlineVariant
             },
-            // A key is a pale square on a pale ground, and the shadow is what makes it a key.
-            // On paper the shadow cannot be drawn, so the outline takes the job over.
-            shadowElevation = if (eink) 0.dp else PageKeyElevation,
-            border = if (eink) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
-            modifier = Modifier.size(PageKeySize),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(PageKeySize)
-                    .clearAndSetSemantics { this.contentDescription = contentDescription },
-                contentAlignment = Alignment.Center,
-            ) {
-                content()
-            }
-        }
+            modifier = Modifier.size(RailIconSize),
+        )
     }
 }
 

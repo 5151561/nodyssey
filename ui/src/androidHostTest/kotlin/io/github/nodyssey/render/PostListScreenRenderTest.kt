@@ -111,6 +111,17 @@ class PostListScreenRenderTest {
         captureScreenRoboImage(filePath = "build/outputs/renders/post-list-sites-light.png")
     }
 
+    /** The board strip opened over the feed: every board as a wrapped grid of pills. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun `the board strip expanded in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNodeWithContentDescription("全部版块").performClick()
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/post-list-boards-light.png")
+    }
+
     private companion object {
         val BOARDS =
             listOf(
@@ -118,6 +129,12 @@ class PostListScreenRenderTest {
                 Board("daily", "日常", null),
                 Board("tech", "技术", null),
                 Board("info", "情报", null),
+                Board("trade", "交易", null),
+                Board("review", "测评", null),
+                Board("carpool", "拼车", null),
+                Board("dev", "Dev", null),
+                Board("life", "生活", null),
+                Board("photo-share", "贴图", null),
             )
 
         private fun post(
@@ -128,6 +145,7 @@ class PostListScreenRenderTest {
             comments: Int,
             views: Int,
             lastActive: String,
+            lastCommenter: String? = null,
             newComments: Int = 0,
             pinned: Boolean = false,
             awarded: Boolean = false,
@@ -146,6 +164,7 @@ class PostListScreenRenderTest {
                 commentCount = comments,
                 lastActiveText = lastActive,
                 lastActiveTitle = null,
+                lastCommenterName = lastCommenter,
                 isPinned = pinned,
                 isLocked = false,
                 isAwarded = awarded,
@@ -158,12 +177,12 @@ class PostListScreenRenderTest {
         val FEED =
             listOf(
                 post(1, "【公告】NodeSeek 社区行为准则与版规更新", "管理员", "公告", 42, 8600, "5分钟前", pinned = true),
-                post(2, "自建 NAS 一年，聊聊我踩过的那些坑和真香时刻", "homelab_er", "技术", 128, 3400, "刚刚", newComments = 6, awarded = true),
-                post(3, "有没有那种用了就回不去的小众 App，求推荐", "轻舟", "日常", 87, 2100, "3分钟前", newComments = 2),
-                post(4, "黑五机场怎么选？把我对比的几家整理成了表格", "过路人", "情报", 65, 4800, "12分钟前"),
-                post(5, "第一次跑长文本翻译，本地模型和 API 的取舍", "codemonkey", "技术", 33, 1500, "18分钟前", read = true),
-                post(6, "深夜放毒：分享一个我常做的十分钟快手菜", "厨房杀手", "日常", 54, 1900, "26分钟前", read = true),
-                post(7, "关于最近 VPS 涨价，说说我的续费策略", "省钱达人", "情报", 19, 900, "34分钟前", read = true),
+                post(2, "自建 NAS 一年，聊聊我踩过的那些坑和真香时刻", "homelab_er", "技术", 128, 3400, "刚刚", "轻舟", newComments = 6, awarded = true),
+                post(3, "有没有那种用了就回不去的小众 App，求推荐", "轻舟", "日常", 87, 2100, "3分钟前", "nas_newbie", newComments = 2),
+                post(4, "黑五机场怎么选？把我对比的几家整理成了表格", "过路人", "情报", 65, 4800, "12分钟前", "Sakura"),
+                post(5, "第一次跑长文本翻译，本地模型和 API 的取舍", "codemonkey", "技术", 33, 1500, "18分钟前", "阿杰", read = true),
+                post(6, "深夜放毒：分享一个我常做的十分钟快手菜", "厨房杀手", "日常", 54, 1900, "26分钟前", "homelab_er", read = true),
+                post(7, "关于最近 VPS 涨价，说说我的续费策略", "省钱达人", "情报", 19, 900, "34分钟前", "过路人", read = true),
             )
     }
 }

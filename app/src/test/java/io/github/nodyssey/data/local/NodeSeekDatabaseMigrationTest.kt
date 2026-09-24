@@ -386,17 +386,48 @@ class NodeSeekDatabaseMigrationTest {
     }
 
     /**
+     * Null on every existing row: v14 never read the name, and the next refresh of the row's board
+     * rewrites it anyway.
+     */
+    @Test
+    fun `migration 14 to 15 gives feed rows a last commenter without dropping them`() {
+        helper.createDatabase(DATABASE_NAME, 14).apply {
+            execSQL(
+                """
+                INSERT INTO posts(
+                    postId, title, authorName, authorUid, avatarUrl, categoryTitle, categorySlug,
+                    viewCount, commentCount, lastActiveText, lastActiveTitle, isPinned, isLocked,
+                    lockLevel, isAwarded, isBlocked, cachedAtMillis
+                )
+                VALUES(42, 'a cached post', 'someone', 7, NULL, '日常', 'daily', 100, 3, '5min ago', NULL, 0, 0, NULL, 0, 0, 1000)
+                """.trimIndent(),
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 15, true, MIGRATION_14_15)
+
+        migrated.query("SELECT title, lastActiveText, lastCommenterName FROM posts WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("a cached post", it.getString(0))
+            assertEquals("5min ago", it.getString(1))
+            assertTrue(it.isNull(2))
+        }
+        migrated.close()
+    }
+
+    /**
      * The whole ladder at once, which is the only test that runs it the way a device does.
      *
      * Every step above proves its own rung against the schema beside it; none of them proves that
      * the rungs compose — that a column one migration adds is where a later migration's SQL expects
      * it, on a file that has actually climbed the versions in between rather than being created at
      * the version under test. A reader on the oldest still-migratable store upgrades through all
-     * eleven in one open, so that is what this runs: real v3 rows in, `runMigrationsAndValidate`
-     * against the exported v14 schema out, the oldest data still readable at the top.
+     * twelve in one open, so that is what this runs: real v3 rows in, `runMigrationsAndValidate`
+     * against the exported v15 schema out, the oldest data still readable at the top.
      */
     @Test
-    fun `a v3 store climbs every migration to v14 with its data intact`() {
+    fun `a v3 store climbs every migration to v15 with its data intact`() {
         helper.createDatabase(DATABASE_NAME, 3).apply {
             execSQL(
                 """
@@ -423,7 +454,7 @@ class NodeSeekDatabaseMigrationTest {
             close()
         }
 
-        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 14, true, *NODESEEK_MIGRATIONS)
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 15, true, *NODESEEK_MIGRATIONS)
 
         migrated.query("SELECT title, isBlocked, isAwarded FROM posts WHERE postId = 42").use {
             it.moveToFirst()

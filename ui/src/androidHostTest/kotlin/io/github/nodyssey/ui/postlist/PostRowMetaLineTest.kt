@@ -16,7 +16,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * A feed card's two meta lines each stay one line, and everything on them is centred on it: the board
- * tag and the time under the author's name, the counts at the foot.
+ * tag beside the author's name, and at the foot the counts with the last reply between them.
  *
  * This is the bug the icons were introduced for: spelled out as `1234 浏览` and `12 回复`, the counts
  * ran past the width of a 360dp phone as soon as the author had a real name, and the items that
@@ -39,6 +39,8 @@ class PostRowMetaLineTest {
 
     private val longAuthor = "一个很长的用户名字abcdef"
 
+    private val lastCommenter = "另一个也很长的回复者名字"
+
     @Test
     fun `the meta line stays on one line even with a long author name`() {
         composeRule.setContent {
@@ -47,8 +49,13 @@ class PostRowMetaLineTest {
             }
         }
 
-        val header = listOf("board" to centreOfText("日常"), "time" to centreOfText("3小时前"))
-        val foot = listOf("reply" to centreOfLabel("12 回复"), "view" to centreOfLabel("1234 浏览"))
+        val header = listOf("author" to centreOfText(longAuthor), "board" to centreOfText("日常"))
+        val foot =
+            listOf(
+                "reply" to centreOfLabel("12 回复"),
+                "last reply" to centreOfText("$lastCommenter 3小时前"),
+                "view" to centreOfLabel("1234 浏览"),
+            )
 
         // 1dp of slack: these are pixel centres of boxes with odd heights, not a design tolerance.
         fun List<Pair<String, Float>>.offLine() = filter { (_, centre) -> kotlin.math.abs(centre - first().second) > 1f }
@@ -87,6 +94,7 @@ class PostRowMetaLineTest {
                 commentCount = 12,
                 lastActiveText = "3小时前",
                 lastActiveTitle = null,
+                lastCommenterName = lastCommenter,
                 isPinned = false,
                 isLocked = false,
                 isAwarded = false,

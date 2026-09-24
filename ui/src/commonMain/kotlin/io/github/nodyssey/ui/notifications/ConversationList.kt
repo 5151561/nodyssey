@@ -7,12 +7,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -24,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -62,17 +59,16 @@ import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
+import io.github.plaza.designsys.component.PlazaExtendedFab
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
-import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
-import io.github.plaza.designsys.theme.fabLift
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -153,27 +149,14 @@ internal fun ConversationList(
             }
         }
 
-        // The content overload rather than `icon`/`text`: that one wraps its label in an animation
-        // container that does not surface the text to semantics, and the button would announce
-        // itself unnamed.
-        ExtendedFloatingActionButton(
+        PlazaExtendedFab(
+            text = stringResource(Res.string.messages_new_conversation),
+            icon = Icons.Default.Edit,
             onClick = onNewConversation,
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            elevation = PlazaFabElevation,
-            modifier =
-            Modifier
+            modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(Spacing.lg)
-                .fabLift(),
-        ) {
-            Icon(Icons.Default.Edit, contentDescription = null)
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = stringResource(Res.string.messages_new_conversation),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            )
-        }
+                .padding(Spacing.lg),
+        )
     }
 
     if (state.newConversation.isVisible) {

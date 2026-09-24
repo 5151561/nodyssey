@@ -29,6 +29,15 @@ class PostListParserTest {
         assertEquals(4, first.commentCount)
         assertEquals("24s ago", first.lastActiveText)
         assertEquals("2026-04-27 13:46:32", first.lastActiveTitle)
+        assertEquals("harunoyuki", first.lastCommenterName)
+    }
+
+    /** With nobody answering yet, the site puts the author in the last-commenter slot. */
+    @Test
+    fun `names the author as last commenter on an unanswered thread`() {
+        val unanswered = page.posts.first { it.postId == 703688L }
+        assertEquals(0, unanswered.commentCount)
+        assertEquals("Gwang", unanswered.lastCommenterName)
     }
 
     @Test

@@ -3,12 +3,10 @@ package io.github.nodyssey.ui.bookmarks
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
@@ -20,7 +18,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -105,17 +102,16 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandAppBarState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaBackHandler
+import io.github.plaza.designsys.component.PlazaExtendedFab
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
-import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
-import io.github.plaza.designsys.theme.fabLift
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -302,27 +298,11 @@ fun BookmarksScreen(
         },
         floatingActionButton = {
             if (!state.inSelection && state.offlineAvailable && state.pendingDownloadCount > 0) {
-                // The content overload rather than the `icon`/`text` one: that overload wraps its
-                // label in an animation container that does not surface the text to semantics, so
-                // the pill announced itself as an unnamed button.
-                ExtendedFloatingActionButton(
+                PlazaExtendedFab(
+                    text = stringResource(Res.string.bookmarks_download_all, state.pendingDownloadCount),
+                    icon = PlazaIcons.DownloadForOffline,
                     onClick = onDownloadPending,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    elevation = PlazaFabElevation,
-                    modifier = Modifier.fabLift(),
-                ) {
-                    Icon(PlazaIcons.DownloadForOffline, contentDescription = null)
-                    Spacer(Modifier.width(9.dp))
-                    Text(
-                        text = stringResource(Res.string.bookmarks_download_all, state.pendingDownloadCount),
-                        style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontFeatureSettings = TABULAR_FIGURES,
-                        ),
-                    )
-                }
+                )
             }
         },
         // At the end, where 8e puts it and where the thumb already is; the list's bottom padding

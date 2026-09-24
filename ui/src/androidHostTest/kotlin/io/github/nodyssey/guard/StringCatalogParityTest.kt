@@ -143,6 +143,7 @@ class StringCatalogParityTest {
             "offline_state_percent",
             "page_jump_of_total",
             "post_badge_more",
+            "post_new_reply_delta",
             "post_quote_prefix",
             "post_quote_reply",
             "profile_level_unknown",

@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -35,7 +37,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
 import androidx.compose.material3.HorizontalDivider
@@ -78,6 +79,7 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
@@ -89,6 +91,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FreeChickenLegs
@@ -176,10 +179,11 @@ import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.LayerCardGap
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.MetaText
+import io.github.plaza.designsys.component.PlazaExtendedFab
+import io.github.plaza.designsys.component.PlazaFabHeight
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.QuotePreview
@@ -189,7 +193,6 @@ import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.theme.LocalPlazaLayers
-import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.PostTitle
 import io.github.plaza.designsys.theme.Sizes
@@ -197,7 +200,6 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asSignature
 import io.github.plaza.designsys.theme.cardBorderStroke
-import io.github.plaza.designsys.theme.fabLift
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -886,9 +888,7 @@ private fun DetailBottomActions(
     Column(
         modifier = modifier.padding(Spacing.lg),
         horizontalAlignment = Alignment.End,
-        // 4dp, not 8: the rail's bottom key already carries 4dp of touch-target slack under its
-        // paint, and the two together are the 8dp the design puts between the rail and the FAB.
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         PageJumpRail(
             expanded = toolbarExpanded,
@@ -901,20 +901,11 @@ private fun DetailBottomActions(
         // The screen's own FAB rather than the toolbar's: 回复 is the one action here that must stay
         // where the thumb last left it, and Material's toolbar rounds its FAB up to 80dp the moment
         // the bar collapses. Shrinking to an icon is the whole of the change it makes now.
-        ExtendedFloatingActionButton(
-            text = { Text(stringResource(Res.string.post_reply_action)) },
-            icon = {
-                Icon(
-                    PlazaIcons.Reply,
-                    contentDescription = null,
-                )
-            },
+        PlazaExtendedFab(
+            text = stringResource(Res.string.post_reply_action),
+            icon = PlazaIcons.Reply,
             onClick = onReply,
             expanded = toolbarExpanded,
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            elevation = PlazaFabElevation,
-            modifier = Modifier.fabLift(),
         )
     }
 }
@@ -965,6 +956,7 @@ private fun DetailTopBar(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(Res.string.action_back),
+                        modifier = Modifier.size(TopBarIconSize),
                     )
                 }
             }
@@ -975,6 +967,7 @@ private fun DetailTopBar(
                     PlazaIcons.OpenInNew,
                     contentDescription = stringResource(Res.string.action_open_in_browser),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(TopBarIconSize),
                 )
             }
             Box {
@@ -983,6 +976,7 @@ private fun DetailTopBar(
                         Icons.Default.MoreVert,
                         contentDescription = stringResource(Res.string.action_more),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(TopBarIconSize),
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -1018,22 +1012,26 @@ private fun DetailTopBar(
             containerColor = MaterialTheme.colorScheme.background,
             scrolledContainerColor = MaterialTheme.colorScheme.background,
         ),
+        // A step under Material's 64dp, as 2b draws it: the bar holds three icons and, once the title
+        // has scrolled away, one line of it. The buttons keep their 48dp targets.
+        expandedHeight = TopBarHeight,
     )
 }
 
-/** What Material's extended FAB stands at, collapsed or not — the rail is stacked on top of it. */
-private val ReplyFabHeight = 56.dp
+private val TopBarHeight = 48.dp
+
+private val TopBarIconSize = 20.dp
 
 /**
  * The room to keep below the thread until the floating controls have been measured — one frame.
  *
- * The retracted rail's own arithmetic: the group's 16dp of bottom padding, the FAB, the 4dp gap
- * above it, and the single page key the rail keeps when its arrows are away, plus a line of air. An
- * underestimate on the frame it is used for is invisible; the measurement replaces it before
+ * The retracted rail's own arithmetic: the group's 16dp of bottom padding, the FAB, the 8dp gap
+ * above it, and roughly the page label the rail keeps when its arrows are away, plus a line of air.
+ * An underestimate on the frame it is used for is invisible; the measurement replaces it before
  * anything is scrolled.
  */
 private val ThreadBottomBarRoom =
-    Spacing.lg + ReplyFabHeight + Spacing.xs + Sizes.minTouchTarget + Spacing.sm
+    Spacing.lg + PlazaFabHeight + Spacing.sm + Spacing.xxl + Spacing.sm
 
 /**
  * The thread as one scroll.
@@ -1041,9 +1039,9 @@ private val ThreadBottomBarRoom =
  * The site paginates comments; this does not. Later pages append into the same list, so the reader
  * never meets a "page 2" boundary — which is the single biggest difference from the mobile web.
  *
- * Drawn as cards on the page (1b): the opening post is one card holding the title as well as the
- * post, and every reply is a card of its own. The gaps between them do the separating the dividers
- * used to.
+ * The opening post is one card on the page holding the title as well as the post; the replies run
+ * flat on the page under it, a hairline between each (Lean 2b). A card per floor spent a card's
+ * padding and a gap on every two-line reply, which on this forum is most of them.
  */
 @Composable
 private fun ThreadList(
@@ -1074,7 +1072,6 @@ private fun ThreadList(
         state = listState,
         contentPadding =
         PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = Spacing.xs, bottom = bottomRoom),
-        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         modifier = modifier
             .fillMaxHeight()
             .readableWidth(),
@@ -1216,11 +1213,8 @@ private fun BlockAware(
     if (!content.isBlocked || revealed || openedHere) {
         floor()
     } else {
-        // A card like the floor it stands in for, but a slim one: it is a line, not a post.
-        LayerCard(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.xs, top = 2.dp, bottom = 2.dp),
-        ) {
+        // A row like the floor it stands in for, but a slim one: it is a line, not a post.
+        FloorRow(verticalPadding = 0.dp) {
             BlockedFloorRow(floor = content.floor, onShow = { openedHere = true })
         }
     }
@@ -1283,10 +1277,10 @@ private fun ThreadHeader(
      * See [io.github.nodyssey.PostDetailKey.preview].
      */
     preview: ThreadPreview?,
+    modifier: Modifier = Modifier,
     /** Fetches page 1 and scrolls to the opening post; null when it is already on screen. */
     onOpenOriginalPost: (() -> Unit)? = null,
     onTitlePlaced: (LayoutCoordinates) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
@@ -1309,12 +1303,14 @@ private fun ThreadHeader(
                     slug = preview?.categorySlug,
                     modifier = Modifier.sharedThreadBoard(postId),
                 )
-                // A labelled tag rather than the list's diamond: here there is room to name the thing.
+                // A labelled tag rather than the list's bare diamond: here there is room to name the thing.
                 if (isAwarded) {
                     TonalTag(
                         text = stringResource(Res.string.post_badge_awarded),
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        // The list's diamond, so the mark reads as the same one on both screens.
+                        icon = NodeSeekIcons.Award,
                     )
                 }
             }
@@ -1373,8 +1369,11 @@ private fun ThreadAuthorRow(
     subtitle: @Composable () -> Unit = {},
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        // Top, not centred: the avatar is shorter than the name and time beside it, and centring it
+        // would tie where it lands to how tall that text measures — which changes the moment badges
+        // arrive with the thread, under an avatar still settling out of its flight.
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         modifier = modifier,
     ) {
         UserAvatar(
@@ -1386,11 +1385,11 @@ private fun ThreadAuthorRow(
         Column(Modifier.weight(1f)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
                 Text(
                     text = authorName,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = floorNameStyle(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
@@ -1459,8 +1458,8 @@ private fun ThreadOpeningPost(
             .fillMaxWidth()
             .onPlaced { card.coordinates = it }
             .floorLongPressSemantics(longPress),
-        contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = 18.dp, bottom = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        contentPadding = OpeningPostPadding,
+        verticalArrangement = Arrangement.spacedBy(OpeningPostGap),
     ) {
         ThreadHeader(
             title = title,
@@ -1522,14 +1521,14 @@ private fun ThreadOpeningPost(
                 onLinkClick = onOpenBrowser,
                 onImageClick = onImageClick,
                 onQuoteRefClick = { onJumpToFloor(it.floor) },
-                textStyle = MaterialTheme.typography.bodyLarge,
+                textStyle = MaterialTheme.typography.bodyMedium,
                 voteContent = voteContent,
                 stardustContent = stardustContent,
             )
         }
         UserSignature(
             nodes = body.signatureNodes,
-            bodyStyle = MaterialTheme.typography.bodyLarge,
+            bodyStyle = MaterialTheme.typography.bodyMedium,
             onOpenBrowser = onOpenBrowser,
             onImageClick = onImageClick,
             onJumpToFloor = onJumpToFloor,
@@ -1553,12 +1552,36 @@ private class CardCoordinates {
     var coordinates: LayoutCoordinates? = null
 }
 
+/** The opening post's card inset, tighter below where its action row carries touch slack of its own. */
+private val OpeningPostPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = Spacing.sm)
+
+private val OpeningPostGap = 10.dp
+
+/** A floor author's name: 13sp, a step under the title roles, heavier than the meta line under it. */
+@Composable
+private fun floorNameStyle(): TextStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+
+/**
+ * A reply's body: a step under the opening post's — the reading size scaled the same way, down to the
+ * 14/22 the Lean round's 2b sets replies in.
+ */
+@Composable
+private fun replyBodyStyle(): TextStyle =
+    MaterialTheme.typography.bodyMedium.let {
+        it.copy(fontSize = it.fontSize * REPLY_BODY_SCALE, lineHeight = it.lineHeight * REPLY_LINE_SCALE)
+    }
+
+/** `bodyMedium`'s 15/25, taken down to 14/22. */
+private const val REPLY_BODY_SCALE = 14f / 15f
+private const val REPLY_LINE_SCALE = 22f / 25f
+
 @Composable
 private fun CommentsHeader(count: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = Spacing.sm, end = Spacing.sm, top = Spacing.sm),
+            .padding(start = FloorInset, end = FloorInset, top = Spacing.xs)
+            .heightIn(min = 36.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -1573,7 +1596,7 @@ private fun CommentsHeader(count: Int) {
         // come oldest first and nothing else — so the slot keeps saying how the list continues.
         Text(
             text = stringResource(Res.string.post_auto_paging),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -1600,16 +1623,16 @@ private fun CommentsHeader(count: Int) {
 }
 
 /**
- * One reply, as its own card (1b).
+ * One reply, flat on the page (Lean 2b).
  *
- * Real replies on this forum are anywhere between two characters and several screens, so the header
- * is one line wherever it fits — avatar, name, badges, time, and the floor number at the far end —
- * and the body runs the card's full width.
+ * Real replies on this forum are anywhere between two characters and several screens, so the avatar
+ * stands beside a two-line header — the name, the badges and the floor number at the far end, then
+ * the time — and the body runs under the header rather than under the avatar.
  *
  * The foot carries only what a reader does on most floors — 点赞, 投喂, 回复 — and a ⋯ for the rest
  * of the site's set (点踩, 引用), which [FloorActionSheet] lays out with their prices. A long press on
  * the header or the foot opens the same panel; on the text it selects, as it always has — see
- * [floorLongPress] for why the card as a whole does not listen.
+ * [floorLongPress] for why the row as a whole does not listen.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1628,86 +1651,104 @@ private fun CommentRow(
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
 ) {
-    LayerCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .floorLongPressSemantics(onMore),
-        contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.xs, top = 14.dp, bottom = Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        Row(
+    FloorRow(modifier = Modifier.floorLongPressSemantics(onMore)) {
+        UserAvatar(
+            url = comment.avatarUrl,
+            name = comment.authorName,
+            size = Sizes.avatarComment,
             modifier = Modifier
-                .padding(end = Spacing.md)
-                .floorLongPress(onMore),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                .authorClickable(comment.authorUid, onAuthorClick)
+                // The name beside it is the same way in, and the one a screen reader is told about.
+                .clearAndSetSemantics {},
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            // The identity block opens the author's space; the floor label stays outside it.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                modifier =
-                Modifier
-                    .weight(1f)
-                    .authorClickable(comment.authorUid, onAuthorClick),
-            ) {
-                UserAvatar(
-                    url = comment.avatarUrl,
-                    name = comment.authorName,
-                    size = Sizes.avatarComment,
-                )
-                // Wrapping rather than squeezing. As one Row the badges and the time were measured
-                // first and the name got what was left, which on an edited 楼主 floor was a few
-                // letters and with one badge more was nothing, while the time folded into a column.
-                // Here whatever does not fit after the name moves to a second line, and a single
-                // line stays exactly as it was.
-                FlowRow(
-                    modifier = Modifier.weight(1f),
+            Column(Modifier.floorLongPress(onMore)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    itemVerticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = comment.authorName,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    FloorBadges(comment)
-                    FloorTimeLine(comment)
+                    // The identity block opens the author's space; the floor label stays outside it.
+                    // Wrapping rather than squeezing: whatever does not fit after the name moves to
+                    // a second line, and a single line stays exactly as it was.
+                    FlowRow(
+                        modifier = Modifier
+                            .weight(1f)
+                            .authorClickable(comment.authorUid, onAuthorClick),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = comment.authorName,
+                            style = floorNameStyle(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        FloorBadges(comment)
+                    }
+                    comment.floor?.let { FloorLabel(it) }
                 }
+                FloorTimeLine(comment)
             }
-            comment.floor?.let { FloorLabel(it) }
+            PostRichContent(
+                nodes = comment.nodes,
+                onLinkClick = onOpenBrowser,
+                onImageClick = onImageClick,
+                onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
+                textStyle = replyBodyStyle(),
+                voteContent = voteContent,
+                stardustContent = stardustContent,
+            )
+            UserSignature(
+                nodes = comment.signatureNodes,
+                bodyStyle = replyBodyStyle(),
+                onOpenBrowser = onOpenBrowser,
+                onImageClick = onImageClick,
+                onJumpToFloor = onJumpToFloor,
+            )
+            CommentFoot(
+                reactions = comment.reactions,
+                pending = pendingReaction,
+                onReact = onReact,
+                onReply = onReply,
+                onEdit = onEdit,
+                onMore = onMore,
+                modifier = Modifier.floorLongPress(onMore),
+            )
         }
-        PostRichContent(
-            nodes = comment.nodes,
-            onLinkClick = onOpenBrowser,
-            onImageClick = onImageClick,
-            onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
-            textStyle = MaterialTheme.typography.bodyMedium,
-            voteContent = voteContent,
-            stardustContent = stardustContent,
-            modifier = Modifier.padding(end = Spacing.md),
-        )
-        UserSignature(
-            nodes = comment.signatureNodes,
-            bodyStyle = MaterialTheme.typography.bodyMedium,
-            onOpenBrowser = onOpenBrowser,
-            onImageClick = onImageClick,
-            onJumpToFloor = onJumpToFloor,
-            modifier = Modifier.padding(end = Spacing.md),
-        )
-        CommentFoot(
-            reactions = comment.reactions,
-            pending = pendingReaction,
-            onReact = onReact,
-            onReply = onReply,
-            onEdit = onEdit,
-            onMore = onMore,
-            modifier = Modifier.floorLongPress(onMore),
-        )
     }
 }
+
+/**
+ * A floor on the page rather than in a card: the gutter's inset, and a hairline under it that does
+ * the separating a gap between cards used to.
+ */
+@Composable
+private fun FloorRow(
+    modifier: Modifier = Modifier,
+    verticalPadding: Dp = 10.dp,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = FloorInset, end = FloorInset, top = verticalPadding, bottom = Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            content = content,
+        )
+        HorizontalDivider(color = LocalPlazaLayers.current.divider)
+    }
+}
+
+/**
+ * How far a floor sits in from the page gutter — the 18dp from the screen edge 2b puts replies and
+ * the comments header at, a few dp outside the opening post's text.
+ */
+private val FloorInset = 10.dp
 
 /**
  * NodeSeek's public Markdown signature, visually separated from the floor's actual content.
@@ -1820,7 +1861,7 @@ private fun OpeningPostActions(
 ) {
     FlowRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1903,24 +1944,26 @@ private fun ReactionPill(
             disabledContentColor = if (spent) content else content.copy(alpha = DISABLED_PILL_ALPHA),
         ),
         border = layers.cardBorderStroke,
-        contentPadding = PaddingValues(horizontal = 14.dp),
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = PaddingValues(horizontal = 10.dp),
+        // Shorter than Material's 40dp button, as 2b draws the row; the target is still 48dp.
         modifier = Modifier.height(ReactionPillHeight),
     ) {
         if (pending) {
             PlazaSpinner(
                 modifier = Modifier.describedAsLoading(),
                 strokeWidth = 2.dp,
-                size = 18.dp,
+                size = 16.dp,
             )
         } else {
-            Icon(action.icon(), contentDescription = stringResource(action.labelRes()), modifier = Modifier.size(20.dp))
+            Icon(action.icon(), contentDescription = stringResource(action.labelRes()), modifier = Modifier.size(16.dp))
         }
         if (text.isNotEmpty()) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp, fontFeatureSettings = TABULAR_FIGURES),
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 6.dp),
+                modifier = Modifier.padding(start = 5.dp),
             )
         }
     }
@@ -1947,12 +1990,12 @@ private fun CommentFoot(
     modifier: Modifier = Modifier,
 ) {
     FlowRow(
-        // Each mark is a TextButton, which keeps 12dp of content padding inside its own bounds. Laid
-        // out honestly the first icon starts 12dp right of the margin the name and the body sit on;
-        // shifting the row back by that much lines the ink up instead.
+        // Each mark is a TextButton, which keeps its content padding inside its own bounds. Laid out
+        // honestly the first icon starts that far right of the margin the name and the body sit on;
+        // shifting the row back by as much lines the ink up instead.
         modifier = modifier
             .fillMaxWidth()
-            .offset(x = -TEXT_BUTTON_CONTENT_INSET),
+            .offset(x = -FootButtonInset),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg).forEach { action ->
@@ -1965,6 +2008,7 @@ private fun CommentFoot(
                 spent = reactions?.hasSpent(action) == true,
                 pending = pending == action,
                 onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
+                compact = true,
             )
         }
         // One item, so 回复 and ⋯ wrap together; the weight then spends what is left of whichever
@@ -1974,8 +2018,8 @@ private fun CommentFoot(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // The one text button on the row, in the accent: it carries the floor into the editor,
-            // which is what 2c's "回复 #12 · nssk" header is showing.
+            // The one labelled button on the row: it carries the floor into the editor, which is what
+            // 2c's "回复 #12 · nssk" header is showing. In the row's own grey, as 2b draws it.
             val (action, icon, label) =
                 when {
                     onEdit != null -> Triple(onEdit, Icons.Default.Edit, Res.string.post_edit_action)
@@ -1985,39 +2029,71 @@ private fun CommentFoot(
             if (action != null && icon != null && label != null) {
                 TextButton(
                     onClick = action,
-                    // The ⋯ beside it brings its own touch slack, so the pair can sit close.
-                    contentPadding = PaddingValues(horizontal = Spacing.md),
-                    modifier = Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET),
+                    contentPadding = FootButtonPadding,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    modifier = Modifier
+                        .height(FootHeight)
+                        // Its narrowest is its whole label. The foot decides whether this pair fits
+                        // beside the tallies from the pair's narrowest, and a label that could break
+                        // after one character said it would — then the ⋯ got what was left.
+                        .width(IntrinsicSize.Max)
+                        .offset(x = FootButtonInset),
                 ) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(FootIconSize))
                     Text(
                         stringResource(label),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = footLabelStyle(),
+                        maxLines = 1,
                         modifier = Modifier.padding(start = Spacing.xs),
                     )
                 }
             }
-            Box(Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET)) { FloorMoreButton(onMore) }
+            FloorMoreButton(
+                onClick = onMore,
+                iconSize = FootIconSize,
+                modifier = Modifier
+                    .offset(x = FootButtonInset)
+                    .size(width = Sizes.minTouchTarget - Spacing.sm, height = FootHeight),
+            )
         }
     }
 }
 
 /** ⋯ — the way into a floor's 1c panel that does not depend on knowing about the long press. */
 @Composable
-private fun FloorMoreButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
+private fun FloorMoreButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 18.dp,
+) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(
             PlazaIcons.MoreHoriz,
             contentDescription = stringResource(Res.string.post_floor_actions),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(iconSize),
         )
     }
 }
 
-/** `ButtonDefaults.TextButtonContentPadding`'s horizontal inset. */
-private val TEXT_BUTTON_CONTENT_INSET = 12.dp
+/**
+ * A reply's foot, a step under Material's 40dp buttons as 2b draws it: 28dp of paint, which Compose
+ * still hit-tests at 48dp, so a two-line reply is not mostly foot.
+ */
+private val FootHeight = 28.dp
 
-private val ReactionPillHeight = 40.dp
+private val FootIconSize = 16.dp
+
+/** The foot's buttons' own inset — also how far the row is pulled back to put the first icon on the margin. */
+private val FootButtonInset = Spacing.sm
+
+private val FootButtonPadding = PaddingValues(horizontal = FootButtonInset)
+
+@Composable
+private fun footLabelStyle(): TextStyle =
+    MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium, fontFeatureSettings = TABULAR_FIGURES)
+
+private val ReactionPillHeight = 30.dp
 
 private const val DISABLED_PILL_ALPHA = 0.5f
 
@@ -2052,6 +2128,8 @@ private fun QuietReaction(
      * collected a thread unable to un-collect it.
      */
     selected: Boolean = false,
+    /** A reply's foot rather than the opening post's row: see [FootHeight]. */
+    compact: Boolean = false,
 ) {
     /*
      * Spent is drawn, not merely disabled. These three cannot be undone, so the row has to answer
@@ -2067,23 +2145,26 @@ private fun QuietReaction(
 
             selected -> ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
 
-            // Quiet until used: the accent is kept for what this reader has done, and for 回复.
+            // Quiet until used: the accent is kept for what this reader has done.
             else -> ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
         },
+        contentPadding = if (compact) FootButtonPadding else ButtonDefaults.TextButtonContentPadding,
+        modifier = if (compact) Modifier.height(FootHeight) else Modifier,
     ) {
+        val iconSize = if (compact) FootIconSize else 18.dp
         if (pending) {
             PlazaSpinner(
                 modifier = Modifier.describedAsLoading(),
                 strokeWidth = 2.dp,
-                size = 18.dp,
+                size = iconSize,
             )
         } else {
-            Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = stringResource(label), modifier = Modifier.size(iconSize))
         }
         if (count.isNotEmpty()) {
             Text(
                 text = count,
-                style = MaterialTheme.typography.labelSmall,
+                style = footLabelStyle(),
                 modifier = Modifier.padding(start = Spacing.xs),
             )
         }
@@ -2590,19 +2671,18 @@ private fun UnopenedThreadSkeleton() {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = LayerPageGutter, vertical = Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
     ) {
         // The same card the opening post will be drawn in, so the page does not change shape when it
         // arrives — only what is in the card does.
         LayerCard(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = 18.dp, bottom = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            contentPadding = OpeningPostPadding,
+            verticalArrangement = Arrangement.spacedBy(OpeningPostGap),
         ) {
             SkeletonBar(0.92f, 22.dp)
             SkeletonBar(0.55f, 22.dp)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -2622,25 +2702,26 @@ private fun UnopenedThreadSkeleton() {
     }
 }
 
-/** The first few reply stubs under the opening post, each in the card its reply will have. Grey either way. */
+/** The first few reply stubs under the opening post, each in the row its reply will have. Grey either way. */
 @Composable
 private fun CommentSkeletons() {
-    Column(verticalArrangement = Arrangement.spacedBy(LayerCardGap)) {
+    // Where the comments header will be, so the first reply lands where its stub was.
+    Column(Modifier.padding(top = Spacing.xs + 36.dp)) {
         repeat(3) {
-            LayerCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
+            FloorRow {
+                Box(
+                    Modifier
+                        .size(Sizes.avatarComment)
+                        .clip(AvatarShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                )
+                Column(
+                    modifier = Modifier.weight(1f).padding(bottom = Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Box(
-                        Modifier
-                            .size(Sizes.avatarComment)
-                            .clip(AvatarShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    )
-                    SkeletonBar(0.5f, 12.dp)
+                    SkeletonBar(0.4f, 12.dp)
+                    SkeletonBar(0.85f, 12.dp)
                 }
-                SkeletonBar(0.85f, 12.dp)
             }
         }
     }

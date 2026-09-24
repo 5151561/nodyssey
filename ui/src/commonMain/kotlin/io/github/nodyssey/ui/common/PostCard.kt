@@ -1,39 +1,48 @@
 package io.github.nodyssey.ui.common
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.post_badge_awarded
 import io.github.nodyssey.ui.resources.post_new_reply_count
+import io.github.nodyssey.ui.resources.post_new_reply_delta
 import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.plaza.designsys.component.MetaStat
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.textScaledSize
+import io.github.plaza.designsys.component.tonalTagTextStyle
+import io.github.plaza.designsys.theme.LocalPlazaFontScale
+import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * A post card's title — the feed's, a space's and 我的主题帖's at 17/25, a search result's a step
- * smaller at 16/24. Scaled from `titleMedium` rather than fixed, so the reading-size preference —
- * which is carried in the type scale — reaches it.
+ * A post card's title — the feed's, a space's and 我的主题帖's at 15/22, as the Lean round's 2a sets
+ * it. Scaled from `titleMedium` rather than fixed, so the reading-size preference — which is carried
+ * in the type scale — reaches it.
  */
 @Composable
 internal fun postCardTitleStyle(
-    sizeSp: Float = 17f,
-    lineHeightSp: Float = 25f,
+    sizeSp: Float = 15f,
+    lineHeightSp: Float = 22f,
 ): TextStyle {
     val base = MaterialTheme.typography.titleMedium
     val scale = sizeSp / TITLE_MEDIUM_SP
@@ -84,15 +93,16 @@ internal fun PostBadges(
 }
 
 /**
- * A post card's reply figure, emitted into the caller's row like [PostBadges]: 「N 条新回复」 as a
- * filled pill once the reader has opened the thread and more came in — the delta is then the useful
- * number — and the reply count otherwise. The feed and the search results draw it the same way.
+ * A post card's reply figure, emitted into the caller's row like [PostBadges]: the reply count, and
+ * after it a small filled +N once the reader has opened the thread and more came in (Lean 2a). The
+ * feed and the search results draw it the same way.
  */
 @Composable
 internal fun PostReplyStat(post: FeedPost) {
-    if (post.newCommentCount > 0) {
-        NewReplyBadge(post.newCommentCount)
-    } else {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
         post.summary.commentCount?.let {
             MetaStat(
                 icon = PlazaIcons.ModeComment,
@@ -100,22 +110,29 @@ internal fun PostReplyStat(post: FeedPost) {
                 contentDescription = stringResource(Res.string.post_reply_count, it),
             )
         }
+        if (post.newCommentCount > 0) NewReplyBadge(post.newCommentCount)
     }
 }
 
 @Composable
 private fun NewReplyBadge(count: Int) {
+    val spoken = stringResource(Res.string.post_new_reply_count, count)
     Text(
-        text = stringResource(Res.string.post_new_reply_count, count),
-        style = MaterialTheme.typography.labelMedium.copy(
+        text = stringResource(Res.string.post_new_reply_delta, count),
+        style = tonalTagTextStyle().copy(
+            fontSize = NEW_REPLY_BADGE_SIZE * LocalPlazaFontScale.current,
             fontWeight = FontWeight.SemiBold,
             fontFeatureSettings = TABULAR_FIGURES,
         ),
         color = MaterialTheme.colorScheme.onPrimary,
         modifier =
         Modifier
-            .clip(CircleShape)
+            .semantics { contentDescription = spoken }
+            .clip(MaterialTheme.shapes.extraSmall)
             .background(MaterialTheme.colorScheme.primary)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 5.dp),
     )
 }
+
+/** The +N's type, a step under a board tag's so the pill sits inside the counts' line. */
+private val NEW_REPLY_BADGE_SIZE = 10.sp

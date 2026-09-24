@@ -68,7 +68,7 @@ fun TonalTag(
     }
 }
 
-/** A tag's corner — [TonalTag]'s and [BadgeChip]'s, and anything drawn to sit in a row of them. */
+/** A tag's corner — [TonalTag]'s, and anything drawn to sit in a row of them. */
 val TonalTagShape: Shape = RoundedCornerShape(6.dp)
 
 /**
@@ -135,29 +135,45 @@ fun BadgeChip(
     val scheme = MaterialTheme.colorScheme
     val (container, content) =
         when (tone) {
-            BadgeTone.Primary -> scheme.primaryContainer to scheme.onPrimaryContainer
+            // Filled, the one badge that is: the subject of the thread is what a reader scans for.
+            BadgeTone.Primary -> scheme.primary to scheme.onPrimary
+
             BadgeTone.Accent -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+
             BadgeTone.Muted -> Color.Transparent to scheme.onSurfaceVariant
+
             BadgeTone.Warning -> scheme.errorContainer to scheme.onErrorContainer
+
             BadgeTone.Critical -> scheme.error to scheme.onError
+
             BadgeTone.Neutral -> scheme.secondaryContainer to scheme.onSecondaryContainer
         }
-    val shape = TonalTagShape
+    val shape = MaterialTheme.shapes.extraSmall
     val outlined =
         if (tone == BadgeTone.Muted) {
             Modifier.border(1.dp, scheme.outlineVariant, shape)
         } else {
             Modifier
         }
+    val scale = LocalPlazaFontScale.current
     Text(
         text = text,
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+        // A step under a tag's type, as the Lean round's 2b sets it: the badge rides the name's line
+        // and must not be the tallest thing on it.
+        style = TextStyle(
+            fontSize = BADGE_FONT_SIZE * scale,
+            lineHeight = BADGE_LINE_HEIGHT * scale,
+            fontWeight = FontWeight.SemiBold,
+        ),
         color = content,
         modifier =
         modifier
             .clip(shape)
             .then(outlined)
             .background(container)
-            .padding(horizontal = 7.dp, vertical = 1.dp),
+            .padding(horizontal = 5.dp, vertical = 1.dp),
     )
 }
+
+private val BADGE_FONT_SIZE = 10.sp
+private val BADGE_LINE_HEIGHT = 14.sp

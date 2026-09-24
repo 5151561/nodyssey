@@ -33,7 +33,7 @@ import androidx.sqlite.execSQL
         OfflineImageEntity::class,
         CollectedPostMetaEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -340,6 +340,19 @@ val MIGRATION_13_14 =
     }
 
 /**
+ * Gives a feed row the name of whoever replied last, which the card's foot prints beside the time.
+ *
+ * Null on every existing row: v14 never read the name, and a list row is rewritten by the next
+ * refresh of its board anyway, so nothing is worth back-filling.
+ */
+val MIGRATION_14_15 =
+    object : Migration(14, 15) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `posts` ADD COLUMN `lastCommenterName` TEXT")
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -363,4 +376,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_11_12,
     MIGRATION_12_13,
     MIGRATION_13_14,
+    MIGRATION_14_15,
 )

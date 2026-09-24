@@ -158,7 +158,8 @@ class BookmarksScreenTest {
 
         composeRule.onAllNodesWithText("已离线 2 篇 · 占用 12.4 MB", substring = true).onFirst().assertIsDisplayed()
         // 未下载 + 失败 = 2. Already-offline and in-flight rows are not things left to download.
-        composeRule.onNodeWithText("全部下载 · 2 篇").assertIsDisplayed()
+        // The FAB's name: its label is folded into an animation that hides it from semantics.
+        composeRule.onNodeWithContentDescription("全部下载 · 2 篇").assertIsDisplayed()
     }
 
     /** Nothing downloaded is not a fact worth a line; the bar drops it rather than printing zeroes. */
@@ -281,6 +282,6 @@ class BookmarksScreenTest {
             state().copy(entries = entries.map { it.copy(offline = OfflineState.Downloaded(bytes = 1)) }),
         )
 
-        composeRule.onNodeWithText("全部下载 · 0 篇").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("全部下载", substring = true).assertDoesNotExist()
     }
 }

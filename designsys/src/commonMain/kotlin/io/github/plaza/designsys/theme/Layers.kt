@@ -3,10 +3,7 @@ package io.github.plaza.designsys.theme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -165,16 +162,3 @@ fun Modifier.floatShadow(
             .dropShadow(shape, Shadow(radius = 4.dp, color = ShadowInk, offset = DpOffset(0.dp, 2.dp), alpha = 0.12f))
             .dropShadow(shape, Shadow(radius = 24.dp, color = ShadowInk, offset = DpOffset(0.dp, 10.dp), alpha = 0.16f))
     }
-
-/** An extended FAB's elevation in the layer system: none of Material's own. See [fabLift]. */
-val PlazaFabElevation: FloatingActionButtonElevation
-    @Composable get() = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
-
-/**
- * An extended FAB's lift in the layer system: the [floatShadow] of its shape, in place of the Material
- * elevation [PlazaFabElevation] switches off. Material's draws one hard ambient shadow in the
- * platform's colour; this one sits a step above the cards, in the page's hue, like every other
- * floating control. Every extended FAB takes the pair.
- */
-@Composable
-fun Modifier.fabLift(): Modifier = floatShadow(FloatingActionButtonDefaults.extendedFabShape, LocalPlazaLayers.current.shadows)

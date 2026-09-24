@@ -298,15 +298,19 @@ class PostListScreenTest {
         composeRule.onNodeWithContentDescription("12 回复").assertIsDisplayed()
     }
 
-    /** The whole point of the read-mark table: the delta replaces the raw total once read. */
+    /**
+     * The whole point of the read-mark table: once read, the delta rides beside the total (Lean 2a),
+     * drawn as +N and read out in words.
+     */
     @Test
-    fun `a read row with new replies shows the delta instead`() {
+    fun `a read row with new replies shows the delta beside the total`() {
         setScreen(
             listOf(feedPost(1, "read", isRead = true, newCommentCount = 4, commentCount = 16)),
         )
 
-        composeRule.onNodeWithText("4 条新回复").assertIsDisplayed()
-        composeRule.onAllNodesWithContentDescription("16 回复").assertCountEquals(0)
+        composeRule.onNodeWithText("+4").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("4 条新回复").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("16 回复").assertIsDisplayed()
     }
 
     @Test

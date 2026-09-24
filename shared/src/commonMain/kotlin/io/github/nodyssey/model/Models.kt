@@ -17,6 +17,12 @@ data class PostSummary(
     val commentCount: Int?,
     val lastActiveText: String?,
     val lastActiveTitle: String?,
+    /**
+     * Who left the reply [lastActiveText] dates. On a thread nobody has answered yet the site names
+     * the author here, and the time beside it is then when the thread was posted. Null on a row
+     * cached before v15, until the next refresh of its list rewrites it.
+     */
+    val lastCommenterName: String? = null,
     val isPinned: Boolean = false,
     val isLocked: Boolean = false,
     /** 推荐阅读 — the thread has been 加精, per the diamond the row carries next to its title. */

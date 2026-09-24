@@ -71,6 +71,7 @@
 
     <string name="post_reply_count">%1$d replies</string>
     <string name="post_new_reply_count">%1$d new replies</string>
+    <string name="post_last_reply_by">Last reply by %1$s, %2$s</string>
     <string name="post_view_count">%1$d views</string>
     <string name="post_badge_pinned">Pinned</string>
     <string name="post_badge_awarded">Recommended</string>
@@ -194,7 +195,6 @@
 
     <string name="search_hint">Search posts</string>
     <string name="home_search_hint">Search posts or users</string>
-    <string name="post_read_marker">Read</string>
     <string name="search_hint_board">Search posts in %1$s</string>
     <string name="search_user_hint">Search usernames</string>
     <string name="search_posts_tab">Posts</string>

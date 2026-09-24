@@ -65,6 +65,10 @@
     <!-- Post list -->
     <string name="post_reply_count">%1$d 回复</string>
     <string name="post_new_reply_count">%1$d 条新回复</string>
+    <!-- 2a 卡片底行回复数旁的小胶囊；朗读用 post_new_reply_count。只有标点，不需要译文。 -->
+    <string name="post_new_reply_delta">+%1$d</string>
+    <!-- 卡片底行「最后回复人 时间」的朗读文字；屏幕上只画名字和时间。 -->
+    <string name="post_last_reply_by">%1$s 最后回复于 %2$s</string>
     <string name="post_view_count">%1$d 浏览</string>
     <string name="post_badge_pinned">置顶</string>
     <!-- 加精: the site labels its own marker 推荐阅读, so the a11y label says the same thing -->
@@ -230,8 +234,6 @@
     <string name="search_hint">搜索帖子</string>
     <!-- 首页顶部的搜索框占位：点它进搜索页，帖子和用户都能搜。 -->
     <string name="home_search_hint">搜索帖子或用户</string>
-    <!-- 首页卡片右下角：这帖读过了（标题同时变浅）。 -->
-    <string name="post_read_marker">已读</string>
     <string name="search_hint_board">在 %1$s 版块搜帖子</string>
     <string name="search_user_hint">搜索用户名</string>
     <string name="search_posts_tab">帖子</string>

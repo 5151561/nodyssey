@@ -71,6 +71,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.ui.common.longPressToEdit
@@ -183,9 +184,13 @@ internal fun BoardStrip(
     PlazaBackHandler(enabled = editing) { editing = false }
 
     Column(
-        Modifier.animateContentSize(
-            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-        ),
+        Modifier
+            .animateContentSize(
+                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+            )
+            // Air above the pills, whether the header is showing or folded away over them; the list's
+            // own top padding makes up the rest below.
+            .padding(top = Spacing.sm, bottom = Spacing.xs),
     ) {
         /*
          * A box with the toggle laid over the corner, not a row with the toggle beside the pills.
@@ -202,10 +207,10 @@ internal fun BoardStrip(
                     selectedSlug = selectedSlug,
                     editing = editing,
                     // Clear of the toggle, its own end inset, and a pill's worth of breathing room.
-                    firstRowInset = ToggleSlotWidth + Spacing.sm,
+                    firstRowInset = ToggleSlotWidth + PillGap,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = Spacing.lg),
+                        .padding(start = Spacing.md),
                     onBoardClick = { slug ->
                         onBoardClick(slug)
                         expanded = false
@@ -226,8 +231,8 @@ internal fun BoardStrip(
                     LazyRow(
                         state = rowState,
                         modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(horizontal = Spacing.lg),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        contentPadding = PaddingValues(start = Spacing.md, end = Spacing.xs),
+                        horizontalArrangement = Arrangement.spacedBy(PillGap),
                     ) {
                         items(count = boards.size, key = { boards[it].slug ?: FRONT_PAGE_KEY }) { index ->
                             val board = boards[index]
@@ -246,14 +251,13 @@ internal fun BoardStrip(
             // first row of pills rather than centred in a taller band beside them. Both are shorter
             // than 48dp; Compose extends a pointer target that small to 48dp when it hit-tests.
             //
-            // The end inset is the same 16dp the pills are laid out against on the left, so the strip
-            // is symmetric: the button used to sit flush against the display edge because it was the
-            // only thing in this row without padding of its own.
+            // The end inset keeps the button off the display edge, where it used to sit flush because
+            // it was the only thing in this row without padding of its own.
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .height(PillHeight)
-                    .padding(end = Spacing.lg),
+                    .padding(end = ToggleEndInset),
                 contentAlignment = Alignment.Center,
             ) {
                 // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
@@ -295,9 +299,9 @@ internal fun BoardStrip(
                         // 墨水屏 draws the raised tone as the page's own paper, and the outline is all
                         // that shows a key there; the lit tick needs none.
                         .then(
-                            if (editing) Modifier else Modifier.cardBorder(LocalPlazaLayers.current, MaterialTheme.shapes.medium),
+                            if (editing) Modifier else Modifier.cardBorder(LocalPlazaLayers.current, PillShape),
                         ),
-                    shape = MaterialTheme.shapes.medium,
+                    shape = PillShape,
                     colors =
                     IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = container,
@@ -331,6 +335,7 @@ internal fun BoardStrip(
                                     else -> Res.string.action_show_all_boards
                                 },
                             ),
+                            modifier = Modifier.size(ToggleIconSize),
                         )
                     }
                 }
@@ -341,7 +346,7 @@ internal fun BoardStrip(
                 text = stringResource(Res.string.board_edit_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = Spacing.lg, bottom = Spacing.sm),
+                modifier = Modifier.padding(start = Spacing.md, top = Spacing.xs),
             )
         }
     }
@@ -447,7 +452,7 @@ private fun ExpandedBoards(
             firstRowInset = firstRowInset,
             // Editing widens the gaps so the corner badges have somewhere to sit: at the resting 8dp
             // a badge would overlap the pill beside it rather than the pill it belongs to.
-            horizontalGap = if (editing) Spacing.lg else Spacing.sm,
+            horizontalGap = if (editing) Spacing.lg else PillGap,
             modifier = modifier
                 .onGloballyPositioned { containerCoords = it }
                 .then(gestures),
@@ -544,9 +549,8 @@ private fun ExpandedBoards(
  * beside the flow narrowed *every* line and left a tall empty gutter down the right of the block. One
  * line gives way to the toggle; the rest run the full width.
  *
- * Deliberately minimal — no vertical gap parameter, no alignment, no `maxLines`. Each pill is a 32dp
- * shape centred in a 48dp touch band, so the lines already clear each other by 16dp and anything this
- * layout added on top would read as a list rather than as a grid of chips.
+ * Deliberately minimal — no alignment, no `maxLines`. The lines are [PillGap] apart, the same as
+ * the pills along one: a pill is laid out at its painted height, so without it the lines would touch.
  */
 @Composable
 private fun BoardFlow(
@@ -557,6 +561,7 @@ private fun BoardFlow(
 ) {
     Layout(content = content, modifier = modifier) { measurables, constraints ->
         val gap = horizontalGap.roundToPx()
+        val lineGap = PillGap.roundToPx()
         val width = constraints.maxWidth
         val inset = firstRowInset.roundToPx()
         val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0, minHeight = 0)) }
@@ -581,7 +586,8 @@ private fun BoardFlow(
         }
         if (row.isNotEmpty()) rows += row
 
-        layout(width, rows.sumOf { line -> line.maxOf { it.height } }) {
+        val height = rows.sumOf { line -> line.maxOf { it.height } } + lineGap * (rows.size - 1).coerceAtLeast(0)
+        layout(width, height) {
             var y = 0
             rows.forEach { line ->
                 var x = 0
@@ -589,7 +595,7 @@ private fun BoardFlow(
                     placeable.place(x, y)
                     x += placeable.width + gap
                 }
-                y += line.maxOf { it.height }
+                y += line.maxOf { it.height } + lineGap
             }
         }
     }
@@ -691,6 +697,8 @@ private fun BoardPill(
             Text(
                 text = board.title,
                 style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = PILL_LABEL_SIZE,
+                    lineHeight = PILL_LABEL_LINE_HEIGHT,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                 ),
                 maxLines = 1,
@@ -719,7 +727,7 @@ private fun BoardPill(
         } else {
             null
         },
-        shape = PlazaChipDefaults.shape,
+        shape = PillShape,
         colors = PlazaChipDefaults.filterChipColors(containerColor = container, labelColor = label),
         border = PlazaChipDefaults.border(selected),
     )
@@ -771,13 +779,31 @@ internal fun List<BoardSlot>.reorderedFor(
 /** 综合 has no slug, and a list key has to be something. */
 internal const val FRONT_PAGE_KEY = "front"
 
-private val ToggleWidth = 40.dp
+private val ToggleWidth = 32.dp
 
-/** A board pill is the app's chip — a soft rectangle rather than a capsule, so a row of them reads as tabs. */
-private val PillHeight = PlazaChipDefaults.Height
+/** Where the toggle stops short of the display edge. */
+private val ToggleEndInset = Spacing.sm
+
+private val ToggleIconSize = 18.dp
+
+/**
+ * A board pill is the app's chip — a soft rectangle rather than a capsule, so a row of them reads as
+ * tabs — a step under [PlazaChipDefaults.Height] and its corner, as the Lean round's 2a draws the strip:
+ * this is navigation the reader passes over on every screen of the feed, not a form. Compose still
+ * hit-tests a pill this short at 48dp.
+ */
+private val PillHeight = 30.dp
+
+private val PillShape
+    @Composable get() = MaterialTheme.shapes.small
+
+private val PillGap = 6.dp
+
+private val PILL_LABEL_SIZE = 13.sp
+private val PILL_LABEL_LINE_HEIGHT = 18.sp
 
 /** The toggle plus the end inset it is drawn against — the width the first row of pills gives up. */
-private val ToggleSlotWidth = ToggleWidth + Spacing.lg
+private val ToggleSlotWidth = ToggleWidth + ToggleEndInset
 
 private const val DRAG_SCALE = 1.06f
 private val DRAG_ELEVATION = 8.dp

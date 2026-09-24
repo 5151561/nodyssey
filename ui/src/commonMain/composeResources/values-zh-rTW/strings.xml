@@ -66,6 +66,7 @@
 
     <string name="post_reply_count">%1$d 回覆</string>
     <string name="post_new_reply_count">%1$d 則新回覆</string>
+    <string name="post_last_reply_by">%1$s 最後回覆於 %2$s</string>
     <string name="post_view_count">%1$d 瀏覽</string>
     <string name="post_badge_pinned">置頂</string>
     <string name="post_badge_awarded">推薦閱讀</string>
@@ -188,7 +189,6 @@
 
     <string name="search_hint">搜尋文章</string>
     <string name="home_search_hint">搜尋文章或用戶</string>
-    <string name="post_read_marker">已讀</string>
     <string name="search_hint_board">在 %1$s 版塊搜文章</string>
     <string name="search_user_hint">搜尋使用者名稱</string>
     <string name="search_posts_tab">文章</string>

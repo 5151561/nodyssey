@@ -30,8 +30,9 @@ import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.theme.Spacing
 
 /**
- * One row's outline within its group card: the card's 24dp at the group's outer corners, square at
- * the seams. See [GroupedListItem] and [groupSlice], which are the only things that should need it.
+ * One row's outline within its group card: the card's own [LayerCardRadius] at the group's outer
+ * corners, square at the seams. See [GroupedListItem] and [groupSlice], which are the only things
+ * that should need it.
  */
 fun groupShape(first: Boolean, last: Boolean): Shape =
     RoundedCornerShape(
@@ -41,7 +42,7 @@ fun groupShape(first: Boolean, last: Boolean): Shape =
         bottomStart = if (last) GROUP_OUTER_RADIUS else GROUP_SEAM_RADIUS,
     )
 
-private val GROUP_OUTER_RADIUS = 24.dp
+private val GROUP_OUTER_RADIUS = LayerCardRadius
 private val GROUP_SEAM_RADIUS = 0.dp
 
 /**
