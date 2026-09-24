@@ -1,69 +1,55 @@
 package io.github.nodyssey.ui.settings
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.PlazaIcons
-import io.github.plaza.designsys.theme.Spacing
 
-/** 软件与社区关于页共用的导航动作行。 */
+/**
+ * A row of the two 关于 pages' grouped cards — 关于软件 and 关于社区 — laid out by [GroupedRow].
+ *
+ * [external] swaps the chevron for the leave-the-app arrow, because the difference between "another
+ * page of this app" and "your browser" is worth knowing before the tap. [trailing] replaces both for
+ * a row that acts in place (复制 RSS). A subtitle that is an address — a repository, an email — is set
+ * in monospace, since it is read character by character.
+ */
 @Composable
-internal fun AboutActionRow(
+internal fun AboutRow(
     title: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     subtitle: String? = null,
     external: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
+    first: Boolean = false,
+    last: Boolean = false,
 ) {
-    Surface(
+    GroupedRow(
+        title = title,
+        subtitle = subtitle,
+        subtitleMonospace = subtitle != null && ("github.com" in subtitle || "@" in subtitle),
+        first = first,
+        last = last,
         onClick = onClick,
-        color = MaterialTheme.colorScheme.background,
-        modifier = modifier,
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xs, vertical = Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                    subtitle?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = if (it.contains("github.com") || it.contains("@")) FontFamily.Monospace else FontFamily.Default,
-                        )
-                    }
-                }
-                when {
-                    trailing != null -> trailing()
-                    external -> Icon(PlazaIcons.OpenInNew, contentDescription = null, modifier = Modifier.size(17.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    else -> Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        showChevron = !external && trailing == null,
+        icon = icon,
+        trailing =
+        trailing ?: if (external) {
+            {
+                Icon(
+                    PlazaIcons.OpenInNew,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
             }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        }
-    }
+        } else {
+            null
+        },
+    )
 }

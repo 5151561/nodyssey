@@ -780,3 +780,38 @@ data class LevelSpan(
     val floor: Int,
     val next: Int,
 )
+
+/**
+ * Where a chicken-leg count sits in its level's [span] — what every level bar and its caption are
+ * drawn from, so 我的, 账户与成长 and 鸡腿流水 cannot work it out three different ways.
+ */
+data class LevelProgress(
+    val chicken: Int,
+    val span: LevelSpan,
+) {
+    /**
+     * How far through the *current* level the count sits, 0–1: a Lv2 account at 410 is 2% into
+     * 400 → 900, not 46% of the way from zero.
+     */
+    val fraction: Float
+        get() {
+            val width = (span.next - span.floor).takeIf { it > 0 } ?: return 1f
+            return ((chicken - span.floor).toFloat() / width).coerceIn(0f, 1f)
+        }
+
+    /** How many more the next level needs; null once the count has reached it. */
+    val remaining: Int?
+        get() = (span.next - chicken).takeIf { it > 0 }
+
+    /** The level the bar leads to — one past [LevelSpan.barRank], so Lv6 above the site's Lv5 clamp. */
+    val nextRank: Int
+        get() = span.barRank + 1
+
+    companion object {
+        /** Null unless both the count and the span are known: a bar is never drawn from a guess. */
+        fun of(
+            chicken: Int?,
+            span: LevelSpan?,
+        ): LevelProgress? = if (chicken != null && span != null) LevelProgress(chicken, span) else null
+    }
+}

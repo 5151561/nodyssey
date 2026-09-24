@@ -27,7 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -45,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.data.contentPreview
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
@@ -68,7 +68,6 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -321,24 +320,16 @@ private fun NewConversationSheet(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
+    PlazaSheet(
+        onDismiss = onDismiss,
         sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
-        containerColor = LocalPlazaLayers.current.page,
+        title = stringResource(Res.string.messages_new_conversation),
+        subtitle = stringResource(Res.string.messages_new_conversation_intro),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = Spacing.lg).padding(bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            Text(
-                stringResource(Res.string.messages_new_conversation),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(Res.string.messages_new_conversation_intro),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             OutlinedTextField(
                 value = state.query,
                 onValueChange = onQueryChange,

@@ -150,6 +150,35 @@ class ProfileScreenTest {
         composeRule.onNodeWithText("连续签到").assertDoesNotExist()
     }
 
+    /** 我的 words the level the way 账户与成长 and 鸡腿流水 do: one caption, one form. */
+    @Test
+    fun `the account card states level progress in the shared wording`() {
+        composeRule.setContent {
+            PlazaTheme {
+                ProfileScreen(
+                    state =
+                    ProfileUiState(
+                        isSignedIn = true,
+                        uid = 1,
+                        displayName = "nodyssey_dev",
+                        level = "Lv 1",
+                        rank = 1,
+                        chickenCount = 344,
+                    ),
+                    destinations = ProfileDestinations(),
+                    onSignIn = {},
+                    onRetry = {},
+                    onOpenWebsite = {},
+                    onVerify = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("344 / 400 · 还差 56 升到 Lv2").assertIsDisplayed()
+    }
+
     @Test
     fun `the grid lays the four sections out and each tile is one jump`() {
         var commentsOpened = false

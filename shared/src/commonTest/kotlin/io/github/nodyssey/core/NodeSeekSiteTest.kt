@@ -129,6 +129,24 @@ class NodeSeekSiteTest {
         assertFalse(NodeSeekSite.isAvatarUrl(""))
     }
 
+    /** The bar runs across the current level, not from zero, and the caption names the next level. */
+    @Test
+    fun `level progress is measured within the current level`() {
+        val lv2 = LevelProgress(chicken = 410, span = NodeSeekSite.levelChickenSpan(2))
+        assertEquals(0.02f, lv2.fraction, 0.0001f)
+        assertEquals(490, lv2.remaining)
+        assertEquals(3, lv2.nextRank)
+
+        // Past the site's Lv5 clamp the bar is full and nothing is left to earn.
+        val lv6 = LevelProgress(chicken = 4_000, span = NodeSeekSite.levelChickenSpan(6))
+        assertEquals(1f, lv6.fraction)
+        assertNull(lv6.remaining)
+        assertEquals(6, lv6.nextRank)
+
+        assertNull(LevelProgress.of(chicken = null, span = NodeSeekSite.levelChickenSpan(1)))
+        assertNull(LevelProgress.of(chicken = 344, span = null))
+    }
+
     /** The site clamps its bar at Lv5 (`Math.min(user.rank, 5)`); nothing beyond it is published. */
     @Test
     fun `level spans stop advancing past Lv5`() {

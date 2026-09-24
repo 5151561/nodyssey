@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,12 +23,9 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +64,8 @@ import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.LockBadge
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.MediumButtonStyle
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.compactCount
@@ -428,18 +426,13 @@ private fun SpaceHeader(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                FilledTonalButton(
+                MediumButton(
                     onClick = onMessage,
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    style = MediumButtonStyle.Tonal,
+                    icon = Icons.Default.Email,
+                    modifier = Modifier.weight(1f),
                 ) {
-                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(
-                        stringResource(Res.string.space_message),
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
+                    Text(stringResource(Res.string.space_message))
                 }
             }
         }
@@ -460,19 +453,13 @@ private fun FollowButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val icon = if (followed) Icons.Default.Check else Icons.Default.Add
-    val label = stringResource(if (followed) Res.string.space_following else Res.string.space_follow)
-    val content: @Composable RowScope.() -> Unit = {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
-        Text(label, modifier = Modifier.padding(start = 6.dp))
-    }
-    val buttonModifier = modifier.heightIn(min = ButtonDefaults.MediumContainerHeight)
-    val shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight)
-
-    if (followed) {
-        FilledTonalButton(onClick = onClick, modifier = buttonModifier, shapes = shapes, content = content)
-    } else {
-        Button(onClick = onClick, modifier = buttonModifier, shapes = shapes, content = content)
+    MediumButton(
+        onClick = onClick,
+        style = if (followed) MediumButtonStyle.Tonal else MediumButtonStyle.Filled,
+        icon = if (followed) Icons.Default.Check else Icons.Default.Add,
+        modifier = modifier,
+    ) {
+        Text(stringResource(if (followed) Res.string.space_following else Res.string.space_follow))
     }
 }
 

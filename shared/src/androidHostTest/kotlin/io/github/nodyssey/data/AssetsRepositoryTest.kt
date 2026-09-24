@@ -206,8 +206,8 @@ class AssetsRepositoryTest {
             assertEquals(2, growth.level)
             assertEquals(409, growth.chickenCount)
             // The level bar comes off a formula, not the network, so it survives what the allowances did not.
-            assertEquals(400, growth.levelFloorChicken)
-            assertEquals(900, growth.nextLevelChicken)
+            assertEquals(400, growth.levelSpan?.floor)
+            assertEquals(900, growth.levelSpan?.next)
             assertNull(growth.postQuota.used)
             assertEquals(20, growth.postQuota.total)
             assertEquals(DailyQuota(null, null), growth.attendanceQuota)

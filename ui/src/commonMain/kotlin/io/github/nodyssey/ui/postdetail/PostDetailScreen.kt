@@ -43,7 +43,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -106,6 +105,7 @@ import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.NumberEntry
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
@@ -2197,16 +2197,9 @@ private fun FloorActionSheet(
     onDismiss: () -> Unit,
     onReact: (ReactionAction) -> Unit,
 ) {
-    val layers = LocalPlazaLayers.current
     val copy = rememberClipboardCopy()
     val copied = stringResource(Res.string.post_body_copied)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        // The page's colour, so the quote, the tiles and the list read as cards on it — the same
-        // layering as the thread under the scrim.
-        containerColor = layers.page,
-    ) {
+    PlazaSheet(onDismiss = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             modifier = Modifier
                 // A landscape phone, a split screen or a large text size is shorter than the panel,

@@ -84,16 +84,27 @@ class AccountScreensRenderTest {
     }
 
     @Test
-    fun `contact in dark`() {
+    fun `contact in dark`() = contact(darkTheme = true, bound = false, name = "account-contact-dark")
+
+    /** A bound Telegram account: 「已绑定」 on its tag beside the card's title. */
+    @Test
+    fun `contact with Telegram bound, in light`() = contact(darkTheme = false, bound = true, name = "account-contact-bound-light")
+
+    private fun contact(
+        darkTheme: Boolean,
+        bound: Boolean,
+        name: String,
+    ) {
         composeRule.setContent {
-            PlazaTheme(darkTheme = true) {
+            PlazaTheme(darkTheme = darkTheme) {
                 ContactScreen(
                     state =
                     ContactUiState(
                         isLoading = false,
                         email = "someone@example.com",
                         emailVerified = true,
-                        telegram = TelegramBinding(bound = false),
+                        telegram =
+                        if (bound) TelegramBinding(bound = true, displayName = "Nody Sseus") else TelegramBinding(bound = false),
                     ),
                     snackbarHostState = remember { SnackbarHostState() },
                     onBack = {},
@@ -109,6 +120,6 @@ class AccountScreensRenderTest {
             }
         }
 
-        composeRule.onRoot().captureRender("account-contact-dark")
+        composeRule.onRoot().captureRender(name)
     }
 }

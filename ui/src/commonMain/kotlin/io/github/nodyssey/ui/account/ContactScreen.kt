@@ -86,6 +86,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.SectionNote
+import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -325,17 +326,11 @@ private fun DisabledPhoneCard() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = LocalPlazaLayers.current.inset,
-            ) {
-                Text(
-                    stringResource(Res.string.account_phone_unavailable),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 3.dp),
-                )
-            }
+            TonalTag(
+                text = stringResource(Res.string.account_phone_unavailable),
+                containerColor = LocalPlazaLayers.current.inset,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -368,7 +363,14 @@ private fun TelegramCard(
                             stringResource(Res.string.account_telegram_title),
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                         )
-                        if (binding?.bound == true) BoundChip()
+                        if (binding?.bound == true) {
+                            TonalTag(
+                                text = stringResource(Res.string.account_telegram_bound),
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                icon = Icons.Default.Check,
+                            )
+                        }
                     }
                     Text(
                         text =
@@ -417,27 +419,6 @@ private fun TelegramCard(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BoundChip() {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(13.dp))
-            Text(
-                stringResource(Res.string.account_telegram_bound),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            )
         }
     }
 }

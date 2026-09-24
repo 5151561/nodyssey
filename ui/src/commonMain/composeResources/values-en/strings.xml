@@ -270,7 +270,6 @@
     <string name="profile_chicken">Drumsticks</string>
     <string name="profile_stars">Stardust</string>
     <string name="profile_level">Level</string>
-    <string name="profile_level_remaining">%2$d drumsticks to Lv%1$d</string>
     <string name="profile_attendance_checking">Checking today’s check-in…</string>
     <string name="profile_attendance_done">Checked in today · see the leaderboard</string>
     <string name="profile_attendance_title">Check in</string>
@@ -826,7 +825,6 @@
 
     <string name="assets_title">Account and growth</string>
     <string name="assets_current_level">Current level</string>
-    <string name="assets_level_remaining">%1$d drumsticks to Lv %2$d</string>
     <string name="assets_level_no_threshold">The level is the drumstick total</string>
     <string name="assets_daily_title">Today’s allowance</string>
     <string name="assets_quota_post">Drumsticks from posting today</string>
@@ -858,7 +856,7 @@
     <string name="credit_balance">Drumsticks</string>
     <string name="credit_entry_total">Total %1$d</string>
     <string name="credit_unit_level">drumsticks · Lv%1$d</string>
-    <string name="credit_progress_remaining">%1$d / %2$d · %3$d more to Lv%4$d</string>
+    <string name="level_progress_remaining">%1$d / %2$d · %3$d more to Lv%4$d</string>
     <string name="credit_column_change">Change · reason</string>
     <string name="credit_column_total">Total</string>
 

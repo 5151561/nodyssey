@@ -3,9 +3,11 @@ package io.github.nodyssey.ui.settings.theme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -197,6 +199,17 @@ class ThemeSettingsScreenTest {
         composeRule.onAllNodesWithText("柔和").assertCountEquals(2)
         composeRule.onNodeWithText("单色").performClick()
         assertEquals(PaletteStyle.MONOCHROME, style)
+    }
+
+    /** The style in force is the menu's selected entry, which is what a screen reader says of it. */
+    @Test
+    fun `the palette style menu marks the current style as selected`() {
+        setScreen()
+
+        composeRule.onNodeWithText("色彩风格").performScrollTo().performClick()
+
+        composeRule.onNode(hasText("柔和") and isSelectable()).assertIsSelected()
+        composeRule.onNode(hasText("单色") and isSelectable()).assertIsNotSelected()
     }
 
     private fun setScreen(

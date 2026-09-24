@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -85,11 +84,11 @@ import io.github.nodyssey.ui.resources.board_park
 import io.github.nodyssey.ui.resources.board_parked
 import io.github.nodyssey.ui.resources.board_restore
 import io.github.plaza.designsys.component.PlazaBackHandler
+import io.github.plaza.designsys.component.PlazaChipDefaults
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardBorder
-import io.github.plaza.designsys.theme.cardBorderStroke
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -665,7 +664,7 @@ private fun BoardPill(
         if (parked) {
             MaterialTheme.colorScheme.surfaceContainerHighest
         } else {
-            LocalPlazaLayers.current.raised
+            PlazaChipDefaults.containerColor()
         },
         animationSpec = colorSpec,
         label = "board-pill-container",
@@ -720,21 +719,9 @@ private fun BoardPill(
         } else {
             null
         },
-        shape = MaterialTheme.shapes.medium,
-        colors =
-        FilterChipDefaults.filterChipColors(
-            containerColor = container,
-            labelColor = label,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            // The selected board is the darkest thing on the page — the inverse surface, not the
-            // brand colour — so it reads as "you are here" rather than as one more tinted control.
-            selectedContainerColor = MaterialTheme.colorScheme.inverseSurface,
-            selectedLabelColor = MaterialTheme.colorScheme.inverseOnSurface,
-            selectedTrailingIconColor = MaterialTheme.colorScheme.inverseOnSurface,
-        ),
-        // Only the card outline, and only where there is one: on 墨水屏 the raised tone is the page's
-        // paper, so without it an unselected board was a word floating on the page.
-        border = LocalPlazaLayers.current.cardBorderStroke?.takeUnless { selected },
+        shape = PlazaChipDefaults.shape,
+        colors = PlazaChipDefaults.filterChipColors(containerColor = container, labelColor = label),
+        border = PlazaChipDefaults.border(selected),
     )
 }
 
@@ -786,8 +773,8 @@ internal const val FRONT_PAGE_KEY = "front"
 
 private val ToggleWidth = 40.dp
 
-/** A board pill: 36dp tall and `shapes.medium` round — a soft rectangle rather than a capsule, so a row of them reads as tabs. */
-private val PillHeight = 36.dp
+/** A board pill is the app's chip — a soft rectangle rather than a capsule, so a row of them reads as tabs. */
+private val PillHeight = PlazaChipDefaults.Height
 
 /** The toggle plus the end inset it is drawn against — the width the first row of pills gives up. */
 private val ToggleSlotWidth = ToggleWidth + Spacing.lg

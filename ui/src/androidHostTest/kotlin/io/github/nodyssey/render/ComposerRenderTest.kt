@@ -11,6 +11,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadStatus
+import io.github.nodyssey.ui.composer.ComposerViewMode
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.PostComposerScreen
 import io.github.nodyssey.ui.composer.PostComposerUiState
@@ -46,11 +47,14 @@ class ComposerRenderTest {
     @Before
     fun onlyWhenRendering() = assumeRendering()
 
-    private fun setPost(darkTheme: Boolean) {
+    private fun setPost(
+        darkTheme: Boolean,
+        state: PostComposerUiState = POST,
+    ) {
         composeRule.setContent {
             PlazaTheme(darkTheme = darkTheme) {
                 PostComposerScreen(
-                    state = POST,
+                    state = state,
                     titleState = rememberTextFieldState(POST.title),
                     bodyState = rememberTextFieldState(POST.body),
                     snackbarHostState = SnackbarHostState(),
@@ -110,6 +114,13 @@ class ComposerRenderTest {
     fun `the post editor in dark`() {
         setPost(darkTheme = true)
         composeRule.onRoot().captureRender("composer-post-dark")
+    }
+
+    /** 预览, with the site's rules on their banner above the post. */
+    @Test
+    fun `the preview in light`() {
+        setPost(darkTheme = false, state = POST.copy(viewMode = ComposerViewMode.PREVIEW))
+        composeRule.onRoot().captureRender("composer-preview-light")
     }
 
     @Test

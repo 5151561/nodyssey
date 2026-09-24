@@ -39,6 +39,7 @@ import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.AttendanceModeDialog
 import io.github.nodyssey.ui.common.GrowthProgressBar
+import io.github.nodyssey.ui.common.LevelProgressLine
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SpendConfirmDialog
@@ -55,7 +56,6 @@ import io.github.nodyssey.ui.resources.assets_daily_title
 import io.github.nodyssey.ui.resources.assets_ledger
 import io.github.nodyssey.ui.resources.assets_ledger_transfer
 import io.github.nodyssey.ui.resources.assets_level_no_threshold
-import io.github.nodyssey.ui.resources.assets_level_remaining
 import io.github.nodyssey.ui.resources.assets_quota_attendance
 import io.github.nodyssey.ui.resources.assets_quota_comment
 import io.github.nodyssey.ui.resources.assets_quota_feeding
@@ -242,7 +242,6 @@ fun AssetsScreen(
             // 邀请购码住在社区工具里，和站点的入口位置一致；这里不再重复一份。
             GroupedRow(
                 title = stringResource(Res.string.assets_board),
-                titleStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 subtitle = stringResource(Res.string.assets_board_subtitle),
                 icon = PlazaIcons.Group,
                 first = true,
@@ -365,7 +364,7 @@ private fun LevelCard(state: AssetsUiState) {
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 val chicken = state.chickenCount
-                val target = state.nextLevelChicken
+                val target = state.levelSpan?.next
                 val muted = MaterialTheme.colorScheme.onSurfaceVariant
                 Text(
                     text =
@@ -393,19 +392,17 @@ private fun LevelCard(state: AssetsUiState) {
                 )
             }
         }
-        GrowthProgressBar(progress = state.levelProgress)
-        Text(
-            text =
-            state.chickenToNextLevel?.let { remaining ->
-                stringResource(
-                    Res.string.assets_level_remaining,
-                    remaining,
-                    (state.levelBarRank ?: state.level ?: 1) + 1,
-                )
-            } ?: stringResource(Res.string.assets_level_no_threshold),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        val progress = state.levelProgress
+        if (progress != null) {
+            LevelProgressLine(progress)
+        } else {
+            GrowthProgressBar(progress = null)
+            Text(
+                text = stringResource(Res.string.assets_level_no_threshold),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -561,9 +558,7 @@ private val previewState =
         level = 1,
         chickenCount = 344,
         starCount = 4,
-        levelFloorChicken = 100,
-        nextLevelChicken = 400,
-        levelBarRank = 1,
+        levelSpan = NodeSeekSite.levelChickenSpan(1),
         postQuota = DailyQuota(0, 20),
         commentQuota = DailyQuota(3, 20),
         attendanceQuota = DailyQuota(7, 7),

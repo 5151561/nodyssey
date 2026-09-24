@@ -31,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -101,7 +100,6 @@ import io.github.plaza.core.update.UpdateCheck
 import io.github.plaza.core.update.UpdateDownload
 import io.github.plaza.core.update.UpdateFailure
 import io.github.plaza.core.update.releaseNotesText
-import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.IconBadge
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
@@ -226,7 +224,7 @@ fun AboutAppScreen(
                     title = stringResource(Res.string.about_help),
                     subtitle = stringResource(Res.string.about_help_hint),
                     icon = PlazaIcons.WavingHand,
-                    top = true,
+                    first = true,
                     onClick = onOpenHelp,
                 )
                 AboutRow(
@@ -246,7 +244,7 @@ fun AboutAppScreen(
                     subtitle = stringResource(Res.string.about_feedback_hint),
                     icon = PlazaIcons.Campaign,
                     external = true,
-                    bottom = true,
+                    last = true,
                     onClick = { onOpenUri(AppLinks.ISSUES) },
                 )
             }
@@ -259,7 +257,7 @@ fun AboutAppScreen(
                     subtitle = stringResource(Res.string.about_app_channel_hint),
                     icon = PlazaIcons.Sms,
                     external = true,
-                    top = true,
+                    first = true,
                     onClick = { onOpenUri(AppLinks.TELEGRAM_CHANNEL) },
                 )
                 AboutRow(
@@ -273,7 +271,7 @@ fun AboutAppScreen(
                     title = stringResource(Res.string.settings_licenses),
                     subtitle = stringResource(Res.string.about_licenses_hint),
                     icon = PlazaIcons.Gavel,
-                    bottom = state.crashReport == null,
+                    last = state.crashReport == null,
                     onClick = onOpenLicenses,
                 )
                 // Present only while a crash is on record: on a healthy install the rows do not
@@ -295,7 +293,7 @@ fun AboutAppScreen(
                     AboutRow(
                         title = stringResource(Res.string.about_crash_clear),
                         icon = Icons.Default.Delete,
-                        bottom = true,
+                        last = true,
                         onClick = onClearCrashReport,
                     )
                 }
@@ -310,42 +308,6 @@ fun AboutAppScreen(
             )
         }
     }
-}
-
-/**
- * A row of 关于's two cards. [external] swaps the chevron for the leave-the-app arrow, because the
- * difference between "another page of this app" and "your browser" is worth knowing before the tap.
- */
-@Composable
-private fun AboutRow(
-    title: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    subtitle: String? = null,
-    external: Boolean = false,
-    top: Boolean = false,
-    bottom: Boolean = false,
-) {
-    GroupedRow(
-        title = title,
-        subtitle = subtitle,
-        subtitleMonospace = subtitle?.contains("github.com") == true,
-        first = top,
-        last = bottom,
-        onClick = onClick,
-        showChevron = !external,
-        icon = icon,
-        trailing = {
-            if (external) {
-                Icon(
-                    PlazaIcons.OpenInNew,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        },
-    )
 }
 
 @Composable

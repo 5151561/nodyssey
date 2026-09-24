@@ -141,7 +141,6 @@ fun GroupedRow(
      * same shape as its neighbours, differing only in colour.
      */
     contentColor: Color = Color.Unspecified,
-    titleStyle: TextStyle = groupedRowTitleStyle(),
     /**
      * Says the row opens a page of its own. Pass false for a row that acts in place — 清除缓存,
      * 退出登录 — where a chevron would promise a screen that never comes.
@@ -159,7 +158,7 @@ fun GroupedRow(
         onCheckedChange = onCheckedChange,
         enabled = enabled,
         colors = groupedListItemColors(contentColor),
-        headlineContent = { Text(text = title, style = titleStyle) },
+        headlineContent = { Text(text = title, style = groupedRowTitleStyle()) },
         supportingContent =
         subtitle?.let {
             {

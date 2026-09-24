@@ -36,7 +36,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -327,16 +326,13 @@ fun PageJumpSheet(
     val lastPage = totalPages.coerceAtLeast(1)
     val current = page.coerceIn(1, lastPage)
     val title = stringResource(Res.string.page_jump_title)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
+    PlazaSheet(
+        onDismiss = onDismiss,
         sheetState =
         rememberBottomSheetState(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
-        // The page's own colour, so the tiles and keys on it read as cards on a page — the same
-        // layering as the screen the sheet rose from.
-        containerColor = LocalPlazaLayers.current.page,
         // Material's own handle reserves 22dp above and below the bar; the design gives it 24dp in all.
         dragHandle = {
             Box(modifier = Modifier.padding(vertical = 10.dp)) {

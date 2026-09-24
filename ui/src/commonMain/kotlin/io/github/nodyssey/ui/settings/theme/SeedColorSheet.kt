@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -22,13 +21,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -55,12 +51,14 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.MediumButtonStyle
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.settings_seed_apply_once
 import io.github.nodyssey.ui.resources.settings_seed_hex
@@ -74,7 +72,6 @@ import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaPaletteStyle
 import io.github.plaza.designsys.theme.PlazaSeedHct
 import io.github.plaza.designsys.theme.Spacing
@@ -126,10 +123,8 @@ internal fun SeedColorSheet(
             },
         )
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        // The page's grey, so the fields and buttons read as controls on it the way they do on a card.
-        containerColor = LocalPlazaLayers.current.page,
+    PlazaSheet(
+        onDismiss = onDismiss,
         // Straight to full height: the sheet is a picker, two text fields and two buttons, and a
         // half-open state would have put the actions off screen behind a drag.
         sheetState =
@@ -137,6 +132,18 @@ internal fun SeedColorSheet(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
+        title = stringResource(Res.string.settings_seed_sheet_title),
+        action = {
+            TextButton(onClick = pickImageToSample) {
+                Icon(
+                    PlazaIcons.Colorize,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                )
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text(stringResource(Res.string.settings_seed_pick_from_image))
+            }
+        },
     ) {
         Column(
             // A sheet gets no `Scaffold` padding, so the keyboard the two text fields raise is
@@ -148,24 +155,6 @@ internal fun SeedColorSheet(
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(Res.string.settings_seed_sheet_title),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = pickImageToSample) {
-                    Icon(
-                        PlazaIcons.Colorize,
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                    )
-                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                    Text(stringResource(Res.string.settings_seed_pick_from_image))
-                }
-            }
-
-            Spacer(Modifier.height(14.dp))
             val samplingImage = sampling
             if (samplingImage == null && !samplingPending) {
                 ChromaTonePanel(
@@ -237,17 +226,16 @@ internal fun SeedColorSheet(
 
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
+                MediumButton(
                     onClick = { onApply(color, null) },
-                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    style = MediumButtonStyle.Outlined,
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(Res.string.settings_seed_apply_once))
                 }
-                Button(
+                MediumButton(
                     onClick = { onApply(color, name.ifBlank { color.toHexString() }) },
-                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(Res.string.settings_seed_save))
                 }

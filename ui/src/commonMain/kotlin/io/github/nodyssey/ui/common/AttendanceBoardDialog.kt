@@ -13,15 +13,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,7 +36,6 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.groupedListItemColors
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
@@ -66,17 +62,8 @@ fun AttendanceBoardDialog(
     selfUid: Long?,
     modifier: Modifier = Modifier,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        modifier = modifier,
-        containerColor = LocalPlazaLayers.current.page,
-    ) {
+    PlazaSheet(onDismiss = onDismiss, modifier = modifier, title = stringResource(Res.string.assets_board)) {
         Column(Modifier.padding(horizontal = Spacing.lg).padding(bottom = Spacing.xl)) {
-            Text(
-                text = stringResource(Res.string.assets_board),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.padding(horizontal = Spacing.sm).padding(bottom = Spacing.md).semantics { heading() },
-            )
             when {
                 isLoading ->
                     Box(

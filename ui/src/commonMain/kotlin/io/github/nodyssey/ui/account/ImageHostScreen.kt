@@ -25,10 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -66,6 +63,8 @@ import io.github.nodyssey.data.imagehost.CustomHostFields
 import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostProvider
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.MediumButtonStyle
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -460,21 +459,12 @@ private fun ConnectionCard(
 
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             if (state.connected) {
-                FilledTonalButton(
-                    onClick = onDisconnect,
-                    modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                ) {
-                    Text(stringResource(Res.string.imagehost_clear_key), style = MaterialTheme.typography.titleMedium)
+                MediumButton(onClick = onDisconnect, style = MediumButtonStyle.Tonal, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(Res.string.imagehost_clear_key))
                 }
             }
-            Button(onClick = onSave, modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight), shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight)) {
-                Text(
-                    stringResource(
-                        if (state.connected) Res.string.imagehost_key_replace else Res.string.imagehost_key_save,
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                )
+            MediumButton(onClick = onSave, modifier = Modifier.weight(1f)) {
+                Text(stringResource(if (state.connected) Res.string.imagehost_key_replace else Res.string.imagehost_key_save))
             }
         }
         // For the two hosted services this opens their own site; for a self-hosted one it opens

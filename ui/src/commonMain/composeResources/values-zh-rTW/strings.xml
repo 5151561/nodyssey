@@ -264,7 +264,6 @@
     <string name="profile_chicken">雞腿</string>
     <string name="profile_stars">星辰</string>
     <string name="profile_level">等級</string>
-    <string name="profile_level_remaining">距 Lv%1$d 還差 %2$d 雞腿</string>
     <string name="profile_attendance_checking">正在檢查今日簽到…</string>
     <string name="profile_attendance_done">今日已簽到 · 檢視簽到榜</string>
     <string name="profile_attendance_title">簽到</string>
@@ -820,7 +819,6 @@
 
     <string name="assets_title">帳戶與成長</string>
     <string name="assets_current_level">目前等級</string>
-    <string name="assets_level_remaining">還差 %1$d 雞腿到 Lv %2$d</string>
     <string name="assets_level_no_threshold">等級進度即雞腿總數</string>
     <string name="assets_daily_title">今日額度</string>
     <string name="assets_quota_post">今日發文可得雞腿</string>
@@ -852,7 +850,7 @@
     <string name="credit_balance">目前雞腿</string>
     <string name="credit_entry_total">總計 %1$d</string>
     <string name="credit_unit_level">雞腿 · Lv%1$d</string>
-    <string name="credit_progress_remaining">%1$d / %2$d · 還差 %3$d 升到 Lv%4$d</string>
+    <string name="level_progress_remaining">%1$d / %2$d · 還差 %3$d 升到 Lv%4$d</string>
     <string name="credit_column_change">變動 · 理由</string>
     <string name="credit_column_total">總計</string>
 

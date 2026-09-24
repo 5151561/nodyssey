@@ -2,7 +2,12 @@ package io.github.nodyssey.render
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.nodyssey.data.settings.ColorSource
 import io.github.nodyssey.data.settings.SavedTheme
 import io.github.nodyssey.data.settings.UserSettings
@@ -73,6 +78,30 @@ class ThemeSettingsScreenRenderTest {
         }
 
         composeRule.onRoot().captureRender("theme-custom-light")
+    }
+
+    /** 色彩风格's menu, open over the page — the current style is the selected entry. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    @Config(qualifiers = "w360dp-h1100dp")
+    fun `the palette style menu in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNodeWithText("色彩风格").performScrollTo().performClick()
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/theme-palette-menu-light.png")
+    }
+
+    /** 新建's colour sheet (6c2), in a window of its own. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    @Config(qualifiers = "w360dp-h1100dp")
+    fun `the seed colour sheet in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNodeWithText("新建").performScrollTo().performClick()
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/theme-seed-sheet-light.png")
     }
 
     /** The whole page, 6c's preview card included. */

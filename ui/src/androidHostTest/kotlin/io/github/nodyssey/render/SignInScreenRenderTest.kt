@@ -66,7 +66,10 @@ class SignInScreenRenderTest {
     }
 
     @Composable
-    private fun TwoFactor(darkTheme: Boolean) {
+    private fun TwoFactor(
+        darkTheme: Boolean,
+        submitting: Boolean = false,
+    ) {
         PlazaTheme(darkTheme = darkTheme) {
             TwoFactorScreen(
                 state =
@@ -74,6 +77,7 @@ class SignInScreenRenderTest {
                     step = SignInStep.TwoFactor,
                     challenge = TwoFactorChallenge(account = "homelab_er", otpSession = "render"),
                     code = "481",
+                    isSubmitting = submitting,
                 ),
                 secondsUntilNextCode = 18,
                 codeState = rememberTextFieldState("481"),
@@ -121,7 +125,20 @@ class SignInScreenRenderTest {
         composeRule.onRoot().captureRender("two-factor-dark")
     }
 
+    /** The code on its way: the submit button waits with a spinner beside its label. */
+    @Test
+    fun `two-factor submitting in light`() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent { TwoFactor(darkTheme = false, submitting = true) }
+        // Far enough into the spinner's cycle that its arc is more than a sliver.
+        composeRule.mainClock.advanceTimeBy(SPINNER_FRAME_MS)
+
+        composeRule.onRoot().captureRender("two-factor-submitting-light")
+    }
+
     private companion object {
+        const val SPINNER_FRAME_MS = 700L
+
         val REFUSED =
             SignInUiState(
                 account = "homelab_er",

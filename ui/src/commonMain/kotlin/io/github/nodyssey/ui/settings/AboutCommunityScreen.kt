@@ -4,10 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -34,8 +32,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -65,6 +61,7 @@ import io.github.nodyssey.ui.resources.about_telegram_channel
 import io.github.nodyssey.ui.resources.about_telegram_group
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
+import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
@@ -141,7 +138,8 @@ fun AboutCommunityScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg),
+                .padding(SettingsPagePadding),
+            verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
         ) {
             SectionLabel(stringResource(Res.string.about_community))
             statsState?.let { state ->
@@ -150,80 +148,76 @@ fun AboutCommunityScreen(
                     onRetry = onRetryStats,
                 )
             }
-            AboutActionRow(
-                title = stringResource(Res.string.about_site),
-                subtitle = stringResource(Res.string.about_site_hint),
-                icon = PlazaIcons.Article,
-                onClick = onOpenAboutSite,
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_privacy),
-                subtitle = stringResource(Res.string.about_privacy_hint),
-                icon = Icons.Default.Info,
-                onClick = onOpenPrivacy,
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_rss),
-                subtitle = CommunityLinks.RSS_DISPLAY,
-                icon = PlazaIcons.Article,
-                trailing = {
-                    Icon(
-                        PlazaIcons.ContentCopy,
-                        contentDescription = stringResource(Res.string.about_copy_rss),
-                    )
-                },
-                // Both in one coroutine, in this order: the snackbar says the clipboard holds the
-                // feed URL, which is only true once the suspending copy has returned.
-                onClick = {
-                    scope.launch {
-                        onCopyRss()
-                        snackbarHostState.showSnackbar(copiedMessage)
-                    }
-                },
-            )
+            SettingsGroup {
+                AboutRow(
+                    title = stringResource(Res.string.about_site),
+                    subtitle = stringResource(Res.string.about_site_hint),
+                    icon = PlazaIcons.Article,
+                    first = true,
+                    onClick = onOpenAboutSite,
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_privacy),
+                    subtitle = stringResource(Res.string.about_privacy_hint),
+                    icon = Icons.Default.Info,
+                    onClick = onOpenPrivacy,
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_rss),
+                    subtitle = CommunityLinks.RSS_DISPLAY,
+                    icon = PlazaIcons.Article,
+                    trailing = {
+                        Icon(
+                            PlazaIcons.ContentCopy,
+                            contentDescription = stringResource(Res.string.about_copy_rss),
+                        )
+                    },
+                    last = true,
+                    // Both in one coroutine, in this order: the snackbar says the clipboard holds the
+                    // feed URL, which is only true once the suspending copy has returned.
+                    onClick = {
+                        scope.launch {
+                            onCopyRss()
+                            snackbarHostState.showSnackbar(copiedMessage)
+                        }
+                    },
+                )
+            }
 
             SectionLabel(stringResource(Res.string.about_contact))
-            AboutActionRow(
-                title = stringResource(Res.string.about_telegram_channel),
-                icon = PlazaIcons.Campaign,
-                external = true,
-                onClick = { onOpenUri(CommunityLinks.TELEGRAM_CHANNEL) },
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_telegram_group),
-                icon = PlazaIcons.Group,
-                external = true,
-                onClick = { onOpenUri(CommunityLinks.TELEGRAM_GROUP) },
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_email),
-                subtitle = CommunityLinks.EMAIL.removePrefix("mailto:"),
-                icon = PlazaIcons.Campaign,
-                external = true,
-                onClick = { onOpenUri(CommunityLinks.EMAIL) },
-            )
-            AboutActionRow(
-                title = stringResource(Res.string.about_deepflood),
-                subtitle = stringResource(Res.string.about_deepflood_hint),
-                icon = PlazaIcons.Group,
-                external = true,
-                onClick = { onOpenUri(CommunityLinks.DEEPFLOOD) },
-            )
+            SettingsGroup {
+                AboutRow(
+                    title = stringResource(Res.string.about_telegram_channel),
+                    icon = PlazaIcons.Campaign,
+                    external = true,
+                    first = true,
+                    onClick = { onOpenUri(CommunityLinks.TELEGRAM_CHANNEL) },
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_telegram_group),
+                    icon = PlazaIcons.Group,
+                    external = true,
+                    onClick = { onOpenUri(CommunityLinks.TELEGRAM_GROUP) },
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_email),
+                    subtitle = CommunityLinks.EMAIL.removePrefix("mailto:"),
+                    icon = PlazaIcons.Campaign,
+                    external = true,
+                    onClick = { onOpenUri(CommunityLinks.EMAIL) },
+                )
+                AboutRow(
+                    title = stringResource(Res.string.about_deepflood),
+                    subtitle = stringResource(Res.string.about_deepflood_hint),
+                    icon = PlazaIcons.Group,
+                    external = true,
+                    last = true,
+                    onClick = { onOpenUri(CommunityLinks.DEEPFLOOD) },
+                )
+            }
             FriendSiteChips(onOpenUri)
-            Spacer(Modifier.height(Spacing.xl))
         }
     }
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = Spacing.xs, top = Spacing.sm, bottom = Spacing.xs).semantics { heading() },
-    )
 }
 
 @Composable
@@ -231,15 +225,8 @@ private fun CommunityStats(
     state: CommunityStatsUiState,
     onRetry: () -> Unit,
 ) {
-    // The layers rather than `surfaceContainer`, which is now the page itself: the stats would sit
-    // on the page in the page's own colour.
-    Surface(
-        color = LocalPlazaLayers.current.card,
-        shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs),
-    ) {
+    LayerCard(Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {

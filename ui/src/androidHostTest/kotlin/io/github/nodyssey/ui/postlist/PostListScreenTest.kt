@@ -16,6 +16,7 @@ import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -907,6 +908,17 @@ class PostListScreenTest {
 
         composeRule.onNodeWithText("按回复时间").assertIsSelected()
         composeRule.onNodeWithText("按发帖时间").assertIsNotSelected()
+    }
+
+    /** The site in use is the menu's selected entry, not only the one with a tick beside it. */
+    @Test
+    fun `the site switcher marks the active site as selected`() {
+        setScreen(listOf(feedPost(1, "post")))
+
+        composeRule.onNodeWithContentDescription("切换站点").performClick()
+
+        composeRule.onNode(hasText("NodeSeek") and isSelectable()).assertIsSelected()
+        composeRule.onNode(hasText("DeepFlood") and isSelectable()).assertIsNotSelected()
     }
 
     /** The lock is the only thing saying the board is restricted, so it has to be described. */

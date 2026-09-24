@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,13 +55,13 @@ import io.github.plaza.designsys.component.LayerCardGap
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
+import io.github.plaza.designsys.component.PlazaChipDefaults
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.StatusAction
 import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
-import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -217,12 +218,10 @@ private fun MenuChip(
         AssistChip(
             onClick = { expanded = true },
             label = { Text(label) },
-            // A control on the page rather than in a card: the raised tone, the chip look every filter
-            // row has in the layered design — and the card outline where there is one, because on
-            // 墨水屏 the raised tone is the page's own paper and the outline is all that shows a chip.
-            shape = MaterialTheme.shapes.medium,
-            colors = AssistChipDefaults.assistChipColors(containerColor = LocalPlazaLayers.current.raised),
-            border = LocalPlazaLayers.current.cardBorderStroke,
+            modifier = Modifier.heightIn(min = PlazaChipDefaults.Height),
+            shape = PlazaChipDefaults.shape,
+            colors = PlazaChipDefaults.assistChipColors(),
+            border = PlazaChipDefaults.border(),
             trailingIcon = {
                 Icon(
                     Icons.Default.ArrowDropDown,

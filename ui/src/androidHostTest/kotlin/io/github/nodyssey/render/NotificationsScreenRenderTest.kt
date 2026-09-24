@@ -5,6 +5,8 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.nodyssey.data.ForumNotification
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.NotificationCategory
@@ -12,6 +14,7 @@ import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.NotificationSource
 import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.contentPreview
+import io.github.nodyssey.ui.notifications.NewConversationState
 import io.github.nodyssey.ui.notifications.NotificationsScreen
 import io.github.nodyssey.ui.notifications.NotificationsUiState
 import io.github.plaza.core.TimeFormat
@@ -43,10 +46,11 @@ class NotificationsScreenRenderTest {
     private fun Screen(
         darkTheme: Boolean,
         tab: NotificationTab = NotificationTab.INTERACTIONS,
+        base: NotificationsUiState = STATE,
     ) {
         PlazaTheme(darkTheme = darkTheme) {
             NotificationsScreen(
-                state = STATE.copy(selectedTab = tab),
+                state = base.copy(selectedTab = tab),
                 onSignIn = {},
                 onVerify = {},
                 onTabChange = {},
@@ -108,6 +112,32 @@ class NotificationsScreenRenderTest {
         composeRule.setContent { Screen(darkTheme = true, tab = NotificationTab.MESSAGES) }
 
         composeRule.onRoot().captureRender("messages-dark")
+    }
+
+    /** 互动 with nothing in it: the shared empty state, on its card. */
+    @Test
+    fun `the interactions tab with nothing in it, in light`() {
+        composeRule.setContent {
+            Screen(darkTheme = false, base = STATE.copy(items = emptyList(), counts = NotificationCounts()))
+        }
+
+        composeRule.onRoot().captureRender("notifications-empty-light")
+    }
+
+    /** 新会话, which opens in a window of its own — hence the screen capture. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun `the new conversation sheet, in light`() {
+        composeRule.setContent {
+            Screen(
+                darkTheme = false,
+                tab = NotificationTab.MESSAGES,
+                base = STATE.copy(newConversation = NewConversationState(isVisible = true)),
+            )
+        }
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/messages-new-conversation-light.png")
     }
 
     private companion object {

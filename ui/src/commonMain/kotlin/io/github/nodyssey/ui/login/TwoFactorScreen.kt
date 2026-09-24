@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -19,8 +18,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,7 +44,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.sign_in_2fa_body
@@ -58,7 +55,6 @@ import io.github.nodyssey.ui.resources.sign_in_2fa_submit
 import io.github.nodyssey.ui.resources.sign_in_2fa_title
 import io.github.nodyssey.ui.resources.sign_in_submitting
 import io.github.nodyssey.ui.resources.sign_in_use_web
-import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.digitsOnly
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
@@ -166,26 +162,13 @@ fun TwoFactorScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.lg),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Button(
+                MediumButton(
                     onClick = onSubmit,
                     enabled = state.canSubmitCode,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    busy = state.isSubmitting,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    if (state.isSubmitting) {
-                        PlazaSpinner(
-                            modifier = Modifier.describedAsLoading(),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            size = 18.dp,
-                        )
-                        Text(
-                            stringResource(Res.string.sign_in_submitting),
-                            modifier = Modifier.padding(start = Spacing.sm),
-                        )
-                    } else {
-                        Text(stringResource(Res.string.sign_in_2fa_submit), fontWeight = FontWeight.SemiBold)
-                    }
+                    Text(stringResource(if (state.isSubmitting) Res.string.sign_in_submitting else Res.string.sign_in_2fa_submit))
                 }
                 TextButton(onClick = onUseWebSignIn) {
                     Text(stringResource(Res.string.sign_in_use_web), fontWeight = FontWeight.SemiBold)

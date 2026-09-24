@@ -65,10 +65,30 @@ import kotlin.math.roundToInt
  * springs to a canned height the moment they lift their finger takes that call away from them —
  * which is exactly what it feels like.
  *
- * That is the one place this parts company with Material's
- * [androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior], whose gesture
- * model it otherwise copies: fold before the page moves, reopen only once the page is back at its
- * top. Material always settles to fully open or fully closed.
+ * The gesture model is Material's
+ * [androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior]: fold before the
+ * page moves, reopen only once the page is back at its top.
+ *
+ * Hand-rolled rather than Material's `TwoRowsTopAppBar` over that behaviour, which was weighed at the
+ * pinned material3 (1.12.0-alpha03). The pair does cover most of this bar — a title slot told which
+ * row it is in, `expandedHeight` as the toolbar plus [oneHandExpandedBlank], and null snap and fling
+ * specs, which stop it settling, so "stays where it is let go" is not the reason. The reasons are
+ * three things the design draws that it has no parameter for:
+ *
+ * - **The large title's place.** 24dp in from the edge and 16dp above the content, heading the
+ *   [readableWidth] column on a tablet. `TwoRowsTopAppBar` takes no padding for its bottom row and
+ *   sets that title with Material's own insets.
+ * - **One title's worth of ink at every height.** [expandedTitleAlpha] and [collapsedTitleAlpha]
+ *   always sum to one; Material fades its two titles on separate curves, and the midpoint of a drag
+ *   reads fainter than either end.
+ * - **The lift.** A shadow in light, a step up in tone in dark and on 墨水屏, both keyed to content
+ *   having scrolled under the bar ([OneHandAppBarState.isContentOverlapped]). Material's
+ *   `TopAppBarColors` blends by collapsed fraction — which never moves where the blank is zero, as
+ *   with 单手模式 off or in a landscape window — and draws no shadow at all.
+ *
+ * Revisit when a material3 release gives `TwoRowsTopAppBar` a padding for its bottom title and a
+ * container keyed to overlap, or when the design lets these three go. The blank's sizing, the
+ * fold/unfold animation and the lift would still be this file's to draw after such a move.
  *
  * The toolbar row stays pinned at the top and the blank opens beneath it, as the 轻盈层叠 artboards
  * draw it (设置 6a, 通知 5a): back arrow and actions where Material puts them, a 36sp title flush left

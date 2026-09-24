@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.paging.PagingData
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.DailyQuota
 import io.github.nodyssey.data.StardustEntry
@@ -69,7 +70,7 @@ class AssetsScreenRenderTest {
     @Composable
     private fun Credit() {
         CreditScreen(
-            state = CreditUiState(level = 1, chickenCount = 344, levelFloorChicken = 100, nextLevelChicken = 400),
+            state = CreditUiState(level = 1, chickenCount = 344, levelSpan = NodeSeekSite.levelChickenSpan(1)),
             entries = remember { flowOf(PagingData.from(CREDIT)) },
             onBack = {},
             onRetry = {},
@@ -187,9 +188,7 @@ class AssetsScreenRenderTest {
                 level = 1,
                 chickenCount = 344,
                 starCount = 4,
-                levelFloorChicken = 100,
-                nextLevelChicken = 400,
-                levelBarRank = 1,
+                levelSpan = NodeSeekSite.levelChickenSpan(1),
                 postQuota = DailyQuota(0, 20),
                 commentQuota = DailyQuota(3, 20),
                 attendanceQuota = DailyQuota(5, 5),

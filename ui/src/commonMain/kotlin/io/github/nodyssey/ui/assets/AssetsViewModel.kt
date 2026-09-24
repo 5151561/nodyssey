@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.core.LevelProgress
+import io.github.nodyssey.core.LevelSpan
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AttendanceBoardEntry
 import io.github.nodyssey.data.AttendanceMode
@@ -32,11 +34,8 @@ data class AssetsUiState(
     val level: Int? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
-    /** Where the current level began — the level bar's zero, which is not the account's. */
-    val levelFloorChicken: Int? = null,
-    val nextLevelChicken: Int? = null,
-    /** The level the bar is drawn for; differs from [level] only above Lv5, where the site clamps. */
-    val levelBarRank: Int? = null,
+    /** The current level's span — the level bar's zero is its floor, not the account's. */
+    val levelSpan: LevelSpan? = null,
     val postQuota: DailyQuota = DailyQuota(null, null),
     val commentQuota: DailyQuota = DailyQuota(null, null),
     val attendanceQuota: DailyQuota = DailyQuota(null, null),
@@ -55,28 +54,9 @@ data class AssetsUiState(
 ) {
     val hasData: Boolean get() = chickenCount != null || starCount != null || level != null
 
-    /** How much more the level bar needs, when the threshold is known and not yet reached. */
-    val chickenToNextLevel: Int?
-        get() {
-            val target = nextLevelChicken ?: return null
-            val current = chickenCount ?: return null
-            return (target - current).takeIf { it > 0 }
-        }
-
-    /**
-     * How far through the *current* level the count sits — not how far through all of levelling.
-     *
-     * A Lv2 account with 410 chicken legs is 2% into 400 → 900, and drawing it against 0 → 900 would
-     * show 46%: a bar that looks nearly half done when the level just started.
-     */
-    val levelProgress: Float?
-        get() {
-            val target = nextLevelChicken ?: return null
-            val floor = levelFloorChicken ?: return null
-            val span = (target - floor).takeIf { it > 0 } ?: return null
-            val current = chickenCount ?: return null
-            return ((current - floor).toFloat() / span).coerceIn(0f, 1f)
-        }
+    /** Where the balance sits in its level; null until both are known. */
+    val levelProgress: LevelProgress?
+        get() = LevelProgress.of(chickenCount, levelSpan)
 }
 
 /**
@@ -194,9 +174,7 @@ class AssetsViewModel(
             level = snapshot.level,
             chickenCount = snapshot.chickenCount,
             starCount = snapshot.starCount,
-            levelFloorChicken = snapshot.levelFloorChicken,
-            nextLevelChicken = snapshot.nextLevelChicken,
-            levelBarRank = snapshot.levelBarRank,
+            levelSpan = snapshot.levelSpan,
             postQuota = snapshot.postQuota,
             commentQuota = snapshot.commentQuota,
             attendanceQuota = snapshot.attendanceQuota,

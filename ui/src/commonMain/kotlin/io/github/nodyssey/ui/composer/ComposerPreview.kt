@@ -1,14 +1,8 @@
 package io.github.nodyssey.ui.composer
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -27,6 +21,7 @@ import io.github.nodyssey.ui.resources.composer_rule_body
 import io.github.nodyssey.ui.resources.composer_rule_title
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.parseMarkdown
+import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
@@ -40,29 +35,13 @@ import org.jetbrains.compose.resources.stringResource
  */
 @Composable
 fun RuleReminderCard(modifier: Modifier = Modifier) {
-    Surface(
+    InlineBanner(
+        title = stringResource(Res.string.composer_rule_title),
+        text = stringResource(Res.string.composer_rule_body),
+        icon = PlazaIcons.Campaign,
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
         modifier = modifier,
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        shape = MaterialTheme.shapes.large,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm + 2.dp),
-        ) {
-            Icon(PlazaIcons.Campaign, contentDescription = null, modifier = Modifier.size(20.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    text = stringResource(Res.string.composer_rule_title),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Text(
-                    text = stringResource(Res.string.composer_rule_body),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-    }
+    )
 }
 
 /**

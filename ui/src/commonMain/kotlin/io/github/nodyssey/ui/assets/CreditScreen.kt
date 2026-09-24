@@ -36,19 +36,17 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.CreditEntry
-import io.github.nodyssey.ui.common.GrowthProgressBar
+import io.github.nodyssey.ui.common.LevelProgressLine
 import io.github.nodyssey.ui.common.NoLedgerEntriesState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
-import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.credit_balance
 import io.github.nodyssey.ui.resources.credit_column_change
 import io.github.nodyssey.ui.resources.credit_column_total
 import io.github.nodyssey.ui.resources.credit_entry_total
-import io.github.nodyssey.ui.resources.credit_progress_remaining
 import io.github.nodyssey.ui.resources.credit_title
 import io.github.nodyssey.ui.resources.credit_unit_level
 import io.github.plaza.core.TimeFormat
@@ -153,8 +151,8 @@ fun CreditScreen(
  *
  * NodeSeek's levelling *is* the chicken count — 344 chickens is both the balance and the progress bar
  * — so showing the two as separate figures would invent a distinction the site does not make. The bar
- * is therefore drawn under the balance itself, over the current level's span (Lv2 is 400 → 900), in
- * the tertiary tone the 鸡腿 tile wears on 我的 and 账户与成长.
+ * is therefore drawn under the balance itself, over the current level's span (Lv2 is 400 → 900), as
+ * the same [LevelProgressLine] 我的 and 账户与成长 draw.
  */
 @Composable
 private fun ChickenBalanceHeader(state: CreditUiState) {
@@ -182,29 +180,7 @@ private fun ChickenBalanceHeader(state: CreditUiState) {
                 modifier = Modifier.alignByBaseline(),
             )
         }
-        state.levelProgress?.let { progress ->
-            GrowthProgressBar(progress = progress, color = MaterialTheme.colorScheme.tertiary)
-        }
-        levelProgressText(state)?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun levelProgressText(state: CreditUiState): String? {
-    val chicken = state.chickenCount ?: return null
-    val next = state.nextLevelChicken ?: return null
-    val level = state.level ?: return null
-    val remaining = next - chicken
-    return if (remaining > 0) {
-        stringResource(Res.string.credit_progress_remaining, chicken, next, remaining, level + 1)
-    } else {
-        stringResource(Res.string.assets_quota_value, chicken, next)
+        state.levelProgress?.let { LevelProgressLine(it) }
     }
 }
 
@@ -357,7 +333,7 @@ private val previewEntries =
 private fun CreditPreview() {
     PlazaTheme {
         CreditScreen(
-            state = CreditUiState(level = 1, chickenCount = 344, levelFloorChicken = 100, nextLevelChicken = 400),
+            state = CreditUiState(level = 1, chickenCount = 344, levelSpan = NodeSeekSite.levelChickenSpan(1)),
             entries = flowOf(PagingData.from(previewEntries)),
             onBack = {},
             onRetry = {},

@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.notifications_interactions
@@ -71,7 +71,6 @@ import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
-import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -308,9 +307,10 @@ private fun FrequencySheet(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = LocalPlazaLayers.current.page,
+    PlazaSheet(
+        onDismiss = onDismiss,
+        title = stringResource(Res.string.notify_frequency),
+        subtitle = stringResource(Res.string.notify_frequency_hint),
     ) {
         Column(
             modifier =
@@ -319,16 +319,6 @@ private fun FrequencySheet(
                 .padding(bottom = Spacing.lg)
                 .navigationBarsPadding(),
         ) {
-            Text(
-                stringResource(Res.string.notify_frequency),
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-            )
-            Text(
-                stringResource(Res.string.notify_frequency_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.sm),
-            )
             Column(Modifier.selectableGroup()) {
                 SettingsRepository.POLL_MINUTE_CHOICES.forEach { minutes ->
                     val isSelected = minutes == selected

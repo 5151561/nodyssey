@@ -11,6 +11,8 @@ import androidx.paging.PagingData
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.cachedIn
+import io.github.nodyssey.core.LevelProgress
+import io.github.nodyssey.core.LevelSpan
 import io.github.nodyssey.core.net.NodeSeekJsonClient
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.CreditEntry
@@ -37,19 +39,12 @@ import kotlinx.coroutines.launch
 data class CreditUiState(
     val level: Int? = null,
     val chickenCount: Int? = null,
-    /** Where the current level began — the bar's zero. See `NodeSeekSite.levelChickenSpan`. */
-    val levelFloorChicken: Int? = null,
-    val nextLevelChicken: Int? = null,
+    /** The current level's span — the bar's zero is its floor. See `NodeSeekSite.levelChickenSpan`. */
+    val levelSpan: LevelSpan? = null,
 ) {
-    /** How far through the current level's span the balance sits; the same bar 账户与成长 draws. */
-    val levelProgress: Float?
-        get() {
-            val next = nextLevelChicken ?: return null
-            val floor = levelFloorChicken ?: return null
-            val span = (next - floor).takeIf { it > 0 } ?: return null
-            val current = chickenCount ?: return null
-            return ((current - floor).toFloat() / span).coerceIn(0f, 1f)
-        }
+    /** Where the balance sits in its level; the same bar 账户与成长 draws. */
+    val levelProgress: LevelProgress?
+        get() = LevelProgress.of(chickenCount, levelSpan)
 }
 
 /**
@@ -91,8 +86,7 @@ class CreditViewModel(
                             it.copy(
                                 level = growth.level,
                                 chickenCount = growth.chickenCount,
-                                levelFloorChicken = growth.levelFloorChicken,
-                                nextLevelChicken = growth.nextLevelChicken,
+                                levelSpan = growth.levelSpan,
                             )
                         }
                     }

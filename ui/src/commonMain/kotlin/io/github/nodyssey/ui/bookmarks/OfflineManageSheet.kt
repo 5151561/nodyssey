@@ -18,9 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.OfflineSettings
 import io.github.nodyssey.data.OfflineUsage
 import io.github.nodyssey.ui.account.formatBytes
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.nodyssey.ui.resources.offline_auto_sync
@@ -65,7 +64,6 @@ import io.github.nodyssey.ui.resources.offline_usage_text
 import io.github.nodyssey.ui.resources.offline_wifi_only
 import io.github.nodyssey.ui.resources.offline_wifi_only_body
 import io.github.plaza.designsys.component.ChoiceRow
-import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerCard
@@ -97,12 +95,12 @@ internal fun OfflineManageSheet(
     var pickingRetention by remember { mutableStateOf(false) }
     var confirmingClear by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
+    PlazaSheet(
+        onDismiss = onDismiss,
         modifier = modifier,
         sheetState = sheetState,
-        // The page colour, so the usage card and the settings group sit on it as cards do everywhere.
-        containerColor = LocalPlazaLayers.current.page,
+        title = stringResource(Res.string.offline_sheet_title),
+        subtitle = stringResource(Res.string.offline_sheet_body),
     ) {
         OfflineManagePanel(
             usage = usage,
@@ -152,7 +150,7 @@ internal fun OfflineManageSheet(
 }
 
 /**
- * Everything inside the sheet.
+ * Everything inside the sheet under its header.
  *
  * Split out from [OfflineManageSheet] so it can be previewed: `ModalBottomSheet` draws into its own
  * dialog window, which `@Preview` does not render, and this panel is the part that was designed.
@@ -175,60 +173,40 @@ private fun OfflineManagePanel(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 18.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            Text(
-                text = stringResource(Res.string.offline_sheet_title),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(Res.string.offline_sheet_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
         LayerCard(Modifier.padding(horizontal = Spacing.lg)) {
             UsageBreakdown(usage)
         }
 
         Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.lg)) {
-            GroupedListItem(
+            GroupedRow(
+                title = stringResource(Res.string.offline_wifi_only),
+                subtitle = stringResource(Res.string.offline_wifi_only_body),
+                icon = PlazaIcons.Wifi,
                 first = true,
-                last = false,
                 checked = settings.wifiOnly,
                 onCheckedChange = { onSettingsChange(settings.copy(wifiOnly = it)) },
-                leadingContent = { Icon(PlazaIcons.Wifi, contentDescription = null) },
-                headlineContent = { Text(stringResource(Res.string.offline_wifi_only)) },
-                supportingContent = { Text(stringResource(Res.string.offline_wifi_only_body)) },
-                trailingContent = { GroupedListItemSwitch(checked = settings.wifiOnly) },
+                trailing = { GroupedListItemSwitch(checked = settings.wifiOnly) },
             )
-            GroupedListItem(
+            GroupedRow(
+                title = stringResource(Res.string.offline_images),
+                subtitle = stringResource(Res.string.offline_images_body),
+                icon = PlazaIcons.Image,
                 first = false,
-                last = false,
                 checked = settings.includeImages,
                 onCheckedChange = { onSettingsChange(settings.copy(includeImages = it)) },
-                leadingContent = { Icon(PlazaIcons.Image, contentDescription = null) },
-                headlineContent = { Text(stringResource(Res.string.offline_images)) },
-                supportingContent = { Text(stringResource(Res.string.offline_images_body)) },
-                trailingContent = { GroupedListItemSwitch(checked = settings.includeImages) },
+                trailing = { GroupedListItemSwitch(checked = settings.includeImages) },
             )
-            GroupedListItem(
+            GroupedRow(
+                title = stringResource(Res.string.offline_auto_sync),
+                subtitle = stringResource(Res.string.offline_auto_sync_body),
+                icon = PlazaIcons.Sync,
                 first = false,
-                last = false,
                 checked = settings.autoSyncReplies,
                 onCheckedChange = { onSettingsChange(settings.copy(autoSyncReplies = it)) },
-                leadingContent = { Icon(PlazaIcons.Sync, contentDescription = null) },
-                headlineContent = { Text(stringResource(Res.string.offline_auto_sync)) },
-                supportingContent = { Text(stringResource(Res.string.offline_auto_sync_body)) },
-                trailingContent = { GroupedListItemSwitch(checked = settings.autoSyncReplies) },
+                trailing = { GroupedListItemSwitch(checked = settings.autoSyncReplies) },
             )
             GroupedRow(
                 title = stringResource(Res.string.offline_retention),
-                titleStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 subtitle = stringResource(Res.string.offline_retention_body),
                 icon = PlazaIcons.Schedule,
                 last = true,

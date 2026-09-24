@@ -55,13 +55,14 @@ class SearchScreenRenderTest {
         state: SearchUiState,
         query: String,
         darkTheme: Boolean,
+        posts: List<FeedPost> = POSTS,
     ) {
         PlazaTheme(darkTheme = darkTheme) {
             val results =
                 remember {
                     flowOf(
                         PagingData.from(
-                            data = POSTS,
+                            data = posts,
                             sourceLoadStates =
                             LoadStates(
                                 refresh = LoadState.NotLoading(false),
@@ -110,6 +111,14 @@ class SearchScreenRenderTest {
 
     @Test
     fun `post results in dark`() = render("search-posts-dark", POST_RESULTS, "NAS")
+
+    /** A result the reader has opened before and that has had replies since, as the feed marks it. */
+    @Test
+    fun `post results with new replies in light`() {
+        val posts = POSTS.map { if (it.summary.postId == 4L) it.copy(newCommentCount = 3) else it }
+        composeRule.setContent { Screen(POST_RESULTS, "NAS", darkTheme = false, posts = posts) }
+        composeRule.onRoot().captureRender("search-posts-new-replies-light")
+    }
 
     @Test
     fun `user results in light`() = render("search-users-light", USER_RESULTS, "NAS")

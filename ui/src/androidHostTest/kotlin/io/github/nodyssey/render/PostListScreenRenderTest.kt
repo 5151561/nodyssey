@@ -4,11 +4,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.nodyssey.data.Board
 import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.model.PostSummary
@@ -84,6 +88,27 @@ class PostListScreenRenderTest {
         composeRule.setContent { Screen(darkTheme = true) }
 
         composeRule.onRoot().captureRender("post-list-dark")
+    }
+
+    /** The two menus of the header, open over the feed; each marks its current entry. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun `the sort menu in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNodeWithContentDescription("排序方式").performClick()
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/post-list-sort-light.png")
+    }
+
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun `the site switcher in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNodeWithContentDescription("切换站点").performClick()
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/post-list-sites-light.png")
     }
 
     private companion object {

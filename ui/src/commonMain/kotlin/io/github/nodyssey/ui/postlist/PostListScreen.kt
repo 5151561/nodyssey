@@ -27,13 +27,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledIconButton
@@ -66,7 +64,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -95,6 +92,7 @@ import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.CollapsingHeader
 import io.github.nodyssey.ui.common.EmptyFeedState
+import io.github.nodyssey.ui.common.FeedSortOrder
 import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
@@ -102,7 +100,10 @@ import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.PageJumpRail
 import io.github.nodyssey.ui.common.PageJumpSheet
 import io.github.nodyssey.ui.common.PostBadges
+import io.github.nodyssey.ui.common.PostReplyStat
+import io.github.nodyssey.ui.common.SelectableMenuItem
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.SortMenuItem
 import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.common.sharedThreadAuthor
@@ -121,15 +122,11 @@ import io.github.nodyssey.ui.resources.feed_page_size_note
 import io.github.nodyssey.ui.resources.home_search_hint
 import io.github.nodyssey.ui.resources.page_jump_newest
 import io.github.nodyssey.ui.resources.post_badge_pinned
-import io.github.nodyssey.ui.resources.post_new_reply_count
 import io.github.nodyssey.ui.resources.post_read_marker
-import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.post_view_count
 import io.github.nodyssey.ui.resources.site_switch_next_launch
 import io.github.nodyssey.ui.resources.site_switch_separate_sessions
 import io.github.nodyssey.ui.resources.site_switch_signed_in_as
-import io.github.nodyssey.ui.resources.sort_by_post_time
-import io.github.nodyssey.ui.resources.sort_by_reply_time
 import io.github.nodyssey.ui.resources.tab_profile
 import io.github.nodyssey.ui.settings.rememberSiteSwitch
 import io.github.nodyssey.ui.settings.siteSwitchRestartsApp
@@ -145,13 +142,11 @@ import io.github.plaza.designsys.component.PrefetchAvatars
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
-import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaFabElevation
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
-import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.cardBorder
 import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
@@ -163,7 +158,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 
@@ -1027,13 +1021,11 @@ private fun SortButton(
             Icon(imageVector = PlazaIcons.SwapVert, contentDescription = stringResource(Res.string.action_sort))
         }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            SortMenuItem(Res.string.sort_by_reply_time, FeedSort.LAST_REPLY, sort) {
-                onSortChange(it)
-                menuOpen = false
-            }
-            SortMenuItem(Res.string.sort_by_post_time, FeedSort.POST_TIME, sort) {
-                onSortChange(it)
-                menuOpen = false
+            FeedSortOrder.forEach { order ->
+                SortMenuItem(order, sort) {
+                    onSortChange(it)
+                    menuOpen = false
+                }
             }
         }
     }
@@ -1087,7 +1079,10 @@ private fun SiteSwitcher(
         ) {
             Site.entries.forEachIndexed { index, site ->
                 val isCurrent = site == active
-                DropdownMenuItem(
+                SelectableMenuItem(
+                    selected = isCurrent,
+                    index = index,
+                    count = Site.entries.size,
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1128,23 +1123,7 @@ private fun SiteSwitcher(
                         switchSite(site)
                     },
                     leadingIcon = { SiteMonogram(site, index) },
-                    // Same reason as [SortMenuItem]: without this the two entries are announced
-                    // identically and the tick is decoration TalkBack cannot see.
-                    modifier = Modifier
-                        .padding(horizontal = 6.dp, vertical = 1.dp)
-                        .clip(ControlShape)
-                        .background(if (isCurrent) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-                        .heightIn(min = 64.dp)
-                        .semantics { selected = isCurrent },
-                    trailingIcon = {
-                        if (isCurrent) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            )
-                        }
-                    },
+                    modifier = Modifier.heightIn(min = 64.dp),
                 )
             }
             HorizontalDivider(
@@ -1194,33 +1173,6 @@ private fun SiteMonogram(
 /** The site's host as a reader would type it: no scheme, no `www.`. */
 private val Site.domain: String
     get() = origin.substringAfter("://").removePrefix("www.")
-
-@Composable
-private fun SortMenuItem(
-    labelRes: StringResource,
-    value: FeedSort,
-    current: FeedSort,
-    onClick: (FeedSort) -> Unit,
-) {
-    val isCurrent = value == current
-    DropdownMenuItem(
-        text = { Text(stringResource(labelRes)) },
-        onClick = { onClick(value) },
-        // Which order is in force was carried entirely by the tick, and a decorative tick is not
-        // information: TalkBack read the two items identically. `selected` is what puts "已选中"
-        // into the announcement, so the icon can stay decoration.
-        modifier = Modifier.semantics { selected = isCurrent },
-        trailingIcon = {
-            if (isCurrent) {
-                Icon(
-                    Icons.Default.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        },
-    )
-}
 
 /**
  * One topic, as a card on the page.
@@ -1310,17 +1262,7 @@ internal fun PostRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            if (post.newCommentCount > 0) {
-                NewReplyBadge(post.newCommentCount)
-            } else {
-                summary.commentCount?.let {
-                    MetaStat(
-                        icon = PlazaIcons.ModeComment,
-                        value = it.toString(),
-                        contentDescription = stringResource(Res.string.post_reply_count, it),
-                    )
-                }
-            }
+            PostReplyStat(post)
             summary.viewCount?.let {
                 MetaStat(
                     icon = PlazaIcons.Visibility,
@@ -1392,24 +1334,6 @@ private inline fun Modifier.thenIf(
     condition: Boolean,
     modifier: @Composable () -> Modifier,
 ): Modifier = if (condition) then(modifier()) else this
-
-/** Replaces the reply count once the user has read the thread: the delta is the useful number. */
-@Composable
-private fun NewReplyBadge(count: Int) {
-    Text(
-        text = stringResource(Res.string.post_new_reply_count, count),
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontFeatureSettings = TABULAR_FIGURES,
-        ),
-        color = MaterialTheme.colorScheme.onPrimary,
-        modifier =
-        Modifier
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-    )
-}
 
 /**
  * First-load placeholder, laid out row for row like the real list.

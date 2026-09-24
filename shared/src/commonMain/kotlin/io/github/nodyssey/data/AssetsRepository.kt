@@ -1,5 +1,6 @@
 package io.github.nodyssey.data
 
+import io.github.nodyssey.core.LevelSpan
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.core.net.JsonSource
 import io.github.nodyssey.core.net.NodeSeekJsonClient
@@ -39,18 +40,15 @@ data class DailyQuota(
  * Everything the 账户与成长 screen needs.
  *
  * Levelling is chicken-based, and the thresholds are a published formula rather than the single
- * 400 they were once taken for — see [NodeSeekSite.levelChickenSpan]. The bar runs
- * [levelFloorChicken] → [nextLevelChicken], both null only when the account's level is unknown.
+ * 400 they were once taken for — see [NodeSeekSite.levelChickenSpan]. The bar runs across
+ * [levelSpan], null only when the account's level is unknown.
  */
 data class GrowthSnapshot(
     val level: Int?,
     val chickenCount: Int?,
     val starCount: Int?,
-    /** Where the current level began; the bar's zero, not the account's. */
-    val levelFloorChicken: Int?,
-    val nextLevelChicken: Int?,
-    /** The level the bar is drawn for — the account's, except above Lv5 where the site clamps. */
-    val levelBarRank: Int?,
+    /** The current level's span — the bar's zero is its floor, not the account's. */
+    val levelSpan: LevelSpan?,
     val postQuota: DailyQuota,
     val commentQuota: DailyQuota,
     val attendanceQuota: DailyQuota,
@@ -141,14 +139,11 @@ class NetworkAssetsRepository(
         val attendanceAsync = async { runCatchingExceptCancellation { attendanceQuotaToday() }.getOrNull() }
         val profile = profileRepository.profile()
         val progress = progressAsync.await()
-        val span = profile.rank?.let(NodeSeekSite::levelChickenSpan)
         GrowthSnapshot(
             level = profile.rank,
             chickenCount = profile.chickenCount,
             starCount = profile.starCount,
-            levelFloorChicken = span?.floor,
-            nextLevelChicken = span?.next,
-            levelBarRank = span?.barRank,
+            levelSpan = profile.rank?.let(NodeSeekSite::levelChickenSpan),
             // Posts are counted in posts on the wire and in chicken legs on screen; comments are
             // already chicken legs. See [NodeSeekSite.PROGRESS_TODAY_API_PATH].
             postQuota =

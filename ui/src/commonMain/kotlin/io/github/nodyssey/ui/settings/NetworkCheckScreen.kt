@@ -13,8 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +46,7 @@ import io.github.nodyssey.data.diagnostics.formatMillis
 import io.github.nodyssey.data.diagnostics.formatRate
 import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyType
+import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.network_check_app_none
@@ -218,27 +217,13 @@ fun NetworkCheckScreen(
                 }
             }
 
-            Button(
+            MediumButton(
                 onClick = onRerun,
                 enabled = !state.running,
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs).heightIn(min = ButtonDefaults.MediumContainerHeight),
-                shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                busy = state.running,
+                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
             ) {
-                if (state.running) {
-                    PlazaSpinner(
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        size = 18.dp,
-                    )
-                    Text(
-                        text = stringResource(Res.string.network_check_running),
-                        // The idle label's style, or the button's text jumps a size on every run.
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = Spacing.sm),
-                    )
-                } else {
-                    Text(stringResource(Res.string.network_check_rerun), style = MaterialTheme.typography.titleMedium)
-                }
+                Text(stringResource(if (state.running) Res.string.network_check_running else Res.string.network_check_rerun))
             }
 
             SectionNotes(

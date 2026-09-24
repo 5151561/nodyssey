@@ -29,25 +29,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
@@ -72,7 +65,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -96,11 +88,16 @@ import io.github.nodyssey.model.SearchHistoryEntry
 import io.github.nodyssey.model.SearchTarget
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.CollapsingHeader
+import io.github.nodyssey.ui.common.FeedSortOrder
+import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.common.NavigationBarScrollConnection
 import io.github.nodyssey.ui.common.NavigationDirectionThreshold
 import io.github.nodyssey.ui.common.NoSearchResultsState
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.SortMenuItem
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.labelRes
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
@@ -130,8 +127,6 @@ import io.github.nodyssey.ui.resources.search_remove_recent
 import io.github.nodyssey.ui.resources.search_user_hint
 import io.github.nodyssey.ui.resources.search_user_history_scope
 import io.github.nodyssey.ui.resources.search_users_tab
-import io.github.nodyssey.ui.resources.sort_by_post_time
-import io.github.nodyssey.ui.resources.sort_by_reply_time
 import io.github.plaza.designsys.component.ChoiceSegments
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerCard
@@ -139,6 +134,7 @@ import io.github.plaza.designsys.component.LayerDivider
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PillTabRow
+import io.github.plaza.designsys.component.PlazaChipDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
@@ -148,7 +144,6 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardBorder
-import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
@@ -571,6 +566,8 @@ private fun ResultScopeRow(
                 selected = true,
                 onClick = onOpenOptions,
                 label = { Text(title) },
+                modifier = Modifier.heightIn(min = PlazaChipDefaults.Height),
+                shape = PlazaChipDefaults.shape,
                 trailingIcon = {
                     Box(
                         modifier =
@@ -589,13 +586,8 @@ private fun ResultScopeRow(
                         )
                     }
                 },
-                colors =
-                InputChipDefaults.inputChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ),
-                border = null,
+                colors = PlazaChipDefaults.inputChipColors(),
+                border = PlazaChipDefaults.border(selected = true),
             )
         } else {
             FilterChip(
@@ -603,8 +595,10 @@ private fun ResultScopeRow(
                 onClick = onOpenOptions,
                 label = { Text(stringResource(Res.string.search_all_boards)) },
                 trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                colors = FilterChipDefaults.filterChipColors(containerColor = layers.raised),
-                border = layers.cardBorderStroke,
+                modifier = Modifier.heightIn(min = PlazaChipDefaults.Height),
+                shape = PlazaChipDefaults.shape,
+                colors = PlazaChipDefaults.filterChipColors(),
+                border = PlazaChipDefaults.border(),
             )
         }
         Box(Modifier.weight(1f))
@@ -627,53 +621,15 @@ private fun ResultScopeRow(
                 shape = MaterialTheme.shapes.large,
                 containerColor = layers.raised,
             ) {
-                SortOrder.forEachIndexed { index, sort ->
-                    SortMenuItem(sort, index, state.sort, onSortChange) { showSortMenu = false }
+                FeedSortOrder.forEach { sort ->
+                    SortMenuItem(sort, state.sort) {
+                        showSortMenu = false
+                        onSortChange(it)
+                    }
                 }
             }
         }
     }
-}
-
-/** The order the site's own sort menu lists them in, and the order every picker here uses. */
-private val SortOrder = listOf(FeedSort.LAST_REPLY, FeedSort.POST_TIME)
-
-private fun FeedSort.labelRes(): StringResource =
-    if (this == FeedSort.POST_TIME) Res.string.sort_by_post_time else Res.string.sort_by_reply_time
-
-/** Material's selectable menu item: the current order sits on a tonal pill with a tick. */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SortMenuItem(
-    sort: FeedSort,
-    index: Int,
-    selectedSort: FeedSort,
-    onSortChange: (FeedSort) -> Unit,
-    closeMenu: () -> Unit,
-) {
-    val isCurrent = sort == selectedSort
-    DropdownMenuItem(
-        selected = isCurrent,
-        onClick = {
-            closeMenu()
-            onSortChange(sort)
-        },
-        text = { Text(stringResource(sort.labelRes()), fontWeight = if (isCurrent) FontWeight.SemiBold else null) },
-        shapes = MenuDefaults.itemShape(index, SortOrder.size),
-        // Same reason as the home feed's menu: the tick is decoration, `selected` is what TalkBack
-        // reads out as 已选中.
-        modifier = Modifier.semantics { selected = isCurrent },
-        trailingIcon = {
-            if (isCurrent) Icon(Icons.Default.Check, contentDescription = null)
-        },
-        colors =
-        MenuDefaults.selectableItemColors(
-            containerColor = Color.Transparent,
-            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-            selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-    )
 }
 
 @Composable
@@ -962,35 +918,29 @@ private fun AdvancedSearchSheet(
     val recent = recentBoards.mapNotNull { slug -> boards.firstOrNull { it.slug == slug } }
     val remaining = boards.filterNot { board -> recent.any { it.slug == board.slug } }
     val allBoards = stringResource(Res.string.search_all_boards)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
+    PlazaSheet(
+        onDismiss = onDismiss,
         sheetState =
         rememberBottomSheetState(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
-        containerColor = LocalPlazaLayers.current.page,
+        title = stringResource(Res.string.search_advanced),
+        action = {
+            TextButton(
+                onClick = {
+                    pickedBoard = null
+                    pickedSort = DefaultSearchSort
+                },
+            ) {
+                Text(stringResource(Res.string.search_advanced_reset), fontWeight = FontWeight.SemiBold)
+            }
+        },
     ) {
         Column(
             Modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Row(Modifier.padding(start = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(Res.string.search_advanced),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(
-                    onClick = {
-                        pickedBoard = null
-                        pickedSort = DefaultSearchSort
-                    },
-                ) {
-                    Text(stringResource(Res.string.search_advanced_reset), fontWeight = FontWeight.SemiBold)
-                }
-            }
             // The choices scroll on their own so the button below stays reachable even on a short
             // window; the button is the whole point of opening the sheet.
             Column(
@@ -1053,19 +1003,13 @@ private fun AdvancedSearchSheet(
                     SortSegments(selected = pickedSort, onSelect = { pickedSort = it })
                 }
             }
-            Button(
-                onClick = { onApply(pickedBoard, pickedSort) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
-                shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-            ) {
+            MediumButton(onClick = { onApply(pickedBoard, pickedSort) }, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     if (willSearch) {
                         stringResource(Res.string.search_in_board, pickedBoard?.let { boards.title(it) } ?: allBoards)
                     } else {
                         stringResource(Res.string.search_apply_board)
                     },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1090,7 +1034,7 @@ private fun BoardChipFlow(content: @Composable () -> Unit) {
  *
  * A tick makes the selected chip ~26dp wider, and in a wrapping group that re-flows every chip after
  * it: on a narrow phone picking a board moved the rest of the list between rows, under the finger
- * that was still choosing. The primary fill against the tonal ones already says which one is on,
+ * that was still choosing. The inverse fill against the tonal ones already says which one is on,
  * TalkBack reads 已选中 from [FilterChip]'s own semantics either way, and the tick is optional
  * decoration in Material's own spec — so it is the part that goes.
  */
@@ -1104,16 +1048,11 @@ private fun BoardChip(
         selected = selected,
         onClick = onSelect,
         label = { Text(title, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium) },
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.height(36.dp),
-        colors =
-        FilterChipDefaults.filterChipColors(
-            containerColor = LocalPlazaLayers.current.inset,
-            labelColor = MaterialTheme.colorScheme.onSurface,
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-        border = LocalPlazaLayers.current.cardBorderStroke,
+        shape = PlazaChipDefaults.shape,
+        modifier = Modifier.height(PlazaChipDefaults.Height),
+        // Inside the sheet's card, so the inset tone: the raised one is the card's own white.
+        colors = PlazaChipDefaults.filterChipColors(inCard = true),
+        border = PlazaChipDefaults.border(selected),
     )
 }
 
@@ -1124,9 +1063,9 @@ private fun SortSegments(
     onSelect: (FeedSort) -> Unit,
 ) {
     ChoiceSegments(
-        labels = SortOrder.map { stringResource(it.labelRes()) },
-        selectedIndex = SortOrder.indexOf(selected),
-        onSelect = { onSelect(SortOrder[it]) },
+        labels = FeedSortOrder.map { stringResource(it.labelRes()) },
+        selectedIndex = FeedSortOrder.indexOf(selected),
+        onSelect = { onSelect(FeedSortOrder[it]) },
     )
 }
 

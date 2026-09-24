@@ -2,7 +2,11 @@ package io.github.nodyssey.render
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
@@ -93,6 +97,17 @@ class BookmarksScreenRenderTest {
         composeRule.setContent { Screen(darkTheme = false, selection = setOf(1L, 3L)) }
 
         composeRule.onRoot().captureRender("bookmarks-selection-light")
+    }
+
+    /** 离线管理 (i1), a sheet in a window of its own — hence the screen capture. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun `the offline sheet in light`() {
+        composeRule.setContent { Screen(darkTheme = false) }
+        composeRule.onNodeWithContentDescription("管理").performClick()
+        composeRule.waitForIdle()
+
+        captureScreenRoboImage(filePath = "build/outputs/renders/bookmarks-offline-sheet-light.png")
     }
 
     private companion object {

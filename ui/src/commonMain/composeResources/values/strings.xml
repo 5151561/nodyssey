@@ -334,8 +334,6 @@
     <string name="profile_chicken">鸡腿</string>
     <string name="profile_stars">星辰</string>
     <string name="profile_level">等级</string>
-    <!-- 我的 · 账户卡上等级条的说明 -->
-    <string name="profile_level_remaining">距 Lv%1$d 还差 %2$d 鸡腿</string>
     <string name="profile_attendance_checking">正在检查今日签到…</string>
     <string name="profile_attendance_done">今日已签到 · 查看签到榜</string>
     <!-- 2b 签到横幅：主标题、未签时的副标题（不写随机区间——站点没公布）、行尾的签到榜按钮 -->
@@ -983,7 +981,6 @@
     <!-- 8a 等级卡左上角的小标题 -->
     <string name="assets_current_level">当前等级</string>
     <string name="assets_level">Lv %1$d</string>
-    <string name="assets_level_remaining">还差 %1$d 鸡腿到 Lv %2$d</string>
     <string name="assets_level_no_threshold">等级进度即鸡腿总数</string>
     <string name="assets_daily_title">今日额度</string>
     <string name="assets_quota_post">今日发帖可得鸡腿</string>
@@ -1025,9 +1022,10 @@
     <string name="credit_balance">当前鸡腿</string>
     <string name="credit_level">Lv%1$d</string>
     <string name="credit_entry_total">总计 %1$d</string>
-    <!-- 8b 余额头：大数字旁的单位与等级；进度说明；列表上方的两个列名 -->
+    <!-- 8b 余额头：大数字旁的单位与等级；列表上方的两个列名 -->
     <string name="credit_unit_level">鸡腿 · Lv%1$d</string>
-    <string name="credit_progress_remaining">%1$d / %2$d · 还差 %3$d 升到 Lv%4$d</string>
+    <!-- 等级条下的一行说明，我的、账户与成长、鸡腿流水三处共用；到达下一级后只显示「344 / 400」 -->
+    <string name="level_progress_remaining">%1$d / %2$d · 还差 %3$d 升到 Lv%4$d</string>
     <string name="credit_column_change">变动 · 理由</string>
     <string name="credit_column_total">总计</string>
 

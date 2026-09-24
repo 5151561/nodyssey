@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,8 +23,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -37,23 +34,20 @@ import io.github.nodyssey.data.FeedPost
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.PostBadges
-import io.github.nodyssey.ui.common.TITLE_BADGE_SIZE
+import io.github.nodyssey.ui.common.PostReplyStat
 import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.credit_level
-import io.github.nodyssey.ui.resources.post_new_reply_count
-import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.search_user_comments
 import io.github.nodyssey.ui.resources.search_user_joined
 import io.github.nodyssey.ui.resources.search_user_topics
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerCard
-import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.SkeletonBar
 import io.github.plaza.designsys.component.TonalTag
 import io.github.plaza.designsys.component.UserAvatar
-import io.github.plaza.designsys.component.textScaledSize
 import org.jetbrains.compose.resources.stringResource
 
 /** A result card is a step smaller than the feed's, so its corners are a step tighter: `shapes.large`. */
@@ -104,59 +98,15 @@ internal fun SearchPostCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ResultMeta(summary.authorName, Modifier.weight(1f, fill = false))
+                MetaText(summary.authorName, Modifier.weight(1f, fill = false), singleLine = true)
                 summary.lastActiveText?.let {
-                    ResultMeta("·")
-                    ResultMeta(it)
+                    MetaText("·", singleLine = true)
+                    MetaText(it, singleLine = true)
                 }
             }
             PostBadges(summary)
-            // The unread delta replaces the total once the thread has been read, as on the feed.
-            if (post.newCommentCount > 0) {
-                Text(
-                    text = stringResource(Res.string.post_new_reply_count, post.newCommentCount),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                )
-            } else {
-                summary.commentCount?.let { ReplyCount(it) }
-            }
+            PostReplyStat(post)
         }
-    }
-}
-
-@Composable
-private fun ResultMeta(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun ReplyCount(count: Int) {
-    val description = stringResource(Res.string.post_reply_count, count)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        // One announcement, 「42 回复」, rather than an unlabelled icon and a bare number.
-        modifier = Modifier.clearAndSetSemantics { contentDescription = description },
-    ) {
-        Icon(
-            PlazaIcons.ModeComment,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(textScaledSize(TITLE_BADGE_SIZE)),
-        )
-        ResultMeta(count.toString())
     }
 }
 

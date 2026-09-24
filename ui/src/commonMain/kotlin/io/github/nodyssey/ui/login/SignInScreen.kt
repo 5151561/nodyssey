@@ -4,15 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
@@ -24,15 +20,11 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -67,8 +59,9 @@ import io.github.nodyssey.core.ActiveSite
 import io.github.nodyssey.data.session.SignInOutcome
 import io.github.nodyssey.data.session.SignInRefusal
 import io.github.nodyssey.data.session.TwoFactorChallenge
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.MediumButtonStyle
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
-import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_close
@@ -100,7 +93,6 @@ import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
-import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
@@ -332,17 +324,8 @@ fun SignInScreen(
              */
             oneTap?.let { provider ->
                 LayerCard(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    Button(
-                        onClick = onOneTapSignIn,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
-                        shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                    ) {
-                        Icon(PlazaIcons.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(
-                            stringResource(Res.string.sign_in_one_tap, provider.providerName),
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    MediumButton(onClick = onOneTapSignIn, icon = PlazaIcons.Bolt, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(Res.string.sign_in_one_tap, provider.providerName))
                     }
                     Text(
                         stringResource(Res.string.sign_in_one_tap_hint),
@@ -409,37 +392,14 @@ fun SignInScreen(
 
             // Filled when it is the one way in, outlined under a one-tap card (10c), where the
             // card's button is the primary one on the screen and two filled pills would compete.
-            val submitContent: @Composable RowScope.() -> Unit = {
-                if (state.isSubmitting) {
-                    PlazaSpinner(
-                        modifier = Modifier.describedAsLoading(),
-                        strokeWidth = 2.dp,
-                        color = LocalContentColor.current,
-                        size = 18.dp,
-                    )
-                    Spacer(Modifier.width(Spacing.sm))
-                    Text(stringResource(Res.string.sign_in_submitting))
-                } else {
-                    Text(stringResource(Res.string.sign_in_submit), fontWeight = FontWeight.SemiBold)
-                }
-            }
-            val submitModifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight)
-            if (oneTap == null) {
-                Button(
-                    onClick = onSubmit,
-                    enabled = state.canSubmitCredentials,
-                    modifier = submitModifier,
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                    content = submitContent,
-                )
-            } else {
-                OutlinedButton(
-                    onClick = onSubmit,
-                    enabled = state.canSubmitCredentials,
-                    modifier = submitModifier,
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                    content = submitContent,
-                )
+            MediumButton(
+                onClick = onSubmit,
+                style = if (oneTap == null) MediumButtonStyle.Filled else MediumButtonStyle.Outlined,
+                enabled = state.canSubmitCredentials,
+                busy = state.isSubmitting,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(if (state.isSubmitting) Res.string.sign_in_submitting else Res.string.sign_in_submit))
             }
 
             // The board puts this line under card 2's button, where it explains a control that is
@@ -455,14 +415,13 @@ fun SignInScreen(
             }
 
             if (oneTap == null || state.verification is VerificationState.NotWired || state.sessionNotStored) {
-                OutlinedButton(
+                MediumButton(
                     onClick = onUseWebSignIn,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    style = MediumButtonStyle.Outlined,
+                    icon = PlazaIcons.Public,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(PlazaIcons.Public, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(Spacing.sm))
-                    Text(stringResource(Res.string.sign_in_use_web), fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.sign_in_use_web))
                 }
             }
 

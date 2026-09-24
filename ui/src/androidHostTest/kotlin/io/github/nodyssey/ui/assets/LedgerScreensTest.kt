@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.paging.PagingData
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.StardustEntry
 import io.github.nodyssey.data.StardustType
@@ -43,7 +44,7 @@ class LedgerScreensTest {
 
     @Test
     fun `chicken row shows the amount, the site's own reason, the total and the time`() {
-        setCreditContent(CreditUiState(level = 1, chickenCount = 384, nextLevelChicken = 400))
+        setCreditContent(CreditUiState(level = 1, chickenCount = 384))
 
         composeRule.onNodeWithText("+1").assertIsDisplayed()
         composeRule.onNodeWithText("回帖奖励").assertIsDisplayed()
@@ -65,7 +66,7 @@ class LedgerScreensTest {
     /** Levelling *is* the chicken count, so the header states the progress rather than a second number. */
     @Test
     fun `the header doubles as level progress`() {
-        setCreditContent(CreditUiState(level = 1, chickenCount = 384, levelFloorChicken = 100, nextLevelChicken = 400))
+        setCreditContent(CreditUiState(level = 1, chickenCount = 384, levelSpan = NodeSeekSite.levelChickenSpan(1)))
 
         composeRule.onNodeWithText("鸡腿 · Lv1").assertIsDisplayed()
         composeRule.onNodeWithText("384 / 400 · 还差 16 升到 Lv2").assertIsDisplayed()

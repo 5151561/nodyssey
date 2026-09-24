@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -17,12 +16,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.LuckyDraw
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.MediumButtonStyle
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
@@ -257,19 +255,13 @@ fun LuckyScreen(
                 }
             }
 
-            Button(
+            MediumButton(
                 onClick = onGenerate,
                 enabled = state.canGenerate,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = ButtonDefaults.MediumContainerHeight),
-                shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                icon = PlazaIcons.Link,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(PlazaIcons.Link, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text(
-                    stringResource(Res.string.lucky_generate),
-                    modifier = Modifier.padding(start = Spacing.sm),
-                )
+                Text(stringResource(Res.string.lucky_generate))
             }
             if (!state.canGenerate) {
                 Text(
@@ -492,22 +484,13 @@ private fun GeneratedLinkCard(
                         )
                     }
                 }
-                FilledTonalButton(
+                MediumButton(
                     onClick = onOpen,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    style = MediumButtonStyle.Tonal,
+                    icon = PlazaIcons.OpenInNew,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(
-                        PlazaIcons.OpenInNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(19.dp),
-                    )
-                    Text(
-                        stringResource(Res.string.lucky_open_web),
-                        modifier = Modifier.padding(start = 7.dp),
-                    )
+                    Text(stringResource(Res.string.lucky_open_web))
                 }
                 Text(
                     text = stringResource(Res.string.lucky_result_hint),

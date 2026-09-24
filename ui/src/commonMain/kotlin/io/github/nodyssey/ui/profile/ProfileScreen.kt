@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -67,15 +66,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.ui.common.AttendanceBoardDialog
 import io.github.nodyssey.ui.common.AttendanceModeDialog
-import io.github.nodyssey.ui.common.GrowthProgressBar
+import io.github.nodyssey.ui.common.LevelProgressLine
+import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.siteName
 import io.github.nodyssey.ui.resources.Res
-import io.github.nodyssey.ui.resources.assets_level_no_threshold
-import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.assets_signed_in
 import io.github.nodyssey.ui.resources.assets_signing_in
 import io.github.nodyssey.ui.resources.profile_attendance_board
@@ -92,7 +90,6 @@ import io.github.nodyssey.ui.resources.profile_guest_benefit_post
 import io.github.nodyssey.ui.resources.profile_guest_benefit_post_hint
 import io.github.nodyssey.ui.resources.profile_guest_section
 import io.github.nodyssey.ui.resources.profile_level
-import io.github.nodyssey.ui.resources.profile_level_remaining
 import io.github.nodyssey.ui.resources.profile_level_unknown
 import io.github.nodyssey.ui.resources.profile_member_since
 import io.github.nodyssey.ui.resources.profile_member_uid
@@ -140,7 +137,6 @@ import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
-import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.floatShadow
@@ -419,7 +415,7 @@ private fun AccountCard(
                 }
             }
         }
-        LevelProgress(state)
+        state.levelProgress?.let { LevelProgressLine(it) }
     }
 }
 
@@ -474,38 +470,6 @@ private fun IdentityRow(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-/**
- * 距 Lv N 还差 x 鸡腿, over the same bar 账户与成长 draws.
- *
- * Absent rather than empty while the level is unknown: a grey track with no caption would read as a
- * level that has not started.
- */
-@Composable
-private fun LevelProgress(state: ProfileUiState) {
-    val progress = state.levelProgress ?: return
-    val next = state.nextLevelChicken ?: return
-    val chicken = state.chickenCount ?: return
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row {
-            Text(
-                text =
-                state.chickenToNextLevel?.let { remaining ->
-                    stringResource(Res.string.profile_level_remaining, state.nextLevelRank ?: 0, remaining)
-                } ?: stringResource(Res.string.assets_level_no_threshold),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = stringResource(Res.string.assets_quota_value, chicken, next),
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = TABULAR_FIGURES),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        GrowthProgressBar(progress = progress)
     }
 }
 
@@ -781,17 +745,8 @@ private fun SignedOutProfile(
         }
         item(key = "sign-in") {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Button(
-                    onClick = onSignIn,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                ) {
-                    Icon(PlazaIcons.Login, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(
-                        text = stringResource(Res.string.profile_sign_in, siteName),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        modifier = Modifier.padding(start = Spacing.sm),
-                    )
+                MediumButton(onClick = onSignIn, icon = PlazaIcons.Login, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(Res.string.profile_sign_in, siteName))
                 }
                 Text(
                     text = stringResource(Res.string.profile_sign_in_hint),

@@ -2,7 +2,6 @@ package io.github.nodyssey.ui.notifications
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -24,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Badge
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -90,6 +88,8 @@ import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.StatusAction
+import io.github.plaza.designsys.component.StatusView
 import io.github.plaza.designsys.component.TabLabel
 import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.component.UserAvatar
@@ -97,6 +97,7 @@ import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
@@ -461,9 +462,13 @@ private fun BoxScope.NotificationGroup(
             )
 
         isEmpty ->
-            EmptyNotifications(
-                modifier = Modifier.align(Alignment.Center),
-                onRefresh = onRetry,
+            StatusView(
+                icon = Icons.Default.MailOutline,
+                shape = StatusShapes.Empty,
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                iconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                title = stringResource(Res.string.notifications_empty),
+                primaryAction = StatusAction(stringResource(Res.string.action_retry), onRetry),
             )
 
         else -> {
@@ -671,27 +676,6 @@ internal fun timestampLabel(
                 TimeFormat.absolute(millis),
             )
     }
-
-@Composable
-private fun EmptyNotifications(
-    onRefresh: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.padding(Spacing.xl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Icon(
-            Icons.Default.MailOutline,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp),
-        )
-        Text(stringResource(Res.string.notifications_empty), style = MaterialTheme.typography.titleSmall)
-        Button(onClick = onRefresh) { Text(stringResource(Res.string.action_retry)) }
-    }
-}
 
 @Composable
 private fun NotificationTab.label(): String =

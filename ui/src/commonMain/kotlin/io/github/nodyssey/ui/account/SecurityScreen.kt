@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -23,7 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_change_password
 import io.github.nodyssey.ui.resources.account_confirm_2fa_action
@@ -228,11 +227,10 @@ fun SecurityScreen(
                     if (state.isMismatched) stringResource(Res.string.account_password_mismatch) else null,
                 )
 
-                Button(
+                MediumButton(
                     onClick = onRequestPasswordChange,
                     enabled = state.canSubmitPassword,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = ButtonDefaults.MediumContainerHeight),
-                    shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(Res.string.account_password_update))
                 }

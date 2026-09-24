@@ -7,18 +7,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -38,13 +31,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.MediumButtonStyle
+import io.github.nodyssey.ui.common.SelectableMenuItem
 import io.github.plaza.designsys.component.GroupCard
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaFieldDefaults
-import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.theme.Spacing
 
@@ -151,18 +145,15 @@ internal fun <T> SettingsMenuRow(
             Box {
                 Icon(menuIcon, contentDescription = null)
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    choices.forEach { (choice, label) ->
-                        DropdownMenuItem(
+                    choices.forEachIndexed { index, (choice, label) ->
+                        SelectableMenuItem(
+                            selected = choice == selected,
+                            index = index,
+                            count = choices.size,
                             text = { Text(label) },
                             onClick = {
                                 expanded = false
                                 onSelect(choice)
-                            },
-                            // A tick rather than a radio: a menu shows one row at a time as the finger
-                            // moves down it, and a column of empty circles reads as a form rather than
-                            // as a list with one answer already in it.
-                            trailingIcon = {
-                                if (choice == selected) Icon(Icons.Default.Check, contentDescription = null)
                             },
                         )
                     }
@@ -226,25 +217,17 @@ internal fun SettingsTestSaveButtons(
     onSave: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        FilledTonalButton(
+        MediumButton(
             onClick = onTest,
+            style = MediumButtonStyle.Tonal,
             enabled = enabled && !testing,
-            modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
-            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+            busy = testing,
+            modifier = Modifier.weight(1f),
         ) {
-            if (testing) {
-                PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp)
-            } else {
-                Text(testLabel, style = MaterialTheme.typography.titleMedium)
-            }
+            Text(testLabel)
         }
-        Button(
-            onClick = onSave,
-            enabled = enabled,
-            modifier = Modifier.weight(1f).heightIn(min = ButtonDefaults.MediumContainerHeight),
-            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-        ) {
-            Text(saveLabel, style = MaterialTheme.typography.titleMedium)
+        MediumButton(onClick = onSave, enabled = enabled, modifier = Modifier.weight(1f)) {
+            Text(saveLabel)
         }
     }
 }
