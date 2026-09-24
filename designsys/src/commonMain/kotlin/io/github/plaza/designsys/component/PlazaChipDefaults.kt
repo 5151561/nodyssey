@@ -46,12 +46,14 @@ object PlazaChipDefaults {
         inCard: Boolean = false,
         containerColor: Color = containerColor(inCard),
         labelColor: Color = MaterialTheme.colorScheme.onSurface,
+        /** The unselected chip's icons — its label's colour where the chip is tinted rather than neutral. */
+        iconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     ): SelectableChipColors {
         val scheme = MaterialTheme.colorScheme
         return FilterChipDefaults.filterChipColors(
             containerColor = containerColor,
             labelColor = labelColor,
-            iconColor = scheme.onSurfaceVariant,
+            iconColor = iconColor,
             selectedContainerColor = scheme.inverseSurface,
             selectedLabelColor = scheme.inverseOnSurface,
             selectedLeadingIconColor = scheme.inverseOnSurface,

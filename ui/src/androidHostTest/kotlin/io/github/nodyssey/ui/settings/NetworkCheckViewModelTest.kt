@@ -84,7 +84,7 @@ private class FakeNetworkDiagnostics : NetworkDiagnostics {
             vpnActive = true,
             metered = false,
             proxy = null,
-            dohProvider = null,
+            dohServers = emptyList(),
             customTabsProvider = AppIdentity("Chrome", "com.android.chrome"),
             defaultBrowser = AppIdentity("Chrome", "com.android.chrome"),
             session = SessionSummary(

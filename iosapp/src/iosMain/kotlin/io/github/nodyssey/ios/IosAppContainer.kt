@@ -284,9 +284,10 @@ class IosAppContainer(
     private val dohSettings: DohSettings by lazy { DataStoreDohSettings(createPreferenceDataStore("dns")) }
 
     /**
-     * 加密 DNS, with two of its switches missing and the third path to it taken.
+     * 加密 DNS, with two of its switches missing, one server instead of a list, and the third path to
+     * it taken.
      *
-     * Neither capability is available here and both refusals are quoted from `privacy_context.h` —
+     * None of the capabilities is available here and every refusal is quoted from `privacy_context.h` —
      * see [EncryptedNameResolution], which is also why this needs no session rebuilt and no client
      * handed anything: the setting lands on the process's default privacy context, and every
      * resolution in the process inherits it.
@@ -302,7 +303,11 @@ class IosAppContainer(
                 host = WebUrl.parse(NodeSeekSite.BASE_URL)?.host.orEmpty(),
                 clock = clock,
             ),
-            capabilities = DohCapabilities(canChooseRecordTypes = false, canFallBackToSystem = false),
+            capabilities = DohCapabilities(
+                canChooseRecordTypes = false,
+                canFallBackToSystem = false,
+                triesServersInOrder = false,
+            ),
         )
     }
 
@@ -327,10 +332,10 @@ class IosAppContainer(
             appScope,
             dohSettings.config
                 .map { config ->
-                    if (!config.resolvesOverHttps()) {
-                        null
-                    } else {
-                        EncryptedResolver(url = config.serverUrl, serverAddresses = config.bootstrap)
+                    // One server, because the privacy context takes one; the screen here lets only
+                    // one be ticked, and this reads the first in case a list from elsewhere has more.
+                    config.chain.firstOrNull()?.takeIf { config.resolvesOverHttps() }?.let { server ->
+                        EncryptedResolver(url = server.url, serverAddresses = server.bootstrap)
                     }
                 },
         )

@@ -423,9 +423,10 @@ private fun environmentSection(environment: NetworkEnvironment): CheckSection {
             ),
             CheckLine(
                 label = stringResource(Res.string.network_check_doh),
-                value = environment.dohProvider?.let { dohProviderLabel(it) }
-                    ?: stringResource(Res.string.network_check_doh_off),
-                alert = environment.dohProvider != null,
+                // The servers in the order they are asked, so a report says which one was 首选.
+                value = environment.dohServers.map { dohServerLabel(it) }.joinToString(" → ")
+                    .ifEmpty { stringResource(Res.string.network_check_doh_off) },
+                alert = environment.dohServers.isNotEmpty(),
             ),
             CheckLine(
                 label = stringResource(Res.string.network_check_custom_tab_app),
@@ -578,7 +579,7 @@ private fun NetworkCheckScreenPreview() {
                     vpnActive = true,
                     metered = true,
                     proxy = null,
-                    dohProvider = null,
+                    dohServers = emptyList(),
                     customTabsProvider = AppIdentity("Chrome", "com.android.chrome"),
                     defaultBrowser = AppIdentity("Chrome", "com.android.chrome"),
                     session = SessionSummary(

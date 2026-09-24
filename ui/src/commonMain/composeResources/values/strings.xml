@@ -50,10 +50,13 @@
     <string name="board_admin_only">仅管理员可见</string>
 
     <!-- Rearranging the home strip: long-press it open, drag to reorder, park what you never read -->
-    <string name="action_finish_editing_boards">完成排序</string>
-    <string name="board_edit_hint">拖动排序，点角标移出或加回</string>
+    <string name="board_edit_title">首页版块</string>
+    <string name="board_edit_done">完成</string>
+    <string name="board_edit_hint">拖动排序，点 × 移出首页</string>
     <string name="board_park">移出首页</string>
     <string name="board_restore">加回首页</string>
+    <!-- 版块编辑里，已移出首页的版块那一栏的标题 -->
+    <string name="board_parked_title">未加入首页</string>
     <string name="board_parked">已移出首页</string>
 
     <!-- The four kinds every board falls into; the tag colour and the picker's headings share them -->
@@ -516,8 +519,23 @@
     <string name="doh_provider_dnspod">DNSPod</string>
     <string name="doh_provider_cloudflare">Cloudflare</string>
     <string name="doh_provider_google">Google</string>
-    <string name="doh_provider_custom">自定义</string>
     <string name="doh_provider_custom_hint">填自建或其它 DoH 服务器</string>
+    <!-- 服务商列表的标题：勾选的服务商按列表顺序依次尝试（只有 Android 能这样；iOS 用 doh_provider_title） -->
+    <string name="doh_servers_title_ordered">服务商 · 按顺序尝试</string>
+    <string name="doh_rank_first">首选</string>
+    <!-- 勾选的第 2、3… 个服务商；%1$d 从 1 数起 -->
+    <string name="doh_rank_backup">备用 %1$d</string>
+    <string name="doh_add_custom">添加自定义 DoH 地址</string>
+    <string name="doh_order_note">首选失败或超时后依次换下一个；拖动调整顺序。引导 IP 在各服务商详情里设置。</string>
+    <!-- iOS：系统一次只接受一个加密 DNS 服务器，所以是单选 -->
+    <string name="doh_details_note">这台设备上一次只能用一个服务商。引导 IP 在各服务商详情里设置。</string>
+    <string name="doh_no_server">至少选一个服务商</string>
+    <string name="doh_drag_handle">拖动调整顺序</string>
+    <string name="doh_move_up">上移</string>
+    <string name="doh_move_down">下移</string>
+    <string name="doh_server_add_title">添加 DoH 服务器</string>
+    <!-- 预设服务商详情里：把引导 IP 改回内置的那几个 -->
+    <string name="doh_bootstrap_reset">恢复默认</string>
     <string name="doh_url_label">服务器地址</string>
     <string name="doh_url_placeholder">https://example.com/dns-query</string>
     <string name="doh_url_required">请填写 DoH 服务器地址</string>
@@ -1561,7 +1579,7 @@
 
     <string name="help_section_home">首页与列表</string>
     <string name="help_boards_title">版块条能自己排</string>
-    <string name="help_boards_body">长按版块条进入排序：拖动改顺序，点角标移出或加回首页。</string>
+    <string name="help_boards_body">长按版块条进入编辑：拖动改顺序，点 × 移出首页，在「未加入首页」里点一下加回。</string>
     <string name="help_home_tap_title">再点一下「首页」</string>
     <string name="help_home_tap_body">已在首页时点「首页」：刷新并回到顶部。点「通知」只回顶部。</string>
     <string name="help_sort_title">排序会记住</string>

@@ -72,7 +72,7 @@ class NetworkCheckScreenRenderTest {
                 vpnActive = true,
                 metered = false,
                 proxy = null,
-                dohProvider = null,
+                dohServers = emptyList(),
                 customTabsProvider = AppIdentity("Chrome", "com.android.chrome"),
                 defaultBrowser = AppIdentity("夸克浏览器", "com.quark.browser"),
                 session = SessionSummary(

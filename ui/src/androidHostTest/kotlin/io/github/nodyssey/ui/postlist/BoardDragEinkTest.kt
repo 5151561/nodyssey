@@ -70,7 +70,7 @@ class BoardDragEinkTest {
         // A long press anywhere on the strip is what opens 编辑板块.
         composeRule.onNodeWithText("日常").performTouchInput { longClick() }
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("拖动排序，点角标移出或加回").assertIsDisplayed()
+        composeRule.onNodeWithText("拖动排序，点 × 移出首页").assertIsDisplayed()
 
         val from = composeRule.onNodeWithText("日常").fetchSemanticsNode().boundsInRoot.center
         val onto = composeRule.onNodeWithText("技术").fetchSemanticsNode().boundsInRoot.center

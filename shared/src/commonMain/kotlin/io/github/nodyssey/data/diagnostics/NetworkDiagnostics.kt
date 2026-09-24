@@ -1,6 +1,6 @@
 package io.github.nodyssey.data.diagnostics
 
-import io.github.nodyssey.data.dns.DohProvider
+import io.github.nodyssey.data.dns.DohServer
 import io.github.nodyssey.data.proxy.ProxyConnectionFailure
 import io.github.nodyssey.data.proxy.ProxyType
 
@@ -70,7 +70,8 @@ enum class ProbeTarget {
  *   against a changelog, and half the reports a diagnostic screen collects are about something that
  *   was fixed two releases ago.
  * @property proxy null when 代理 is off.
- * @property dohProvider which server lookups go to, or null when 加密 DNS is off.
+ * @property dohServers the servers lookups go to, in the order they are tried; empty when 加密 DNS
+ *   is off.
  * @property customTabsProvider which installed app answers when the reader taps a link in a post,
  *   and null where nothing on the device offers the service at all. Plain strings rather than a
  *   platform type because that is all `commonMain` may hold, and all the screen has to draw.
@@ -83,7 +84,7 @@ data class NetworkEnvironment(
     val vpnActive: Boolean,
     val metered: Boolean,
     val proxy: ProxySummary?,
-    val dohProvider: DohProvider?,
+    val dohServers: List<DohServer>,
     val customTabsProvider: AppIdentity?,
     val defaultBrowser: AppIdentity?,
     val session: SessionSummary,

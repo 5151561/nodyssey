@@ -58,10 +58,12 @@
 
     <string name="board_admin_only">Admins only</string>
 
-    <string name="action_finish_editing_boards">Done</string>
-    <string name="board_edit_hint">Drag to reorder; tap the corner to park or bring back</string>
+    <string name="board_edit_title">Home boards</string>
+    <string name="board_edit_done">Done</string>
+    <string name="board_edit_hint">Drag to reorder; tap × to take a board off home</string>
     <string name="board_park">Remove from home</string>
     <string name="board_restore">Put back on home</string>
+    <string name="board_parked_title">Not on home</string>
     <string name="board_parked">Removed from home</string>
 
     <string name="board_family_everyday">Everyday</string>
@@ -416,8 +418,19 @@
     <string name="doh_master_hint">The app resolves hostnames over DoH; every other app on the phone carries on as before</string>
     <string name="doh_provider_title">Resolver</string>
     <string name="doh_provider_alidns">AliDNS</string>
-    <string name="doh_provider_custom">Custom</string>
     <string name="doh_provider_custom_hint">Your own DoH server, or any other</string>
+    <string name="doh_servers_title_ordered">Servers · tried in order</string>
+    <string name="doh_rank_first">Primary</string>
+    <string name="doh_rank_backup">Backup %1$d</string>
+    <string name="doh_add_custom">Add a custom DoH address</string>
+    <string name="doh_order_note">When the primary fails or times out, the next one is tried; drag to change the order. Bootstrap IPs are set in each server’s details.</string>
+    <string name="doh_details_note">This device can use one server at a time. Bootstrap IPs are set in each server’s details.</string>
+    <string name="doh_no_server">Choose at least one server</string>
+    <string name="doh_drag_handle">Drag to change the order</string>
+    <string name="doh_move_up">Move up</string>
+    <string name="doh_move_down">Move down</string>
+    <string name="doh_server_add_title">Add a DoH server</string>
+    <string name="doh_bootstrap_reset">Restore defaults</string>
     <string name="doh_url_label">Server address</string>
     <string name="doh_url_required">Enter the DoH server address</string>
     <string name="doh_url_invalid">It has to be a full address beginning with https://</string>
@@ -1326,7 +1339,7 @@
 
     <string name="help_section_home">The feed and its lists</string>
     <string name="help_boards_title">The board strip is yours to arrange</string>
-    <string name="help_boards_body">Long-press the board strip to rearrange: drag to reorder, tap a corner badge to park or restore a board.</string>
+    <string name="help_boards_body">Long-press the board strip to edit it: drag to reorder, tap × to take a board off home, and tap one under “Not on home” to put it back.</string>
     <string name="help_home_tap_title">Tapping Home twice</string>
     <string name="help_home_tap_body">Tap Home while on Home: reload and jump to the top. The same tap on Notifications only jumps.</string>
     <string name="help_sort_title">The sort order sticks</string>

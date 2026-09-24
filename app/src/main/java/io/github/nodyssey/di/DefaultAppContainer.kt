@@ -281,13 +281,14 @@ class DefaultAppContainer(
             // A connection already open to an address the old resolver handed out would otherwise
             // keep carrying requests, and the change would look like it had done nothing.
             onResolverChanged = connectionPool::evictAll,
+            clock = clock,
         )
     }
 
     /**
-     * Both capabilities are yes here, and the reason is the same one: on this platform the app *is*
-     * the resolver. `AppDns` decides which record types to ask for and what to do when the answer
-     * does not come — neither of which is a question `NSURLSession` lets its side ask.
+     * Every capability is yes here, and the reason is the same one: on this platform the app *is*
+     * the resolver. `AppDns` decides which record types to ask for, which server to ask next and what
+     * to do when no answer comes — none of which is a question `NSURLSession` lets its side ask.
      */
     override val doh: DohSupport by lazy {
         DohSupport(
@@ -298,7 +299,11 @@ class DefaultAppContainer(
                 dispatchers = dispatchers,
                 clock = clock,
             ),
-            capabilities = DohCapabilities(canChooseRecordTypes = true, canFallBackToSystem = true),
+            capabilities = DohCapabilities(
+                canChooseRecordTypes = true,
+                canFallBackToSystem = true,
+                triesServersInOrder = true,
+            ),
         )
     }
 

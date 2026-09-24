@@ -53,10 +53,12 @@
 
     <string name="board_admin_only">僅管理員可見</string>
 
-    <string name="action_finish_editing_boards">完成排序</string>
-    <string name="board_edit_hint">拖曳排序，點角標移出或加回</string>
+    <string name="board_edit_title">首頁版塊</string>
+    <string name="board_edit_done">完成</string>
+    <string name="board_edit_hint">拖曳排序，點 × 移出首頁</string>
     <string name="board_park">移出首頁</string>
     <string name="board_restore">加回首頁</string>
+    <string name="board_parked_title">未加入首頁</string>
     <string name="board_parked">已移出首頁</string>
 
     <string name="board_family_everyday">日常類</string>
@@ -410,8 +412,19 @@
     <string name="doh_master_hint">App 內的請求改用 DoH 解析網域；手機上的其它 App 照常</string>
     <string name="doh_provider_title">解析服務商</string>
     <string name="doh_provider_alidns">阿里 DNS</string>
-    <string name="doh_provider_custom">自訂</string>
     <string name="doh_provider_custom_hint">填自建或其它 DoH 伺服器</string>
+    <string name="doh_servers_title_ordered">服務商 · 依序嘗試</string>
+    <string name="doh_rank_first">首選</string>
+    <string name="doh_rank_backup">備用 %1$d</string>
+    <string name="doh_add_custom">新增自訂 DoH 位址</string>
+    <string name="doh_order_note">首選失敗或逾時後依序換下一個；拖曳調整順序。引導 IP 在各服務商詳情裡設定。</string>
+    <string name="doh_details_note">這台裝置上一次只能用一個服務商。引導 IP 在各服務商詳情裡設定。</string>
+    <string name="doh_no_server">至少選一個服務商</string>
+    <string name="doh_drag_handle">拖曳調整順序</string>
+    <string name="doh_move_up">上移</string>
+    <string name="doh_move_down">下移</string>
+    <string name="doh_server_add_title">新增 DoH 伺服器</string>
+    <string name="doh_bootstrap_reset">還原預設</string>
     <string name="doh_url_label">伺服器位址</string>
     <string name="doh_url_required">請填寫 DoH 伺服器位址</string>
     <string name="doh_url_invalid">需要是 https:// 開頭的完整位址</string>
@@ -1318,7 +1331,7 @@
 
     <string name="help_section_home">首頁與清單</string>
     <string name="help_boards_title">版塊列能自己排</string>
-    <string name="help_boards_body">長按版塊列進入排序：拖曳改順序，點角標移出或加回首頁。</string>
+    <string name="help_boards_body">長按版塊列進入編輯：拖曳改順序，點 × 移出首頁，在「未加入首頁」裡點一下加回。</string>
     <string name="help_home_tap_title">再點一下「首頁」</string>
     <string name="help_home_tap_body">已在首頁時點「首頁」：重新整理並回到頂端。點「通知」只回頂端。</string>
     <string name="help_sort_title">排序會記住</string>

@@ -13,37 +13,40 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -51,12 +54,18 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -67,6 +76,8 @@ import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -74,15 +85,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import io.github.nodyssey.data.Board
+import io.github.nodyssey.ui.common.boardFamilyColors
+import io.github.nodyssey.ui.common.boardFamilyOf
 import io.github.nodyssey.ui.common.longPressToEdit
 import io.github.nodyssey.ui.resources.Res
-import io.github.nodyssey.ui.resources.action_finish_editing_boards
 import io.github.nodyssey.ui.resources.action_hide_all_boards
 import io.github.nodyssey.ui.resources.action_show_all_boards
 import io.github.nodyssey.ui.resources.board_admin_only
+import io.github.nodyssey.ui.resources.board_edit_done
 import io.github.nodyssey.ui.resources.board_edit_hint
+import io.github.nodyssey.ui.resources.board_edit_title
 import io.github.nodyssey.ui.resources.board_park
 import io.github.nodyssey.ui.resources.board_parked
+import io.github.nodyssey.ui.resources.board_parked_title
 import io.github.nodyssey.ui.resources.board_restore
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaChipDefaults
@@ -103,10 +118,11 @@ import org.jetbrains.compose.resources.stringResource
  * It costs vertical space while open, but the finger never leaves the top of the screen and the list
  * underneath stays visible — which a sheet cannot claim.
  *
- * Expanded, a long press turns the same pills into an editor: drag to reorder, and tap a pill's
- * corner badge to park it at the tail or bring it back. Parked boards are only drawn while editing —
- * out of the way is the whole point of parking one — so the editor is also the only place they can be
- * recovered, which is why the long press is on the strip rather than buried in 设置.
+ * Expanded, a long press turns the same pills into 1j's editor: a 首页版块 header with 完成, the
+ * strip's pills in their board colours with a × to take one off, and 未加入首页 underneath holding
+ * the ones taken off, each a tap from coming back. Drag to reorder. Parked boards are only drawn while
+ * editing — out of the way is the whole point of parking one — so the editor is also the only place
+ * they can be recovered, which is why the long press is on the strip rather than buried in 设置.
  *
  * [parkedBoards] is deliberately a second list rather than a flag inside [boards]: outside edit mode
  * a parked board is not selectable, and [boards] is exactly the list the feed may page through.
@@ -192,25 +208,36 @@ internal fun BoardStrip(
             // own top padding makes up the rest below.
             .padding(top = Spacing.sm, bottom = Spacing.xs),
     ) {
+        AnimatedVisibility(visible = editing) {
+            BoardEditHeader(
+                onDone = { editing = false },
+                onCollapse = {
+                    editing = false
+                    expanded = false
+                },
+            )
+        }
         /*
          * A box with the toggle laid over the corner, not a row with the toggle beside the pills.
          *
          * A row makes the toggle's width a column that every wrapped row of pills has to keep clear,
          * so an expanded strip left a tall empty gutter down its right edge with a single button at
          * the top of it. Only the *first* row shares its line with the toggle, and that is exactly
-         * what [BoardFlow] insets — the rows below it run the full width of the screen.
+         * what [BoardFlow] insets — the rows below it run the full width of the screen. While editing
+         * the toggle sits in the header instead, and the first row gets its width back.
          */
         Box(Modifier.fillMaxWidth()) {
             if (expanded) {
+                val slots = if (editing) draft else boards.map { BoardSlot(it, parked = false) }
                 ExpandedBoards(
-                    slots = if (editing) draft else boards.map { BoardSlot(it, parked = false) },
+                    slots = slots.filterNot { it.parked },
+                    parkedSlots = slots.filter { it.parked },
                     selectedSlug = selectedSlug,
                     editing = editing,
-                    // Clear of the toggle, its own end inset, and a pill's worth of breathing room.
-                    firstRowInset = ToggleSlotWidth + PillGap,
+                    firstRowInset = if (editing) 0.dp else ToggleWidth + PillGap,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = Spacing.md),
+                        .padding(start = Spacing.md, end = ToggleEndInset),
                     onBoardClick = { slug ->
                         onBoardClick(slug)
                         expanded = false
@@ -220,8 +247,10 @@ internal fun BoardStrip(
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
                     onReorder = { moved ->
-                        draft = moved
-                        commit(moved)
+                        // The flow only holds the strip's half; the parked half rides along unchanged.
+                        val next = moved + draft.filter { it.parked }
+                        draft = next
+                        commit(next)
                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     },
                     onTogglePark = ::togglePark,
@@ -253,100 +282,103 @@ internal fun BoardStrip(
             //
             // The end inset keeps the button off the display edge, where it used to sit flush because
             // it was the only thing in this row without padding of its own.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .height(PillHeight)
-                    .padding(end = ToggleEndInset),
-                contentAlignment = Alignment.Center,
-            ) {
-                // The tonal button *is* the pill, rather than a plain IconButton with one drawn inside
-                // it: the ripple is clipped to the shape it draws instead of spilling above and below
-                // the 32dp pill.
-                //
-                // While editing it is the way out, so it turns into a tick. One control, because a
-                // separate 完成 button would mean two things in a corner that only ever does one.
-                val container by animateColorAsState(
-                    targetValue =
-                    if (editing) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        LocalPlazaLayers.current.raised
-                    },
-                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                    label = "board-toggle-container",
-                )
-                val content by animateColorAsState(
-                    targetValue =
-                    if (editing) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                    label = "board-toggle-content",
-                )
-                FilledTonalIconButton(
-                    onClick = {
-                        when {
-                            editing -> editing = false
-                            else -> expanded = !expanded
-                        }
-                    },
-                    modifier =
-                    Modifier
-                        .size(width = ToggleWidth, height = PillHeight)
-                        // 墨水屏 draws the raised tone as the page's own paper, and the outline is all
-                        // that shows a key there; the lit tick needs none.
-                        .then(
-                            if (editing) Modifier else Modifier.cardBorder(LocalPlazaLayers.current, PillShape),
-                        ),
-                    shape = PillShape,
-                    colors =
-                    IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = container,
-                        contentColor = content,
-                    ),
+            if (!editing) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .height(PillHeight)
+                        .padding(end = ToggleEndInset),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    // Three states through one 40dp hole, so they trade places rather than cut. The
-                    // specs are read out here because a transition spec is not a composable scope.
-                    val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                    val pop = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-                    AnimatedContent(
-                        targetState = editing to expanded,
-                        transitionSpec = {
-                            (fadeIn(fade) + scaleIn(pop, initialScale = ICON_SWAP_SCALE))
-                                .togetherWith(fadeOut(fade) + scaleOut(pop, targetScale = ICON_SWAP_SCALE))
-                        },
-                        label = "board-toggle-icon",
-                    ) { (isEditing, isExpanded) ->
-                        Icon(
-                            imageVector =
-                            when {
-                                isEditing -> Icons.Default.Check
-                                isExpanded -> Icons.Default.KeyboardArrowUp
-                                else -> Icons.Default.KeyboardArrowDown
-                            },
-                            contentDescription =
-                            stringResource(
-                                when {
-                                    isEditing -> Res.string.action_finish_editing_boards
-                                    isExpanded -> Res.string.action_hide_all_boards
-                                    else -> Res.string.action_show_all_boards
-                                },
-                            ),
-                            modifier = Modifier.size(ToggleIconSize),
-                        )
-                    }
+                    BoardToggle(expanded = expanded, onClick = { expanded = !expanded })
                 }
             }
         }
-        AnimatedVisibility(visible = editing) {
+    }
+}
+
+/**
+ * 1j's header over the editor: what is being edited, 完成, and the toggle — now saying 收起 — moved
+ * up out of the pills' first row. 完成 leaves the strip open on the result; the toggle folds it away
+ * as well, which is what someone reaching for the same corner they opened it from expects.
+ */
+@Composable
+private fun BoardEditHeader(
+    onDone: () -> Unit,
+    onCollapse: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, end = ToggleEndInset, bottom = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
             Text(
-                text = stringResource(Res.string.board_edit_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = Spacing.md, top = Spacing.xs),
+                text = stringResource(Res.string.board_edit_title),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.weight(1f).semantics { heading() },
+            )
+            // Material's extra-small step, the size the Lean round gives the composer's 发布: the one
+            // filled thing in the header without being the tallest.
+            Button(
+                onClick = onDone,
+                contentPadding = ButtonDefaults.ExtraSmallContentPadding,
+                modifier = Modifier.heightIn(min = ButtonDefaults.ExtraSmallContainerHeight),
+            ) {
+                Text(stringResource(Res.string.board_edit_done))
+            }
+            BoardToggle(expanded = true, onClick = onCollapse)
+        }
+        Text(
+            text = stringResource(Res.string.board_edit_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = Spacing.md, bottom = Spacing.sm),
+        )
+    }
+}
+
+/**
+ * The ⌄ / ⌃ that opens and folds the strip.
+ *
+ * The tonal button *is* the pill, rather than a plain IconButton with one drawn inside it: the ripple
+ * is clipped to the shape it draws instead of spilling above and below the pill.
+ */
+@Composable
+private fun BoardToggle(
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    val layers = LocalPlazaLayers.current
+    FilledTonalIconButton(
+        onClick = onClick,
+        // 墨水屏 draws the raised tone as the page's own paper, and the outline is all that shows a
+        // key there.
+        modifier = Modifier.size(width = ToggleWidth, height = PillHeight).cardBorder(layers, PillShape),
+        shape = PillShape,
+        colors =
+        IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = layers.raised,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+    ) {
+        // The two states through one hole, so they trade places rather than cut. The specs are read
+        // out here because a transition spec is not a composable scope.
+        val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+        val pop = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+        AnimatedContent(
+            targetState = expanded,
+            transitionSpec = {
+                (fadeIn(fade) + scaleIn(pop, initialScale = ICON_SWAP_SCALE))
+                    .togetherWith(fadeOut(fade) + scaleOut(pop, targetScale = ICON_SWAP_SCALE))
+            },
+            label = "board-toggle-icon",
+        ) { isExpanded ->
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription =
+                stringResource(if (isExpanded) Res.string.action_hide_all_boards else Res.string.action_show_all_boards),
+                modifier = Modifier.size(ToggleIconSize),
             )
         }
     }
@@ -364,6 +396,8 @@ internal fun BoardStrip(
 @Composable
 private fun ExpandedBoards(
     slots: List<BoardSlot>,
+    /** The boards taken off the strip — only ever non-empty while [editing]. */
+    parkedSlots: List<BoardSlot>,
     selectedSlug: String?,
     editing: Boolean,
     firstRowInset: Dp,
@@ -414,125 +448,176 @@ private fun ExpandedBoards(
     // must not leave a floating ghost behind.
     if (draggedKey != null && slots.none { it.key == draggedKey }) draggedKey = null
 
+    /*
+     * Read at event time, not captured. `pointerInput(Unit)` keeps the block it started with for as
+     * long as the node lives, so a drag that closed over `slots` would work on the strip as it was at
+     * the editor's first touch — before a park, or before the previous drag — and land the pill by
+     * slots that have since moved. `slots` and `slotBounds` both change with the same frame, so
+     * reading the current one keeps the list and the hit test in step.
+     */
+    val currentSlots by rememberUpdatedState(slots)
+    val reorder by rememberUpdatedState(onReorder)
+    val editingNow by rememberUpdatedState(editing)
+    val enterEditing by rememberUpdatedState(onEnterEditing)
+
+    /*
+     * The long press stays on the flow while editing, switched off, rather than giving way to the drag
+     * detector: the finger that opened the editor is still down when it opens, and the long press is
+     * what swallows that finger's lift. Swapped out, it would be gone before the lift, and the pill
+     * under the finger would take the lift as a tap — which in the editor parks it.
+     */
     val gestures =
-        if (editing) {
-            Modifier.pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { start ->
-                        pointer = start
-                        releasingKey = null
-                        val slot =
-                            slots.firstOrNull { slotBounds[it.key]?.contains(start) == true }
-                        // Locked 综合 stays first, and reordering the parked tail would be sorting a
-                        // bin. Both are still perfectly tappable; they are just not draggable.
-                        draggedKey = slot?.takeIf { !it.locked && !it.parked }?.key
-                        grabWithinPill =
-                            draggedKey?.let { key -> start - (slotBounds[key]?.center ?: start) }
-                                ?: Offset.Zero
-                    },
-                    onDrag = { change, delta ->
-                        if (draggedKey == null) return@detectDragGestures
-                        change.consume()
-                        pointer += delta
-                        val moved = slots.reorderedFor(draggedKey, pointer, slotBounds)
-                        if (moved != null) onReorder(moved)
-                    },
-                    onDragEnd = ::release,
-                    onDragCancel = ::release,
-                )
-            }
-        } else {
-            Modifier.longPressToEdit(onEnterEditing)
-        }
+        Modifier
+            .longPressToEdit(enabled = { !editingNow }) { enterEditing() }
+            .then(
+                if (editing) {
+                    Modifier.pointerInput(Unit) {
+                        var lastSent: List<BoardSlot>? = null
+                        detectDragGestures(
+                            onDragStart = { start ->
+                                pointer = start
+                                releasingKey = null
+                                lastSent = null
+                                val slot =
+                                    currentSlots.firstOrNull { slotBounds[it.key]?.contains(start) == true }
+                                // Locked 综合 stays first. It is still perfectly tappable; it is just
+                                // not draggable. (The parked boards are not in this flow at all.)
+                                draggedKey = slot?.takeIf { !it.locked && !it.parked }?.key
+                                grabWithinPill =
+                                    draggedKey?.let { key -> start - (slotBounds[key]?.center ?: start) }
+                                        ?: Offset.Zero
+                            },
+                            onDrag = { change, delta ->
+                                if (draggedKey == null) return@detectDragGestures
+                                change.consume()
+                                pointer += delta
+                                val moved = currentSlots.reorderedFor(draggedKey, pointer, slotBounds)
+                                // Several moves can land before the strip recomposes, and each would
+                                // work out the same swap again from the same frame's list.
+                                if (moved != null && moved != lastSent) {
+                                    lastSent = moved
+                                    reorder(moved)
+                                }
+                            },
+                            onDragEnd = ::release,
+                            onDragCancel = ::release,
+                        )
+                    }
+                } else {
+                    Modifier
+                },
+            )
 
     // Lookahead is what lets a pill animate into a slot it has already been placed in: the layout
     // jumps, the drawing follows. Every pill below reads this scope through `animateBounds`.
-    LookaheadScope {
-        BoardFlow(
-            firstRowInset = firstRowInset,
-            // Editing widens the gaps so the corner badges have somewhere to sit: at the resting 8dp
-            // a badge would overlap the pill beside it rather than the pill it belongs to.
-            horizontalGap = if (editing) Spacing.lg else PillGap,
-            modifier = modifier
-                .onGloballyPositioned { containerCoords = it }
-                .then(gestures),
-        ) {
-            slots.forEach { slot ->
-                // Identity, not position. Without it Compose would reuse each node for whatever pill
-                // now sits at that index — the content would teleport and there would be nothing left
-                // for the placement animation to animate.
-                key(slot.key) {
-                    val active = slot.key == draggedKey
-                    val held = active || slot.key == releasingKey
-                    val eink = LocalEinkMode.current
-                    val lift = animateFloatAsState(
-                        targetValue = if (active) 1f else 0f,
-                        animationSpec = liftSpec,
-                        label = "board-pill-lift",
-                    )
-                    Box(
-                        modifier = Modifier
-                            // The held pill draws over its neighbours instead of sliding beneath them.
-                            .zIndex(if (held) 1f else 0f)
-                            .onGloballyPositioned { coords ->
-                                val container = containerCoords ?: return@onGloballyPositioned
-                                slotBounds[slot.key] = container.localBoundingBoxOf(coords)
-                            },
-                    ) {
+    Column(modifier) {
+        LookaheadScope {
+            BoardFlow(
+                firstRowInset = firstRowInset,
+                horizontalGap = PillGap,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { containerCoords = it }
+                    .then(gestures),
+            ) {
+                slots.forEach { slot ->
+                    // Identity, not position. Without it Compose would reuse each node for whatever pill
+                    // now sits at that index — the content would teleport and there would be nothing left
+                    // for the placement animation to animate.
+                    key(slot.key) {
+                        // A pill that leaves the flow — parked, or gone in a refresh — takes its
+                        // slot with it, so nothing is ever dropped onto where it used to be.
+                        DisposableEffect(slot.key) { onDispose { slotBounds.remove(slot.key) } }
+                        val active = slot.key == draggedKey
+                        val held = active || slot.key == releasingKey
+                        val eink = LocalEinkMode.current
+                        val pillShape = PillShape
+                        val lift = animateFloatAsState(
+                            targetValue = if (active) 1f else 0f,
+                            animationSpec = liftSpec,
+                            label = "board-pill-lift",
+                        )
                         Box(
-                            // Inner node, so neither transform below is visible to the measurement
-                            // above. A held pill is already glued to the finger, so it is the one
-                            // pill that must *not* animate towards its slot.
-                            modifier = (
-                                if (held) {
-                                    Modifier
-                                } else {
-                                    Modifier.animateBounds(this@LookaheadScope)
-                                }
-                                ).graphicsLayer {
-                                if (held) {
-                                    val home = slotBounds[slot.key]
-                                    if (home != null) {
-                                        val factor = if (active) 1f else settle.value
-                                        val target = pointer - grabWithinPill
-                                        translationX = (target.x - home.center.x) * factor
-                                        translationY = (target.y - home.center.y) * factor
-                                    }
-                                }
-                                val raised = lift.value
-                                if (raised > 0f) {
-                                    val scale = 1f + (DRAG_SCALE - 1f) * raised
-                                    scaleX = scale
-                                    scaleY = scale
-                                    // The scale above already says "picked up"; the shadow is
-                                    // what a screen adds to it, and paper has nothing to add.
-                                    shadowElevation =
-                                        if (eink) 0f else DRAG_ELEVATION.toPx() * raised
-                                    shape = CircleShape
-                                    clip = false
-                                }
-                            },
+                            modifier = Modifier
+                                // The held pill draws over its neighbours instead of sliding beneath them.
+                                .zIndex(if (held) 1f else 0f)
+                                .onGloballyPositioned { coords ->
+                                    val container = containerCoords ?: return@onGloballyPositioned
+                                    slotBounds[slot.key] = container.localBoundingBoxOf(coords)
+                                },
                         ) {
-                            BoardPill(
-                                board = slot.board,
-                                selected = !editing && slot.board.slug == selectedSlug,
-                                parked = slot.parked,
-                                onClick = { if (!editing) onBoardClick(slot.board.slug) },
-                            )
-                            AnimatedVisibility(
-                                visible = editing && !slot.locked,
-                                enter = scaleIn(MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                    fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
-                                exit = scaleOut(MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                    fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
-                                modifier = Modifier.align(Alignment.TopEnd),
+                            Box(
+                                // Inner node, so neither transform below is visible to the measurement
+                                // above. A held pill is already glued to the finger, so it is the one
+                                // pill that must *not* animate towards its slot.
+                                modifier = (
+                                    if (held) {
+                                        Modifier
+                                    } else {
+                                        Modifier.animateBounds(this@LookaheadScope)
+                                    }
+                                    ).graphicsLayer {
+                                    if (held) {
+                                        val home = slotBounds[slot.key]
+                                        if (home != null) {
+                                            val factor = if (active) 1f else settle.value
+                                            val target = pointer - grabWithinPill
+                                            translationX = (target.x - home.center.x) * factor
+                                            translationY = (target.y - home.center.y) * factor
+                                        }
+                                    }
+                                    val raised = lift.value
+                                    if (raised > 0f) {
+                                        val scale = 1f + (DRAG_SCALE - 1f) * raised
+                                        scaleX = scale
+                                        scaleY = scale
+                                        // And tipped a few degrees, as 1j draws the held pill.
+                                        rotationZ = DRAG_TILT_DEGREES * raised
+                                        // The scale above already says "picked up"; the shadow is
+                                        // what a screen adds to it, and paper has nothing to add.
+                                        shadowElevation =
+                                            if (eink) 0f else DRAG_ELEVATION.toPx() * raised
+                                        shape = pillShape
+                                        clip = false
+                                    }
+                                },
                             ) {
-                                ParkBadge(
-                                    parked = slot.parked,
-                                    onClick = { onTogglePark(slot.key) },
+                                BoardPill(
+                                    board = slot.board,
+                                    selected = slot.board.slug == selectedSlug,
+                                    // 综合 is not a board and cannot be taken off, so it keeps its
+                                    // everyday look and no ×.
+                                    editing = editing && !slot.locked,
+                                    onClick = {
+                                        when {
+                                            !editing -> onBoardClick(slot.board.slug)
+                                            !slot.locked -> onTogglePark(slot.key)
+                                        }
+                                    },
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+        // 1j's second block: what is off the strip, a tap each from coming back. Outside the flow
+        // above rather than a greyed tail at the end of it, so the strip's own rows show exactly what
+        // the strip will hold.
+        if (parkedSlots.isNotEmpty()) {
+            Text(
+                text = stringResource(Res.string.board_parked_title),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = Spacing.md, bottom = Spacing.sm).semantics { heading() },
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(PillGap),
+                verticalArrangement = Arrangement.spacedBy(PillGap),
+            ) {
+                parkedSlots.forEach { slot ->
+                    key(slot.key) {
+                        ParkedBoardChip(board = slot.board, onClick = { onTogglePark(slot.key) })
                     }
                 }
             }
@@ -602,136 +687,147 @@ private fun BoardFlow(
 }
 
 /**
- * The ✕ / ＋ on a pill's shoulder.
+ * One board on the strip.
  *
- * One control with two meanings rather than two controls, because parking and restoring are the same
- * decision seen from either side, and the pill is 32dp tall — there is room for exactly one badge.
+ * While [editing] it wears its board family's colours — the same four the board tags on every row
+ * use — and a × at its end, and a tap takes it off the strip rather than opening it: 1j's editor, where
+ * picking a board is not what the pills are for.
  */
-@Composable
-private fun ParkBadge(
-    parked: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val description = stringResource(if (parked) Res.string.board_restore else Res.string.board_park)
-    val container by animateColorAsState(
-        targetValue = if (parked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "park-badge-container",
-    )
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .size(BADGE_SIZE)
-            .semantics { contentDescription = description },
-        shape = CircleShape,
-        color = container,
-        contentColor =
-        if (parked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            // The two glyphs are the same stroke rotated, so they turn into each other rather than
-            // cutting — the badge is 20dp and a cut at that size reads as a flicker.
-            val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-            val pop = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-            AnimatedContent(
-                targetState = parked,
-                transitionSpec = {
-                    (fadeIn(fade) + scaleIn(pop, initialScale = ICON_SWAP_SCALE))
-                        .togetherWith(fadeOut(fade) + scaleOut(pop, targetScale = ICON_SWAP_SCALE))
-                },
-                label = "park-badge-icon",
-            ) { isParked ->
-                Icon(
-                    imageVector = if (isParked) Icons.Default.Add else Icons.Default.Close,
-                    // The Surface already carries the description; repeating it here would have
-                    // TalkBack read the badge twice.
-                    contentDescription = null,
-                    modifier = Modifier.size(BADGE_ICON_SIZE),
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun BoardPill(
     board: Board,
     selected: Boolean,
     onClick: () -> Unit,
-    parked: Boolean = false,
+    editing: Boolean = false,
 ) {
-    val parkedLabel = stringResource(Res.string.board_parked)
-    val colorSpec = MaterialTheme.motionScheme.defaultEffectsSpec<androidx.compose.ui.graphics.Color>()
-    // Parking a board is a move *and* a fade, and the two read as one gesture only if the colour
-    // takes as long as the flight to the tail does.
+    val family = boardFamilyColors(boardFamilyOf(board.slug, board.title))
+    val colorSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
     val container by animateColorAsState(
-        targetValue =
-        if (parked) {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        } else {
-            PlazaChipDefaults.containerColor()
-        },
+        targetValue = if (editing) family.container else PlazaChipDefaults.containerColor(),
         animationSpec = colorSpec,
         label = "board-pill-container",
     )
     val label by animateColorAsState(
-        targetValue =
-        if (parked) {
-            // See 页码 for why paper takes a real grey instead of a transparent one.
-            if (LocalEinkMode.current) {
-                MaterialTheme.colorScheme.outlineVariant
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = PARKED_ALPHA)
-            }
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
+        targetValue = if (editing) family.content else MaterialTheme.colorScheme.onSurface,
         animationSpec = colorSpec,
         label = "board-pill-label",
     )
+    val parkLabel = stringResource(Res.string.board_park)
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = {
-            Text(
-                text = board.title,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = PILL_LABEL_SIZE,
-                    lineHeight = PILL_LABEL_LINE_HEIGHT,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                ),
-                maxLines = 1,
-            )
-        },
-        // A parked board is still a board — it is only out of the way — so it keeps its shape and its
-        // label and loses its contrast. TalkBack gets told in words, since grey is not a word.
+        label = { Text(text = board.title, style = pillLabelStyle(selected), maxLines = 1) },
+        // A chip reads as "select this"; while editing its tap does something else, and TalkBack says
+        // what. A null action keeps the chip's own, and only names it.
         modifier =
         Modifier
             .height(PillHeight)
-            .then(
-                if (parked) Modifier.semantics { contentDescription = "${board.title}, $parkedLabel" } else Modifier,
-            ),
-        // Boards the site refuses to anyone signed out are worth flagging before the tap, not after.
-        // Described rather than decorative: the warning is the whole point of the icon, and it is
-        // nowhere else in the chip, so leaving it null hides the restriction from TalkBack.
+            .then(if (editing) Modifier.semantics { onClick(label = parkLabel, action = null) } else Modifier),
         trailingIcon =
-        if (board.adminOnly) {
-            {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = stringResource(Res.string.board_admin_only),
-                    modifier = Modifier.size(14.dp),
-                )
+        when {
+            // Described, since the × is the only thing saying what a tap here does.
+            editing -> {
+                {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(Res.string.board_park),
+                        modifier = Modifier.size(PILL_ICON_SIZE),
+                    )
+                }
             }
-        } else {
-            null
+
+            // Boards the site refuses to anyone signed out are worth flagging before the tap, not
+            // after. Described rather than decorative: the warning is the whole point of the icon,
+            // and it is nowhere else in the chip, so leaving it null hides the restriction from
+            // TalkBack.
+            board.adminOnly -> {
+                {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = stringResource(Res.string.board_admin_only),
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+
+            else -> null
         },
         shape = PillShape,
-        colors = PlazaChipDefaults.filterChipColors(containerColor = container, labelColor = label),
+        colors = PlazaChipDefaults.filterChipColors(containerColor = container, labelColor = label, iconColor = label),
         border = PlazaChipDefaults.border(selected),
     )
 }
+
+/**
+ * A board off the strip, under 未加入首页: a dashed outline and a ＋, and a tap puts it back.
+ *
+ * The outline is drawn rather than handed to the chip: Material's chips take a `BorderStroke`, which
+ * has no dash, and a solid outline would make these read as one more row of the strip. A board the
+ * site locks to signed-in readers shows its lock where the ＋ would be, as 1j draws 内版 — it can
+ * still be put back.
+ */
+@Composable
+private fun ParkedBoardChip(
+    board: Board,
+    onClick: () -> Unit,
+) {
+    val outline = MaterialTheme.colorScheme.outline
+    val shape = PillShape
+    val parked = stringResource(Res.string.board_parked)
+    val restore = stringResource(Res.string.board_restore)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // The dash goes on a box around the chip, not on the chip's own modifier: that modifier sits
+    // outside the chip's 48dp touch-target padding, so a line drawn there traces the touch target —
+    // taller than the pill, and into the row below.
+    Box(
+        Modifier
+            .height(PillHeight)
+            .drawBehind {
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = outline,
+                    style = Stroke(
+                        width = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
+                    ),
+                )
+            },
+    ) {
+        AssistChip(
+            onClick = onClick,
+            label = { Text(text = board.title, style = pillLabelStyle(selected = false), maxLines = 1) },
+            leadingIcon = {
+                Icon(
+                    if (board.adminOnly) Icons.Default.Lock else Icons.Default.Add,
+                    contentDescription = if (board.adminOnly) stringResource(Res.string.board_admin_only) else null,
+                    modifier = Modifier.size(PILL_ICON_SIZE),
+                )
+            },
+            // A dashed outline is not a word: TalkBack is told the board is off the strip, and what a
+            // tap does about it.
+            modifier =
+            Modifier.height(PillHeight).semantics {
+                contentDescription = "${board.title}, $parked"
+                onClick(label = restore, action = null)
+            },
+            shape = shape,
+            colors = AssistChipDefaults.assistChipColors(
+                containerColor = Color.Transparent,
+                labelColor = muted,
+                leadingIconContentColor = muted,
+            ),
+            border = null,
+        )
+    }
+}
+
+@Composable
+private fun pillLabelStyle(selected: Boolean) =
+    MaterialTheme.typography.labelLarge.copy(
+        fontSize = PILL_LABEL_SIZE,
+        lineHeight = PILL_LABEL_LINE_HEIGHT,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+    )
 
 /**
  * One pill's place in the strip while it is being rearranged.
@@ -805,9 +901,9 @@ private val PILL_LABEL_LINE_HEIGHT = 18.sp
 /** The toggle plus the end inset it is drawn against — the width the first row of pills gives up. */
 private val ToggleSlotWidth = ToggleWidth + ToggleEndInset
 
+private val PILL_ICON_SIZE = 16.dp
+
 private const val DRAG_SCALE = 1.06f
+private const val DRAG_TILT_DEGREES = -3f
 private val DRAG_ELEVATION = 8.dp
-private const val PARKED_ALPHA = 0.55f
-private val BADGE_SIZE = 20.dp
-private val BADGE_ICON_SIZE = 13.dp
 private const val ICON_SWAP_SCALE = 0.7f

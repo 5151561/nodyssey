@@ -1,39 +1,89 @@
 package io.github.nodyssey.ui.settings
 
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.dns.DnsResolution
 import io.github.nodyssey.data.dns.DohConfigProblem
 import io.github.nodyssey.data.dns.DohProvider
+import io.github.nodyssey.data.dns.DohServer
+import io.github.nodyssey.data.dns.DohServerProblem
 import io.github.nodyssey.ui.account.AccountMessageSnackbar
+import io.github.nodyssey.ui.common.MediumButton
+import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.action_delete
+import io.github.nodyssey.ui.resources.action_done
+import io.github.nodyssey.ui.resources.doh_add_custom
 import io.github.nodyssey.ui.resources.doh_bootstrap_invalid
 import io.github.nodyssey.ui.resources.doh_bootstrap_label
 import io.github.nodyssey.ui.resources.doh_bootstrap_placeholder
+import io.github.nodyssey.ui.resources.doh_bootstrap_reset
+import io.github.nodyssey.ui.resources.doh_details_note
+import io.github.nodyssey.ui.resources.doh_drag_handle
 import io.github.nodyssey.ui.resources.doh_fallback_hint
 import io.github.nodyssey.ui.resources.doh_fallback_title
 import io.github.nodyssey.ui.resources.doh_ipv6_hint
@@ -43,15 +93,22 @@ import io.github.nodyssey.ui.resources.doh_limits_hint
 import io.github.nodyssey.ui.resources.doh_limits_title
 import io.github.nodyssey.ui.resources.doh_master_hint
 import io.github.nodyssey.ui.resources.doh_master_title
+import io.github.nodyssey.ui.resources.doh_move_down
+import io.github.nodyssey.ui.resources.doh_move_up
+import io.github.nodyssey.ui.resources.doh_no_server
+import io.github.nodyssey.ui.resources.doh_order_note
 import io.github.nodyssey.ui.resources.doh_provider_alidns
 import io.github.nodyssey.ui.resources.doh_provider_cloudflare
-import io.github.nodyssey.ui.resources.doh_provider_custom
 import io.github.nodyssey.ui.resources.doh_provider_custom_hint
 import io.github.nodyssey.ui.resources.doh_provider_dnspod
 import io.github.nodyssey.ui.resources.doh_provider_google
 import io.github.nodyssey.ui.resources.doh_provider_title
 import io.github.nodyssey.ui.resources.doh_proxy_hint
+import io.github.nodyssey.ui.resources.doh_rank_backup
+import io.github.nodyssey.ui.resources.doh_rank_first
 import io.github.nodyssey.ui.resources.doh_save
+import io.github.nodyssey.ui.resources.doh_server_add_title
+import io.github.nodyssey.ui.resources.doh_servers_title_ordered
 import io.github.nodyssey.ui.resources.doh_test
 import io.github.nodyssey.ui.resources.doh_test_failure
 import io.github.nodyssey.ui.resources.doh_test_result
@@ -61,19 +118,24 @@ import io.github.nodyssey.ui.resources.doh_url_label
 import io.github.nodyssey.ui.resources.doh_url_placeholder
 import io.github.nodyssey.ui.resources.doh_url_required
 import io.github.nodyssey.ui.resources.doh_webview_hint
+import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.InlineBanner
-import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.SectionNotes
+import io.github.plaza.designsys.component.TonalTag
+import io.github.plaza.designsys.component.groupedRowTitleStyle
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @Composable
 fun DohSettingsRoute(
@@ -94,22 +156,41 @@ fun DohSettingsRoute(
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onEnabledChange = viewModel::setEnabled,
-        onProviderChange = viewModel::setProvider,
-        onUrlChange = viewModel::updateUrl,
-        onBootstrapChange = viewModel::updateBootstrap,
+        onToggleServer = viewModel::toggleServer,
+        onMoveServer = viewModel::moveServer,
+        onOpenServer = viewModel::openServer,
+        onAddServer = viewModel::addServer,
         onIncludeIPv6Change = viewModel::setIncludeIPv6,
         onFallbackChange = viewModel::setFallbackToSystem,
         onSave = viewModel::save,
         onTest = viewModel::test,
         modifier = modifier,
     )
+
+    state.editing?.let { draft ->
+        DohServerSheet(
+            draft = draft,
+            server = state.servers.firstOrNull { it.id == draft.id },
+            onUrlChange = viewModel::updateEditorUrl,
+            onBootstrapChange = viewModel::updateEditorBootstrap,
+            onResetBootstrap = viewModel::resetEditorBootstrap,
+            onDelete = viewModel::deleteEditorServer,
+            onConfirm = viewModel::confirmEditor,
+            onDismiss = viewModel::dismissEditor,
+        )
+    }
 }
 
 /**
- * 加密 DNS — which server turns a hostname into an address for the app's own requests.
+ * 加密 DNS — which servers turn a hostname into an address for the app's own requests.
  *
  * Everything below the master switch is dimmed and inert while it is off, the same treatment
  * [ProxySettingsScreen] and [NotificationSettingsScreen] give the settings behind theirs.
+ *
+ * Where the platform tries servers in turn (`DohCapabilities.triesServersInOrder`), the list is 6f's:
+ * a box to tick each server, the ticked ones on top in the order they are asked, dragged by a handle.
+ * Where it takes one server, the same rows carry radio buttons instead. Either way a row opens its
+ * details — address and bootstrap addresses — in [DohServerSheet].
  *
  * The note at the bottom sits outside that dimmed block on purpose, and it is the part of this screen
  * worth reading first: DoH answers a question about *names*, and a domain whose address is blocked,
@@ -122,9 +203,10 @@ fun DohSettingsScreen(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
-    onProviderChange: (DohProvider) -> Unit,
-    onUrlChange: (String) -> Unit,
-    onBootstrapChange: (String) -> Unit,
+    onToggleServer: (String) -> Unit,
+    onMoveServer: (id: String, toIndex: Int) -> Unit,
+    onOpenServer: (String) -> Unit,
+    onAddServer: () -> Unit,
     onIncludeIPv6Change: (Boolean) -> Unit,
     onFallbackChange: (Boolean) -> Unit,
     onSave: () -> Unit,
@@ -132,6 +214,7 @@ fun DohSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val appBarState = rememberOneHandAppBarState()
+    val ordered = state.capabilities.triesServersInOrder
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -174,73 +257,25 @@ fun DohSettingsScreen(
 
             // No alpha over the block: every control in it takes `enabled` and dims itself.
             Column(verticalArrangement = Arrangement.spacedBy(SettingsItemGap)) {
-                SectionLabel(stringResource(Res.string.doh_provider_title))
-                SettingsGroup {
-                    DohProvider.entries.forEachIndexed { index, provider ->
-                        GroupedRow(
-                            title = dohProviderLabel(provider),
-                            // The address itself, rather than a description of it: it is the one
-                            // thing about a resolver worth checking, and 自定义 is the row where it
-                            // is not known yet.
-                            subtitle = provider.url.ifEmpty {
-                                stringResource(Res.string.doh_provider_custom_hint)
-                            },
-                            subtitleMonospace = provider.url.isNotEmpty(),
-                            first = index == 0,
-                            last = index == DohProvider.entries.lastIndex,
-                            enabled = state.enabled,
-                            selected = provider == state.provider,
-                            onClick = { onProviderChange(provider) },
-                            // Leading, where 6f puts its markers: the column of choices reads down
-                            // the left edge, and the answer is the one that is filled.
-                            leading = {
-                                RadioButton(
-                                    selected = provider == state.provider,
-                                    onClick = null,
-                                    enabled = state.enabled,
-                                )
-                            },
-                            showChevron = false,
-                        )
-                    }
-                }
-
-                if (state.provider == DohProvider.CUSTOM) {
-                    LayerCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        SettingsTextField(
-                            value = state.urlInput,
-                            onValueChange = onUrlChange,
-                            label = stringResource(Res.string.doh_url_label),
-                            placeholder = stringResource(Res.string.doh_url_placeholder),
-                            enabled = state.enabled,
-                            isError = state.problem == DohConfigProblem.MISSING_URL ||
-                                state.problem == DohConfigProblem.INVALID_URL,
-                            supportingText = when (state.problem) {
-                                DohConfigProblem.MISSING_URL -> stringResource(Res.string.doh_url_required)
-                                DohConfigProblem.INVALID_URL -> stringResource(Res.string.doh_url_invalid)
-                                else -> null
-                            },
-                            keyboardType = KeyboardType.Uri,
-                        )
-                        SettingsTextField(
-                            value = state.bootstrapInput,
-                            onValueChange = onBootstrapChange,
-                            label = stringResource(Res.string.doh_bootstrap_label),
-                            placeholder = stringResource(Res.string.doh_bootstrap_placeholder),
-                            enabled = state.enabled,
-                            isError = state.problem == DohConfigProblem.INVALID_BOOTSTRAP,
-                            supportingText =
-                            if (state.problem == DohConfigProblem.INVALID_BOOTSTRAP) {
-                                stringResource(Res.string.doh_bootstrap_invalid)
-                            } else {
-                                null
-                            },
-                            keyboardType = KeyboardType.Uri,
-                        )
-                    }
+                SectionLabel(
+                    stringResource(if (ordered) Res.string.doh_servers_title_ordered else Res.string.doh_provider_title),
+                )
+                DohServerList(
+                    servers = state.servers,
+                    ordered = ordered,
+                    enabled = state.enabled,
+                    onToggle = onToggleServer,
+                    onMove = onMoveServer,
+                    onOpen = onOpenServer,
+                    onAdd = onAddServer,
+                )
+                SectionNote(stringResource(if (ordered) Res.string.doh_order_note else Res.string.doh_details_note))
+                if (state.problem == DohConfigProblem.NO_SERVER) {
+                    InlineBanner(
+                        text = stringResource(Res.string.doh_no_server),
+                        icon = PlazaIcons.ErrorCircle,
+                        announce = true,
+                    )
                 }
 
                 // Both rows are about what the *resolver* can be asked, and on a platform where the
@@ -328,18 +363,353 @@ fun DohSettingsScreen(
     }
 }
 
-/** Shared with 网络自检, which names the same provider on a row of its own. */
+/**
+ * The servers, and the row that adds one, in one card.
+ *
+ * The drag is the toolbar editor's (`ToolbarCustomizeSheet`): Compose has no reorderable list, so a
+ * handle's `detectDragGestures` moves the row by an offset and swaps it one slot per row of travel.
+ * The rows are one height — two fixed lines each — which is what makes a row of travel one division.
+ * Only the ticked block can be rearranged: the unticked rows are not asked, so they have no order to
+ * set, and [withMoved] holds a dragged row inside the block.
+ *
+ * The same swaps are offered to TalkBack as 上移 / 下移 on each ticked row, since a drag is the one
+ * gesture a screen reader cannot make.
+ */
 @Composable
-internal fun dohProviderLabel(provider: DohProvider): String =
+private fun DohServerList(
+    servers: List<DohServer>,
+    ordered: Boolean,
+    enabled: Boolean,
+    onToggle: (String) -> Unit,
+    onMove: (id: String, toIndex: Int) -> Unit,
+    onOpen: (String) -> Unit,
+    onAdd: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    val move by rememberUpdatedState(onMove)
+    val latest by rememberUpdatedState(servers)
+    /*
+     * The order the gesture works on. A drag outruns composition — several move events can land in
+     * one frame, and each has to see the swap the one before it made — so while a finger is down the
+     * rows draw from this snapshot, taken when the drag starts, and from [servers] again once it
+     * lifts. Every swap is also handed to [onMove] as it happens, so the two agree by then. The same
+     * reasoning as `ToolbarCustomizeSheet`'s, which states it at length.
+     */
+    val order = remember { mutableStateListOf<DohServer>() }
+    var draggedId by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var rowHeightPx by remember { mutableIntStateOf(0) }
+    val rows = if (draggedId != null) order else servers
+    val tickedCount = rows.count(DohServer::checked)
+    val draggable = ordered && enabled && tickedCount > 1
+
+    fun release() {
+        draggedId = null
+        dragOffset = 0f
+    }
+
+    SettingsGroup {
+        rows.forEachIndexed { index, server ->
+            key(server.id) {
+                val dragging = server.id == draggedId
+                val rank = rows.take(index).count(DohServer::checked).takeIf { ordered && server.checked }
+                DohServerRow(
+                    server = server,
+                    first = index == 0,
+                    ordered = ordered,
+                    rank = rank,
+                    enabled = enabled,
+                    dragging = dragging,
+                    onToggle = { onToggle(server.id) },
+                    onOpen = { onOpen(server.id) },
+                    onMoveUp = rank?.takeIf { draggable && it > 0 }?.let { { move(server.id, index - 1) } },
+                    onMoveDown = rank?.takeIf { draggable && it < tickedCount - 1 }?.let { { move(server.id, index + 1) } },
+                    modifier = Modifier
+                        .onSizeChanged { if (!dragging) rowHeightPx = it.height }
+                        .zIndex(if (dragging) 1f else 0f)
+                        .offset { IntOffset(0, if (dragging) dragOffset.roundToInt() else 0) },
+                    handle =
+                    if (draggable && server.checked) {
+                        {
+                            DragHandle(
+                                modifier = Modifier.pointerInput(server.id) {
+                                    detectDragGestures(
+                                        onDragStart = {
+                                            order.clear()
+                                            order.addAll(latest)
+                                            draggedId = server.id
+                                            dragOffset = 0f
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        },
+                                        onDragEnd = ::release,
+                                        onDragCancel = ::release,
+                                    ) { change, amount ->
+                                        change.consume()
+                                        val id = draggedId ?: return@detectDragGestures
+                                        if (rowHeightPx == 0) return@detectDragGestures
+                                        dragOffset += amount.y
+                                        // One row of travel is one swap, and the offset gives that
+                                        // row back so the dragged row stays under the finger.
+                                        val steps = (dragOffset / rowHeightPx).roundToInt()
+                                        if (steps == 0) return@detectDragGestures
+                                        val from = order.indexOfFirst { it.id == id }
+                                        val to = (from + steps).coerceIn(0, order.count(DohServer::checked) - 1)
+                                        if (to == from) return@detectDragGestures
+                                        dragOffset -= (to - from) * rowHeightPx
+                                        order.add(to, order.removeAt(from))
+                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        move(id, to)
+                                    }
+                                },
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
+        GroupedRow(
+            title = stringResource(Res.string.doh_add_custom),
+            icon = Icons.Default.Add,
+            last = true,
+            enabled = enabled,
+            contentColor = MaterialTheme.colorScheme.primary,
+            onClick = onAdd,
+            showChevron = false,
+        )
+    }
+}
+
+/**
+ * One server: its box (or radio button), its name with its place in the order, its address, and —
+ * while it can be dragged — the handle.
+ *
+ * Tapping the row opens its details; the box is its own target, so ticking a server and opening it
+ * are two different taps rather than one that does both.
+ */
+@Composable
+private fun DohServerRow(
+    server: DohServer,
+    first: Boolean,
+    ordered: Boolean,
+    /** Where among the ticked servers this one is asked, or null where there is no order to show. */
+    rank: Int?,
+    enabled: Boolean,
+    dragging: Boolean,
+    onToggle: () -> Unit,
+    onOpen: () -> Unit,
+    onMoveUp: (() -> Unit)?,
+    onMoveDown: (() -> Unit)?,
+    handle: (@Composable () -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val label = dohServerLabel(server)
+    val moveUpLabel = stringResource(Res.string.doh_move_up)
+    val moveDownLabel = stringResource(Res.string.doh_move_down)
+    val layers = LocalPlazaLayers.current
+    // The rows are see-through — the card behind them is drawn once, by the group — so a row lifted
+    // off its slot brings a piece of card with it, and a shadow where the screen can draw one.
+    Surface(
+        modifier = modifier,
+        color = if (dragging) layers.card else Color.Transparent,
+        shape = if (dragging) MaterialTheme.shapes.medium else RectangleShape,
+        shadowElevation = if (dragging && layers.shadows) DRAG_ELEVATION else 0.dp,
+    ) {
+        GroupedListItem(
+            first = first,
+            last = false,
+            // On the row itself, which is the node TalkBack lands on; the Surface around it is not.
+            modifier = Modifier.semantics {
+                customActions = listOfNotNull(
+                    onMoveUp?.let {
+                        CustomAccessibilityAction(moveUpLabel) {
+                            it()
+                            true
+                        }
+                    },
+                    onMoveDown?.let {
+                        CustomAccessibilityAction(moveDownLabel) {
+                            it()
+                            true
+                        }
+                    },
+                )
+            },
+            onClick = onOpen,
+            enabled = enabled,
+            leadingContent = {
+                val toggle = Modifier.semantics { contentDescription = label }
+                if (ordered) {
+                    Checkbox(checked = server.checked, onCheckedChange = { onToggle() }, enabled = enabled, modifier = toggle)
+                } else {
+                    RadioButton(selected = server.checked, onClick = onToggle, enabled = enabled, modifier = toggle)
+                }
+            },
+            headlineContent = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = label,
+                        style = groupedRowTitleStyle(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    rank?.let {
+                        TonalTag(
+                            text =
+                            if (it == 0) {
+                                stringResource(Res.string.doh_rank_first)
+                            } else {
+                                stringResource(Res.string.doh_rank_backup, it)
+                            },
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                }
+            },
+            supportingContent = {
+                Text(
+                    // The scheme is always https — the validator refuses anything else — so it is
+                    // left off, and the part worth reading gets the width.
+                    text = server.url.removePrefix(HTTPS_PREFIX),
+                    style = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            trailingContent = handle,
+        )
+    }
+}
+
+/** The grab target: the handle icon, in a box a thumb can find. */
+@Composable
+private fun DragHandle(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.size(width = 40.dp, height = 48.dp), contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = PlazaIcons.DragHandle,
+            contentDescription = stringResource(Res.string.doh_drag_handle),
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/**
+ * One server's details: the address — typed, for one the user added; shown, for a preset — and the
+ * bootstrap addresses, which a preset lets be overridden and put back ([onResetBootstrap]).
+ *
+ * @param server the row being edited, or null while adding one.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DohServerSheet(
+    draft: DohServerDraft,
+    server: DohServer?,
+    onUrlChange: (String) -> Unit,
+    onBootstrapChange: (String) -> Unit,
+    onResetBootstrap: () -> Unit,
+    onDelete: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val preset = draft.preset
+    PlazaSheet(
+        onDismiss = onDismiss,
+        // Straight to full height: two text fields and a row of buttons, and a half-open state would
+        // put the buttons behind the keyboard.
+        sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        ),
+        title = server?.let { dohServerLabel(it) } ?: stringResource(Res.string.doh_server_add_title),
+        subtitle =
+        when {
+            preset != null -> preset.url
+            server == null -> stringResource(Res.string.doh_provider_custom_hint)
+            else -> null
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = Spacing.xl)
+                .padding(bottom = Spacing.xl)
+                .navigationBarsPadding()
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            if (preset == null) {
+                SettingsTextField(
+                    value = draft.urlInput,
+                    onValueChange = onUrlChange,
+                    label = stringResource(Res.string.doh_url_label),
+                    placeholder = stringResource(Res.string.doh_url_placeholder),
+                    isError = draft.problem == DohServerProblem.MISSING_URL ||
+                        draft.problem == DohServerProblem.INVALID_URL,
+                    supportingText = when (draft.problem) {
+                        DohServerProblem.MISSING_URL -> stringResource(Res.string.doh_url_required)
+                        DohServerProblem.INVALID_URL -> stringResource(Res.string.doh_url_invalid)
+                        else -> null
+                    },
+                    keyboardType = KeyboardType.Uri,
+                )
+            }
+            SettingsTextField(
+                value = draft.bootstrapInput,
+                onValueChange = onBootstrapChange,
+                label = stringResource(Res.string.doh_bootstrap_label),
+                placeholder = stringResource(Res.string.doh_bootstrap_placeholder),
+                isError = draft.problem == DohServerProblem.INVALID_BOOTSTRAP,
+                supportingText =
+                if (draft.problem == DohServerProblem.INVALID_BOOTSTRAP) {
+                    stringResource(Res.string.doh_bootstrap_invalid)
+                } else {
+                    null
+                },
+                keyboardType = KeyboardType.Uri,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                when {
+                    preset != null ->
+                        TextButton(onClick = onResetBootstrap) { Text(stringResource(Res.string.doh_bootstrap_reset)) }
+
+                    server != null ->
+                        TextButton(
+                            onClick = onDelete,
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        ) { Text(stringResource(Res.string.action_delete)) }
+                }
+                Spacer(Modifier.weight(1f))
+                MediumButton(onClick = onConfirm) { Text(stringResource(Res.string.action_done)) }
+            }
+        }
+    }
+}
+
+/** Shared with 网络自检, which names the same servers on a row of its own. */
+@Composable
+internal fun dohServerLabel(server: DohServer): String =
+    server.preset?.let { dohProviderLabel(it) }
+        // A server the user added is named by its host: it is what they typed, and the one part of
+        // the address that tells two of them apart.
+        ?: server.url.removePrefix(HTTPS_PREFIX).substringBefore('/').ifEmpty { server.url }
+
+@Composable
+private fun dohProviderLabel(provider: DohProvider): String =
     stringResource(
         when (provider) {
             DohProvider.ALIDNS -> Res.string.doh_provider_alidns
             DohProvider.DNSPOD -> Res.string.doh_provider_dnspod
             DohProvider.CLOUDFLARE -> Res.string.doh_provider_cloudflare
             DohProvider.GOOGLE -> Res.string.doh_provider_google
-            DohProvider.CUSTOM -> Res.string.doh_provider_custom
         },
     )
+
+private const val HTTPS_PREFIX = "https://"
+
+private val DRAG_ELEVATION = 6.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
@@ -357,9 +727,10 @@ private fun DohSettingsPreview() {
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
             onEnabledChange = {},
-            onProviderChange = {},
-            onUrlChange = {},
-            onBootstrapChange = {},
+            onToggleServer = {},
+            onMoveServer = { _, _ -> },
+            onOpenServer = {},
+            onAddServer = {},
             onIncludeIPv6Change = {},
             onFallbackChange = {},
             onSave = {},

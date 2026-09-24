@@ -18,13 +18,25 @@ import kotlinx.coroutines.withTimeout
  * start. Reading the initial pass gets the press before the chip claims it, and watching for slop
  * means a scroll or a drag still cancels it.
  *
+ * Once it fires, the rest of that gesture is its own: every change up to the lift is consumed, so
+ * the chip under the finger does not read the lift as a tap as well. A long press that opens an
+ * editor and then also taps the thing it was held on is two actions for one gesture.
+ *
+ * [enabled] is read per gesture rather than keyed on, so a caller can switch it off without the
+ * node being replaced mid-press — the home board strip does exactly that the moment its editor
+ * opens, with the finger that opened it still down.
+ *
  * Two callers so far, both of them a row of chips whose long press opens an editor: the home
  * board strip, and 我的主题 in 主题.
  */
-fun Modifier.longPressToEdit(onLongPress: () -> Unit): Modifier =
+fun Modifier.longPressToEdit(
+    enabled: () -> Boolean = { true },
+    onLongPress: () -> Unit,
+): Modifier =
     pointerInput(Unit) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            if (!enabled()) return@awaitEachGesture
             val heldStill =
                 try {
                     withTimeout(viewConfiguration.longPressTimeoutMillis) {
@@ -42,6 +54,12 @@ fun Modifier.longPressToEdit(onLongPress: () -> Unit): Modifier =
                 } catch (_: PointerEventTimeoutCancellationException) {
                     true
                 }
-            if (heldStill) onLongPress()
+            if (heldStill) {
+                onLongPress()
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
+            }
         }
     }

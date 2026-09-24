@@ -2,6 +2,7 @@ package io.github.nodyssey.data.diagnostics
 
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.dns.DohConfig
+import io.github.nodyssey.data.dns.resolvesOverHttps
 import io.github.nodyssey.data.proxy.ProxyConfig
 import io.github.nodyssey.data.proxy.ProxyScope
 import io.github.nodyssey.data.proxy.toProxyConnectionFailure
@@ -80,7 +81,7 @@ class OkHttpNetworkDiagnostics(
             vpnActive = snapshot.vpnActive,
             metered = snapshot.metered,
             proxy = proxy.takeIf { it.enabled && it.isUsable }?.summarise(),
-            dohProvider = doh.provider.takeIf { doh.enabled && doh.isUsable },
+            dohServers = if (doh.resolvesOverHttps()) doh.chain else emptyList(),
             customTabsProvider = installed.customTabs,
             defaultBrowser = installed.default,
             session = session(),

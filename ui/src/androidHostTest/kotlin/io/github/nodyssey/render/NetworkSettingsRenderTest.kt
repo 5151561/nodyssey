@@ -4,7 +4,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import io.github.nodyssey.data.dns.DnsResolution
-import io.github.nodyssey.data.dns.DohProvider
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.ui.settings.DohSettingsScreen
 import io.github.nodyssey.ui.settings.DohSettingsUiState
@@ -64,7 +63,6 @@ class NetworkSettingsRenderTest {
                     state =
                     DohSettingsUiState(
                         enabled = true,
-                        provider = DohProvider.ALIDNS,
                         resolution =
                         DnsResolution(
                             host = "www.nodeseek.com",
@@ -75,9 +73,10 @@ class NetworkSettingsRenderTest {
                     snackbarHostState = SnackbarHostState(),
                     onBack = {},
                     onEnabledChange = {},
-                    onProviderChange = {},
-                    onUrlChange = {},
-                    onBootstrapChange = {},
+                    onToggleServer = {},
+                    onMoveServer = { _, _ -> },
+                    onOpenServer = {},
+                    onAddServer = {},
                     onIncludeIPv6Change = {},
                     onFallbackChange = {},
                     onSave = {},

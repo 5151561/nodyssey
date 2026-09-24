@@ -2,6 +2,7 @@ package io.github.nodyssey.core.net
 
 import io.github.nodyssey.data.dns.DohConfig
 import io.github.nodyssey.data.dns.DohProvider
+import io.github.nodyssey.data.dns.DohServer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
@@ -17,7 +18,13 @@ import java.net.UnknownHostException
 private val SYSTEM_ANSWER = listOf(InetAddress.getByName("10.0.0.1"))
 private val DOH_ANSWER = listOf(InetAddress.getByName("104.21.32.1"))
 
-private val ON = DohConfig(enabled = true, provider = DohProvider.ALIDNS)
+private val ON = DohConfig(enabled = true, servers = listOf(DohServer.preset(DohProvider.ALIDNS, checked = true)))
+
+/** Two servers, asked in this order. */
+private val TWO = DohConfig(
+    enabled = true,
+    servers = listOf(DohServer.preset(DohProvider.ALIDNS, checked = true), DohServer.preset(DohProvider.DNSPOD, checked = true)),
+)
 
 /** Records what it was asked, and answers whatever it was built with. */
 private class FakeDns(
@@ -44,18 +51,24 @@ class AppDnsTest {
     private val doh = FakeDns(DOH_ANSWER)
     private var built = 0
     private var evictions = 0
+    private var now = 1_000_000L
 
-    private fun TestScope.appDns(configs: MutableStateFlow<DohConfig>, resolver: Dns = doh) =
-        AppDns(
-            scope = backgroundScope,
-            config = configs,
-            resolvers = {
-                built++
-                resolver
-            },
-            system = system,
-            onResolverChanged = { evictions++ },
-        ).also { runCurrent() }
+    /** [resolver] for every server, unless [byUrl] names one for that server's address. */
+    private fun TestScope.appDns(
+        configs: MutableStateFlow<DohConfig>,
+        resolver: Dns = doh,
+        byUrl: Map<String, Dns> = emptyMap(),
+    ) = AppDns(
+        scope = backgroundScope,
+        config = configs,
+        resolvers = { spec ->
+            built++
+            byUrl[spec.url] ?: resolver
+        },
+        system = system,
+        onResolverChanged = { evictions++ },
+        clock = { now },
+    ).also { runCurrent() }
 
     @Test
     fun `with 加密 DNS off every name goes to the platform`() = runTest {
@@ -120,12 +133,90 @@ class AppDnsTest {
         assertEquals(listOf("www.nodeseek.com"), system.asked)
     }
 
+    @Test
+    fun `the next server is asked only when the one before it fails`() = runTest {
+        val first = FakeDns(answer = null)
+        val second = FakeDns(DOH_ANSWER)
+        val dns = appDns(MutableStateFlow(TWO), byUrl = mapOf(DohProvider.ALIDNS.url to first, DohProvider.DNSPOD.url to second))
+
+        assertEquals(DOH_ANSWER, dns.lookup("www.nodeseek.com"))
+        assertEquals(listOf("www.nodeseek.com"), first.asked)
+        assertEquals(listOf("www.nodeseek.com"), second.asked)
+        assertEquals(emptyList<String>(), system.asked)
+    }
+
+    @Test
+    fun `a server that answers keeps the rest from being asked`() = runTest {
+        val second = FakeDns(DOH_ANSWER)
+        val dns = appDns(MutableStateFlow(TWO), byUrl = mapOf(DohProvider.DNSPOD.url to second))
+
+        dns.lookup("www.nodeseek.com")
+
+        assertEquals(listOf("www.nodeseek.com"), doh.asked)
+        assertEquals(emptyList<String>(), second.asked)
+    }
+
     /**
-     * Rebuilding the resolver throws away the connection to the DoH server and everything it has
-     * cached, so only the fields the resolver was actually built from may do it.
+     * An unreachable 首选 fails by timing out, so asking it first on every lookup would put that wait
+     * in front of every new hostname. For a minute after a failure it goes to the back instead — and
+     * after that minute it is first again, so a server that comes back is used again.
      */
     @Test
-    fun `only a change of server rebuilds the resolver`() = runTest {
+    fun `a server that just failed is asked last for a minute`() = runTest {
+        val first = FakeDns(answer = null)
+        val second = FakeDns(DOH_ANSWER)
+        val dns = appDns(MutableStateFlow(TWO), byUrl = mapOf(DohProvider.ALIDNS.url to first, DohProvider.DNSPOD.url to second))
+        dns.lookup("www.nodeseek.com")
+
+        now += 59_000
+        dns.lookup("s.nodeseek.com")
+        assertEquals(listOf("www.nodeseek.com"), first.asked)
+
+        now += 2_000
+        dns.lookup("img.nodeseek.com")
+        assertEquals(listOf("www.nodeseek.com", "img.nodeseek.com"), first.asked)
+    }
+
+    /**
+     * A name nobody has — a dead image host in an old post — fails on every server, and says nothing
+     * about which of them is reachable. Counting it as a failure of the one that did answer would put
+     * the unreachable 首选 back in front, and the next new hostname would wait out its timeout again.
+     */
+    @Test
+    fun `a name no server has leaves the order as it was`() = runTest {
+        val first = FakeDns(answer = null)
+        val second = object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> =
+                if (hostname == "dead.example.com") throw UnknownHostException(hostname) else DOH_ANSWER
+        }
+        val dns = appDns(MutableStateFlow(TWO), byUrl = mapOf(DohProvider.ALIDNS.url to first, DohProvider.DNSPOD.url to second))
+        dns.lookup("www.nodeseek.com")
+
+        now += 1_000
+        assertThrows(UnknownHostException::class.java) { dns.lookup("dead.example.com") }
+        now += 1_000
+        dns.lookup("img.nodeseek.com")
+
+        assertEquals(listOf("www.nodeseek.com", "dead.example.com"), first.asked)
+    }
+
+    /** Every server failing with the fallback on is the one case the platform answers a name. */
+    @Test
+    fun `the platform is asked only after every server has failed`() = runTest {
+        val failing = FakeDns(answer = null)
+        val dns = appDns(MutableStateFlow(TWO.copy(fallbackToSystem = true)), resolver = failing)
+
+        assertEquals(SYSTEM_ANSWER, dns.lookup("www.nodeseek.com"))
+        assertEquals(2, failing.asked.size)
+    }
+
+    /**
+     * Rebuilding a resolver throws away the connection to its DoH server and everything it has cached,
+     * so only the fields that resolver was actually built from may do it — not the fallback switch,
+     * not the order, not another server joining.
+     */
+    @Test
+    fun `only a change to a server rebuilds that server's resolver`() = runTest {
         val configs = MutableStateFlow(ON)
         appDns(configs)
         assertEquals(1, built)
@@ -134,13 +225,17 @@ class AppDnsTest {
         runCurrent()
         assertEquals(1, built)
 
-        configs.value = ON.copy(fallbackToSystem = true, includeIPv6 = false)
+        configs.value = TWO.copy(fallbackToSystem = true)
         runCurrent()
         assertEquals(2, built)
 
-        configs.value = ON.copy(fallbackToSystem = true, includeIPv6 = false, provider = DohProvider.GOOGLE)
+        configs.value = TWO.copy(fallbackToSystem = true, servers = TWO.servers.reversed())
         runCurrent()
-        assertEquals(3, built)
+        assertEquals(2, built)
+
+        configs.value = TWO.copy(fallbackToSystem = true, includeIPv6 = false)
+        runCurrent()
+        assertEquals(4, built)
     }
 
     /** The fallback switch is read per lookup, so flipping it takes effect without a rebuild. */

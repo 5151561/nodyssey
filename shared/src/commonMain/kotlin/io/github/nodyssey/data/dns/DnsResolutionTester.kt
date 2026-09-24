@@ -66,4 +66,13 @@ data class DohCapabilities(
      * resolution will be blocked". There is no third state to offer.
      */
     val canFallBackToSystem: Boolean,
+    /**
+     * Whether a lookup can move on to the next server when one fails — true where the app runs the
+     * resolver and can simply ask again.
+     *
+     * False on Apple for the same header's reason: the privacy context takes *a* resolver config, one
+     * URL and its addresses, and there is no list to hand it. The screen there picks one server
+     * rather than ordering several, and [DohConfig.chain] is read for its first entry only.
+     */
+    val triesServersInOrder: Boolean,
 )

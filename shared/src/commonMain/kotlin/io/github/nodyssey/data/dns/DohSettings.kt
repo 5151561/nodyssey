@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import okio.IOException
 
 /**
@@ -18,15 +20,15 @@ import okio.IOException
  * DNS lookup, and the only resolver available for it is the one this feature exists to stop
  * trusting — so the addresses are carried here instead, and the first lookup needs no resolver at
  * all. They are the providers' own documented addresses, verified against a public resolver on
- * 2026-08-23; a provider that moves would need this list edited, which is why [CUSTOM] lets the user
- * type both halves.
+ * 2026-08-23; a provider that moves leaves them stale, which is why each preset's can be overridden
+ * from its row ([DohServer.bootstrapOverride]).
  *
- * The order is the order the screen lists them in, and the first is the default: [ALIDNS] and
- * [DNSPOD] answer from inside mainland China, which is where most of this forum reads from — they
- * end an ISP hijacking the answer, which is what this setting is usually reached for.
- * [CLOUDFLARE] and [GOOGLE] resolve from outside it, which is the only thing that helps when the
- * *record* is what has been poisoned rather than the reply; whether their endpoints are reachable at
- * all is a property of the network the phone is on, and 测试解析 is how someone finds out.
+ * The order is the order a fresh install lists them in: [ALIDNS] and [DNSPOD] answer from inside
+ * mainland China, which is where most of this forum reads from — they end an ISP hijacking the
+ * answer, which is what this setting is usually reached for. [CLOUDFLARE] and [GOOGLE] resolve from
+ * outside it, which is the only thing that helps when the *record* is what has been poisoned rather
+ * than the reply; whether their endpoints are reachable at all is a property of the network the phone
+ * is on, and 测试解析 is how someone finds out.
  */
 enum class DohProvider(
     val url: String,
@@ -36,10 +38,61 @@ enum class DohProvider(
     DNSPOD("https://doh.pub/dns-query", listOf("1.12.12.12", "120.53.53.53")),
     CLOUDFLARE("https://cloudflare-dns.com/dns-query", listOf("1.1.1.1", "1.0.0.1", "2606:4700:4700::1111")),
     GOOGLE("https://dns.google/dns-query", listOf("8.8.8.8", "8.8.4.4", "2001:4860:4860::8888")),
-
-    /** Whatever the user typed. Both halves are theirs to fill in — see [DohConfig.customBootstrap]. */
-    CUSTOM("", emptyList()),
 }
+
+/**
+ * One row of 加密 DNS's list: a [preset], or an address the user added.
+ *
+ * [checked] rows are the ones asked, top to bottom — see [DohConfig.chain]. A row that is not checked
+ * stays in the list rather than being dropped, so a preset turned off can be turned back on and a
+ * custom address does not have to be typed twice.
+ *
+ * @param id stable across edits and reorders: the preset's name, or `custom-N` for an added one.
+ * @param customUrl the typed address; unused for a preset, whose address is its own.
+ * @param bootstrapOverride the typed bootstrap addresses. Null for a preset still using the ones it
+ *   ships with; never null for a custom server, where an empty string means "resolve the URL's host
+ *   normally".
+ */
+data class DohServer(
+    val id: String,
+    val preset: DohProvider? = null,
+    val customUrl: String = "",
+    val bootstrapOverride: String? = null,
+    val checked: Boolean = false,
+) {
+    /** The server this row queries — the preset's, or the typed one. */
+    val url: String get() = preset?.url ?: customUrl.trim()
+
+    /** The addresses [url]'s own host is reached at without asking a resolver. May be empty. */
+    val bootstrap: List<String>
+        get() = bootstrapOverride?.let { parseBootstrapAddresses(it).orEmpty() } ?: preset?.bootstrap.orEmpty()
+
+    val isUsable: Boolean get() = isDohUrl(url)
+
+    companion object {
+        fun preset(provider: DohProvider, checked: Boolean = false) =
+            DohServer(id = provider.name, preset = provider, checked = checked)
+    }
+}
+
+/**
+ * What a fresh install lists: every preset, the two mainland ones ticked. Two rather than one because
+ * a second server is the whole point of an ordered list: the first one being unreachable is the
+ * failure a single server has no answer to.
+ */
+val DefaultDohServers: List<DohServer> =
+    DohProvider.entries.map { DohServer.preset(it, checked = it == DohProvider.ALIDNS || it == DohProvider.DNSPOD) }
+
+/** An id no row in this list has yet, for a custom server about to join it. */
+fun List<DohServer>.nextCustomId(): String {
+    val highest =
+        mapNotNull { server ->
+            server.id.takeIf { it.startsWith(CUSTOM_ID_PREFIX) }?.removePrefix(CUSTOM_ID_PREFIX)?.toIntOrNull()
+        }.maxOrNull() ?: 0
+    return "$CUSTOM_ID_PREFIX${highest + 1}"
+}
+
+private const val CUSTOM_ID_PREFIX = "custom-"
 
 /**
  * 加密 DNS — how the app's own HTTP clients turn a hostname into an address.
@@ -56,46 +109,51 @@ enum class DohProvider(
  * [fallbackToSystem] is off by default, and that is the honest default rather than the friendly one.
  * A resolver that quietly hands the question back to the one being bypassed makes the setting mean
  * something different on every network, and the answer it falls back to is the poisoned answer this
- * was turned on to avoid. What the switch is really for is a network where the chosen server cannot
- * be reached at all, where the alternative is an app that resolves nothing.
+ * was turned on to avoid. What the switch is really for is a network where none of the chosen servers
+ * can be reached at all, where the alternative is an app that resolves nothing.
  */
 data class DohConfig(
     val enabled: Boolean = false,
-    val provider: DohProvider = DohProvider.ALIDNS,
-    val customUrl: String = "",
-    /** Zero or more IP literals, separated by commas or spaces. Empty means "resolve the URL's host normally". */
-    val customBootstrap: String = "",
+    /** Every row the screen lists, in the order it lists them. */
+    val servers: List<DohServer> = DefaultDohServers,
     val includeIPv6: Boolean = true,
     val fallbackToSystem: Boolean = false,
 ) {
-    /** The server this config actually queries — the preset's, or the typed one. */
-    val serverUrl: String
-        get() = if (provider == DohProvider.CUSTOM) customUrl.trim() else provider.url
-
-    /** The addresses [serverUrl]'s own host is reached at without asking a resolver. May be empty. */
-    val bootstrap: List<String>
-        get() =
-            if (provider == DohProvider.CUSTOM) {
-                parseBootstrapAddresses(customBootstrap).orEmpty()
-            } else {
-                provider.bootstrap
-            }
-
-    val isUsable: Boolean get() = isDohUrl(serverUrl)
+    /**
+     * The servers a lookup goes to, in the order it tries them: the next is asked only when the one
+     * before it failed.
+     *
+     * A platform whose resolver takes one server (`DohCapabilities.triesServersInOrder` false) uses the
+     * first of these and nothing else; its screen lets only one be ticked.
+     */
+    val chain: List<DohServer> get() = servers.filter { it.checked && it.isUsable }
 }
 
-/** Whether lookups should go to [DohConfig.serverUrl] right now. The counterpart of `ProxyConfig.routes`. */
-fun DohConfig.resolvesOverHttps(): Boolean = enabled && isUsable
+/** Whether lookups should go to [DohConfig.chain] right now. The counterpart of `ProxyConfig.routes`. */
+fun DohConfig.resolvesOverHttps(): Boolean = enabled && chain.isNotEmpty()
 
-enum class DohConfigProblem { MISSING_URL, INVALID_URL, INVALID_BOOTSTRAP }
+/** Why 保存 was refused on the page as a whole. */
+enum class DohConfigProblem {
+    NO_SERVER,
+}
 
-/** `null` when [DohConfig.enabled] is false — a server nobody is asking need not be valid. */
-fun DohConfig.problem(): DohConfigProblem? {
-    if (!enabled || provider != DohProvider.CUSTOM) return null
-    val url = customUrl.trim()
-    if (url.isBlank()) return DohConfigProblem.MISSING_URL
-    if (!isDohUrl(url)) return DohConfigProblem.INVALID_URL
-    if (parseBootstrapAddresses(customBootstrap) == null) return DohConfigProblem.INVALID_BOOTSTRAP
+/** `null` when [DohConfig.enabled] is false — a list nobody is asking need not be complete. */
+fun DohConfig.problem(): DohConfigProblem? = if (enabled && chain.isEmpty()) DohConfigProblem.NO_SERVER else null
+
+/** Why one server's details could not be kept. */
+enum class DohServerProblem { MISSING_URL, INVALID_URL, INVALID_BOOTSTRAP }
+
+/**
+ * Checks a server as typed into its details. [url] is null for a preset, whose address is not the
+ * user's to type.
+ */
+fun dohServerProblem(url: String?, bootstrap: String): DohServerProblem? {
+    if (url != null) {
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) return DohServerProblem.MISSING_URL
+        if (!isDohUrl(trimmed)) return DohServerProblem.INVALID_URL
+    }
+    if (parseBootstrapAddresses(bootstrap) == null) return DohServerProblem.INVALID_BOOTSTRAP
     return null
 }
 
@@ -169,11 +227,15 @@ private fun isIpv6Literal(host: String): Boolean {
 
 private object DohKeys {
     val ENABLED = booleanPreferencesKey("enabled")
-    val PROVIDER = stringPreferencesKey("provider")
-    val CUSTOM_URL = stringPreferencesKey("custom_url")
-    val CUSTOM_BOOTSTRAP = stringPreferencesKey("custom_bootstrap")
+    val SERVERS = stringPreferencesKey("servers")
     val INCLUDE_IPV6 = booleanPreferencesKey("include_ipv6")
     val FALLBACK_TO_SYSTEM = booleanPreferencesKey("fallback_to_system")
+
+    // What a build that offered one server at a time wrote. Read once, into [SERVERS], and removed by
+    // the next save.
+    val LEGACY_PROVIDER = stringPreferencesKey("provider")
+    val LEGACY_CUSTOM_URL = stringPreferencesKey("custom_url")
+    val LEGACY_CUSTOM_BOOTSTRAP = stringPreferencesKey("custom_bootstrap")
 }
 
 interface DohSettings {
@@ -182,7 +244,7 @@ interface DohSettings {
     suspend fun save(config: DohConfig)
 
     /**
-     * Flips the master switch on its own, leaving the server and its options as they are on disk.
+     * Flips the master switch on its own, leaving the servers and options as they are on disk.
      *
      * The same deal 代理设置 struck, for the same reason: the rest of the screen is a draft committed
      * with 保存, 保存 is only offered while the switch is on, and a switch that waited for it could be
@@ -195,7 +257,8 @@ interface DohSettings {
  * The stored half of 加密 DNS.
  *
  * Nothing here is a secret — a resolver's address is configuration, and there is no credential in the
- * protocol — so it is all stored as typed, unlike the proxy's password.
+ * protocol — so it is all stored as typed, unlike the proxy's password. The list is one JSON value
+ * rather than a key per row: its order is part of the setting, and preference keys have none.
  */
 class DataStoreDohSettings(
     private val dataStore: DataStore<Preferences>,
@@ -205,11 +268,7 @@ class DataStoreDohSettings(
         .map { preferences ->
             DohConfig(
                 enabled = preferences[DohKeys.ENABLED] == true,
-                provider = preferences[DohKeys.PROVIDER]
-                    ?.let { runCatching { DohProvider.valueOf(it) }.getOrNull() }
-                    ?: DohConfig().provider,
-                customUrl = preferences[DohKeys.CUSTOM_URL].orEmpty(),
-                customBootstrap = preferences[DohKeys.CUSTOM_BOOTSTRAP].orEmpty(),
+                servers = preferences[DohKeys.SERVERS]?.let(::decodeServers) ?: legacyServers(preferences),
                 includeIPv6 = preferences[DohKeys.INCLUDE_IPV6] != false,
                 fallbackToSystem = preferences[DohKeys.FALLBACK_TO_SYSTEM] == true,
             )
@@ -222,11 +281,79 @@ class DataStoreDohSettings(
     override suspend fun save(config: DohConfig) {
         dataStore.edit { preferences ->
             preferences[DohKeys.ENABLED] = config.enabled
-            preferences[DohKeys.PROVIDER] = config.provider.name
-            preferences[DohKeys.CUSTOM_URL] = config.customUrl
-            preferences[DohKeys.CUSTOM_BOOTSTRAP] = config.customBootstrap
+            preferences[DohKeys.SERVERS] = encodeServers(config.servers)
             preferences[DohKeys.INCLUDE_IPV6] = config.includeIPv6
             preferences[DohKeys.FALLBACK_TO_SYSTEM] = config.fallbackToSystem
+            preferences.remove(DohKeys.LEGACY_PROVIDER)
+            preferences.remove(DohKeys.LEGACY_CUSTOM_URL)
+            preferences.remove(DohKeys.LEGACY_CUSTOM_BOOTSTRAP)
         }
     }
 }
+
+@Serializable
+private data class StoredDohServer(
+    val id: String,
+    val preset: String? = null,
+    val url: String = "",
+    val bootstrap: String? = null,
+    val checked: Boolean = false,
+)
+
+private val serversJson = Json { ignoreUnknownKeys = true }
+
+private fun encodeServers(servers: List<DohServer>): String =
+    serversJson.encodeToString(
+        servers.map { StoredDohServer(it.id, it.preset?.name, it.customUrl, it.bootstrapOverride, it.checked) },
+    )
+
+/**
+ * The stored list, made whole again.
+ *
+ * A preset this build no longer ships is dropped — its address went with it — and one it ships that
+ * the list has never seen is added at the end, unticked: a new preset is something to offer, not
+ * something to start sending lookups to. A value that does not parse at all reads as the defaults
+ * rather than as a crash, the same courtesy the other keys get.
+ */
+private fun decodeServers(text: String): List<DohServer> {
+    val stored = runCatching { serversJson.decodeFromString<List<StoredDohServer>>(text) }.getOrNull()
+        ?: return DefaultDohServers
+    val servers = stored
+        .mapNotNull { row ->
+            when (row.preset) {
+                null -> DohServer(row.id, customUrl = row.url, bootstrapOverride = row.bootstrap.orEmpty(), checked = row.checked)
+
+                else -> DohProvider.entries.firstOrNull { it.name == row.preset }?.let { provider ->
+                    DohServer(provider.name, provider, bootstrapOverride = row.bootstrap, checked = row.checked)
+                }
+            }
+        }.distinctBy { it.id }
+    val missing = DohProvider.entries.filter { provider -> servers.none { it.preset == provider } }
+    return servers + missing.map { DohServer.preset(it) }
+}
+
+/**
+ * The list as a build that offered one server at a time left it: that one server ticked and first,
+ * the other presets after it unticked, and a typed custom address kept as a row of its own even if it
+ * was not the one chosen. A store that never chose anything — or chose something this build does not
+ * know — reads as the defaults.
+ */
+private fun legacyServers(preferences: Preferences): List<DohServer> {
+    val chosen = preferences[DohKeys.LEGACY_PROVIDER] ?: return DefaultDohServers
+    val customUrl = preferences[DohKeys.LEGACY_CUSTOM_URL].orEmpty()
+    val presets = DohProvider.entries.map { DohServer.preset(it, checked = it.name == chosen) }
+    val custom =
+        customUrl.takeIf { it.isNotBlank() }?.let {
+            DohServer(
+                id = presets.nextCustomId(),
+                customUrl = it,
+                bootstrapOverride = preferences[DohKeys.LEGACY_CUSTOM_BOOTSTRAP].orEmpty(),
+                checked = chosen == LEGACY_CUSTOM,
+            )
+        }
+    val servers = presets + listOfNotNull(custom)
+    if (servers.none { it.checked }) return DefaultDohServers
+    return servers.sortedByDescending { it.checked }
+}
+
+private const val LEGACY_CUSTOM = "CUSTOM"
