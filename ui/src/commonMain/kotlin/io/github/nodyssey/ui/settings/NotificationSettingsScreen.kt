@@ -34,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -184,12 +183,11 @@ fun NotificationSettingsScreen(
                 trailingContent = { GroupedListItemSwitch(checked = enabled) },
             )
 
-            // Everything below the master switch is one dimmed, inert block while it is off —
-            // f4's "主开关关闭时下方全部禁用".
-            Column(
-                modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
-                verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
-            ) {
+            // Everything below the master switch is inert while it is off — f4's "主开关关闭时下方
+            // 全部禁用". Each control takes `enabled` and dims itself the way Material dims it; an
+            // alpha over the block on top of that would dim the text twice and turn the cards
+            // translucent over the page.
+            Column(verticalArrangement = Arrangement.spacedBy(SettingsItemGap)) {
                 SectionLabel(stringResource(Res.string.notify_check_section))
                 SettingsGroup {
                     SettingsRow(

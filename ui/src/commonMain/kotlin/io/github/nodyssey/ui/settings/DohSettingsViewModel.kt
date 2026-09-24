@@ -65,7 +65,7 @@ class DohSettingsViewModel(
 
     /** The one control here that is not part of the draft — see the class KDoc. */
     fun setEnabled(value: Boolean) {
-        _uiState.update { it.copy(enabled = value, problem = null, testFailure = null) }
+        _uiState.update { it.copy(enabled = value, problem = null, testFailure = null, resolution = null) }
         viewModelScope.launch { settings.setEnabled(value) }
     }
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Badge
@@ -98,7 +99,7 @@ fun PillTabRow(
     val track = if (layers.shadows) MaterialTheme.colorScheme.surfaceContainerHigh else layers.card
     PrimaryTabRow(
         selectedTabIndex = selectedTabIndex,
-        modifier = modifier.clip(CircleShape).height(PillTabHeight),
+        modifier = modifier.clip(CircleShape).heightIn(min = PillTabHeight),
         containerColor = track,
         contentColor = MaterialTheme.colorScheme.onSurface,
         divider = {},
@@ -122,7 +123,7 @@ fun PillTabRow(
                 onClick = { onSelect(index) },
                 selectedContentColor = MaterialTheme.colorScheme.onSurface,
                 unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.height(PillTabHeight),
+                modifier = Modifier.heightIn(min = PillTabHeight),
                 text = { TabText(tab, selected) },
             )
         }
@@ -147,4 +148,6 @@ private fun TabText(
 }
 
 private val UnderlineIndicatorWidth = 56.dp
-private val PillTabHeight = 44.dp
+
+/** A minimum rather than a height: Material's 48dp touch target, and room to grow at a large font. */
+private val PillTabHeight = 48.dp

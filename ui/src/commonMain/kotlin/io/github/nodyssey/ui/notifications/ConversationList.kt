@@ -64,7 +64,6 @@ import io.github.nodyssey.ui.resources.messages_snippet_mine_prefix
 import io.github.nodyssey.ui.resources.unread_count_capped
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AvatarShape
-import io.github.plaza.designsys.component.GroupDividerInset
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.PlazaFieldDefaults
@@ -259,7 +258,6 @@ private fun ConversationRow(
                 }
             }
         },
-        dividerInset = GroupDividerInset + CONVERSATION_AVATAR + GroupDividerInset,
     )
 }
 

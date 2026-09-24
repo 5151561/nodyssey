@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,7 +41,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -244,11 +242,9 @@ internal fun BoardStrip(
                     Spacer(Modifier.width(ToggleSlotWidth))
                 }
             }
-            // The band a pill occupies is 48dp — a 32dp shape centred inside the touch target Material
-            // reserves for it — while this button is pinned to 32dp and would otherwise hang 8dp above
-            // the first row of pills it is supposed to sit on. Giving it the same band, from the same
-            // composition local the pills read, aligns the two shapes by construction rather than by a
-            // hardcoded offset that a theme could invalidate.
+            // The same [PillHeight] band the pills are pinned to, so the button's shape sits on the
+            // first row of pills rather than centred in a taller band beside them. Both are shorter
+            // than 48dp; Compose extends a pointer target that small to 48dp when it hit-tests.
             //
             // The end inset is the same 16dp the pills are laid out against on the left, so the strip
             // is symmetric: the button used to sit flush against the display edge because it was the
@@ -256,7 +252,7 @@ internal fun BoardStrip(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .heightIn(min = LocalMinimumInteractiveComponentSize.current)
+                    .height(PillHeight)
                     .padding(end = Spacing.lg),
                 contentAlignment = Alignment.Center,
             ) {

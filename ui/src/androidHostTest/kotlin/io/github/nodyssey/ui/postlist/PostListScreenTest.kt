@@ -28,6 +28,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
@@ -559,7 +560,9 @@ class PostListScreenTest {
      */
     @Test
     fun `scrolling the feed folds the app bar away and keeps the board strip`() {
-        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
+        val feedStates = HomeFeedStates()
+        val listState = feedStates.listState(null, FeedSort.LAST_REPLY)
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") }, feedStates = feedStates)
 
         feedList().performTouchInput { swipeUp() }
 
@@ -567,6 +570,34 @@ class PostListScreenTest {
         composeRule.onNodeWithContentDescription("搜索").assertIsNotDisplayed()
         composeRule.onNodeWithText("综合").assertIsDisplayed()
         composeRule.onNodeWithText("技术").assertIsDisplayed()
+        // The header folding is not the feed scrolling. With a collapse limit that never got
+        // published, the header folded exactly like this and then swallowed the rest of the drag.
+        composeRule.runOnIdle {
+            assertTrue(listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0)
+        }
+    }
+
+    /**
+     * The same fold on a signed-out home, where nothing recomposes the header after its first frame,
+     * and back again: `enterAlways` has to bring the header out on the first drag toward the top
+     * rather than after the reader has paid back however far the offset ran past the header's height.
+     */
+    @Test
+    fun `a swipe back down brings the folded app bar out again`() {
+        setScreen((1..40).map { feedPost(it.toLong(), "post $it") })
+
+        // Found by any row rather than by [feedList]'s "post 1": the feed really scrolls now, and one
+        // fling carries every row with that in its title off screen.
+        val anyFeed = composeRule.onAllNodes(hasScrollAction() and hasAnyDescendant(hasText("post ", substring = true))).onLast()
+        // Twice, so a header that kept folding past its own height would owe more than one swipe
+        // back — which is what an unpublished collapse limit did.
+        anyFeed.performTouchInput { swipeUp() }
+        anyFeed.performTouchInput { swipeUp() }
+        composeRule.onNodeWithContentDescription("排序方式").assertIsNotDisplayed()
+
+        anyFeed.performTouchInput { swipeDown() }
+
+        composeRule.onNodeWithContentDescription("排序方式").assertIsDisplayed()
     }
 
     /**

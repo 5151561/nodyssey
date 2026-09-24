@@ -322,8 +322,6 @@ private fun BlockedRow(
         trailingContent = {
             TextButton(onClick = onUnblock) { Text(stringResource(Res.string.account_block_unblock)) }
         },
-        // Inset past the avatar, so the faces read as one column.
-        dividerInset = Spacing.lg + listAvatarSize() + Spacing.lg,
     )
 }
 

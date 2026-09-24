@@ -1,6 +1,9 @@
 package io.github.plaza.designsys.component
 
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -30,12 +33,14 @@ fun ChoiceSegments(
             inactiveContainerColor = card,
             disabledInactiveContainerColor = card,
         )
-    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+    // Intrinsic height so a segment whose label wraps takes its neighbours with it, rather than
+    // standing taller than the row it is part of.
+    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         labels.forEachIndexed { index, label ->
             SegmentedButton(
                 selected = index == selectedIndex,
                 onClick = { onSelect(index) },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 enabled = enabled,
                 colors = colors,
                 shape =
@@ -45,10 +50,11 @@ fun ChoiceSegments(
                     baseShape = MaterialTheme.shapes.small,
                 ),
             ) {
+                // Free to wrap: a segment only sets a minimum height, and a clipped label — English,
+                // or a large font — is worse than a taller button.
                 Text(
                     label,
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
                 )
             }
         }

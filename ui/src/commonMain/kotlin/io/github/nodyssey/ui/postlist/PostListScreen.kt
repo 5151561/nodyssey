@@ -70,7 +70,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,10 +82,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -100,7 +97,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -118,6 +114,7 @@ import io.github.nodyssey.data.OfflineFirstPostRepository
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.CollapsingHeader
 import io.github.nodyssey.ui.common.EmptyFeedState
 import io.github.nodyssey.ui.common.JumpDestination
 import io.github.nodyssey.ui.common.LocalThreadTransition
@@ -194,7 +191,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -910,10 +906,12 @@ private const val APPEND_WAIT_MILLIS = 15_000L
  * `enterAlways`, the same as the navigation bar — while the board strip under them stays pinned,
  * since it is navigation and the one thing a reader reaches for mid-feed.
  *
- * Hand-laid rather than a `TopAppBar`: Material's bars take one title and a row of icon actions, and
- * the second line here is a search field, which no bar slot holds. What *is* Material's is the scroll
- * behaviour — the header reports its own height as the collapse limit and draws itself at whatever
- * offset the behaviour has consumed, which is exactly the contract `TopAppBar` keeps with it.
+ * A [CollapsingHeader] rather than a `TopAppBar`: Material's bars take one title and a row of icon
+ * actions, and the second line here is a search field, which no bar slot holds. The scroll behaviour
+ * is still Material's, and [CollapsingHeader] keeps the half of the contract `TopAppBar` would have
+ * kept — publishing the collapse limit from its measure pass. Publishing it from anywhere the header
+ * does not recompose leaves the limit at `-Float.MAX_VALUE`, and `enterAlways` then swallows every
+ * vertical drag before the feed sees it.
  *
  * 搜索 is a field-shaped button rather than a field: tapping it opens the search screen, where the
  * real `SearchBar` lives with its tabs and history. Typing here would have to duplicate all of that.
@@ -928,45 +926,31 @@ private fun HomeHeader(
     onAccountClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-    val state = scrollBehavior.state
-    var fullHeight by remember { mutableIntStateOf(0) }
-    SideEffect {
-        if (fullHeight > 0 && state.heightOffsetLimit != -fullHeight.toFloat()) {
-            state.heightOffsetLimit = -fullHeight.toFloat()
+    CollapsingHeader(
+        scrollBehavior = scrollBehavior,
+        modifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = Spacing.md, end = Spacing.lg, top = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SiteSwitcher(account = account, modifier = Modifier.weight(1f))
+            AccountButton(account = account, onClick = onAccountClick)
         }
-    }
-    Layout(
-        content = {
-            Column(Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = Spacing.md, end = Spacing.lg, top = Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SiteSwitcher(account = account, modifier = Modifier.weight(1f))
-                    AccountButton(account = account, onClick = onAccountClick)
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = Spacing.lg, end = Spacing.lg, top = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SearchPill(onClick = onSearch, modifier = Modifier.weight(1f))
-                    SortButton(sort = sort, onSortChange = onSortChange)
-                }
-            }
-        },
-        modifier = Modifier
-            .windowInsetsPadding(TopAppBarDefaults.windowInsets)
-            .clipToBounds(),
-    ) { measurables, constraints ->
-        val placeable = measurables.single().measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
-        if (placeable.height != fullHeight) fullHeight = placeable.height
-        val height = (placeable.height + state.heightOffset).roundToInt().coerceIn(0, placeable.height)
-        layout(placeable.width, height) { placeable.place(0, height - placeable.height) }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                // The bottom gap keeps the board strip off the search pill, which it otherwise
+                // touched, with room under the pill for its shadow.
+                .padding(start = Spacing.lg, end = Spacing.lg, top = 14.dp, bottom = Spacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SearchPill(onClick = onSearch, modifier = Modifier.weight(1f))
+            SortButton(sort = sort, onSortChange = onSortChange)
+        }
     }
 }
 

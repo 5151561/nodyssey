@@ -82,7 +82,9 @@ fun plazaLayers(
                 page = scheme.surface,
                 card = scheme.surfaceContainer,
                 raised = scheme.surfaceContainerHigh,
-                inset = scheme.surfaceContainerLow,
+                // Two steps under the card rather than one: `surfaceContainerLow` sat so close to the
+                // card's `surfaceContainer` that a code block or a stats tile vanished into it.
+                inset = scheme.surfaceContainerLowest,
                 divider = scheme.outlineVariant.copy(alpha = DIVIDER_ALPHA),
                 shadows = false,
                 cardBorder = null,

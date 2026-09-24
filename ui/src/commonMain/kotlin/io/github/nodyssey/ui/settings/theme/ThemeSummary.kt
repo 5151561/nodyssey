@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -22,6 +23,7 @@ import io.github.nodyssey.ui.resources.settings_palette_style_monochrome
 import io.github.nodyssey.ui.resources.settings_palette_style_neutral
 import io.github.nodyssey.ui.resources.settings_palette_style_soft
 import io.github.nodyssey.ui.resources.settings_palette_style_vibrant
+import io.github.nodyssey.ui.settings.DISABLED_ALPHA
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -80,11 +82,16 @@ internal fun paletteStyleLabel(style: PaletteStyle): StringResource =
  * actually wearing — under 动态取色 that is whatever the wallpaper gave, and no stored value knows it.
  */
 @Composable
-fun ThemeSummaryDot(modifier: Modifier = Modifier) {
+fun ThemeSummaryDot(
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier
             .size(24.dp)
+            // Dimmed with the row it sits in: a full-colour dot on a greyed-out row reads as live.
+            .alpha(if (enabled) 1f else DISABLED_ALPHA)
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(

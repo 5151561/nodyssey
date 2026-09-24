@@ -163,13 +163,14 @@ fun GroupedRowTrailing(
     showChevron: Boolean = false,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        // Both in the row's content colour rather than a fixed `onSurfaceVariant`: that is what the
+        // trailing slot already provides while the row is enabled, and it dims with a disabled row.
         value?.let {
             // Capped rather than weighted: the value takes what it needs and the title gets the rest;
             // the cap is what stops a long one from taking the lot.
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = VALUE_MAX_WIDTH),
@@ -180,7 +181,6 @@ fun GroupedRowTrailing(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
         }

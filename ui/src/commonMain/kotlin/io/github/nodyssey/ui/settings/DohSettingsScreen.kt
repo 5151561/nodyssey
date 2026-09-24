@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -178,10 +177,8 @@ fun DohSettingsScreen(
                 )
             }
 
-            Column(
-                modifier = Modifier.alpha(if (state.enabled) 1f else DISABLED_ALPHA),
-                verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
-            ) {
+            // No alpha over the block: every control in it takes `enabled` and dims itself.
+            Column(verticalArrangement = Arrangement.spacedBy(SettingsItemGap)) {
                 SectionLabel(stringResource(Res.string.doh_provider_title))
                 SettingsGroup {
                     DohProvider.entries.forEachIndexed { index, provider ->

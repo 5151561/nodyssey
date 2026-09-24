@@ -237,7 +237,6 @@ internal fun DynamicColorContent(
                 checked = settings.wallpaperSystemPalette,
                 onCheckedChange = onSystemPaletteChange,
                 enabled = palette.systemPaletteAvailable,
-                top = true,
                 trailing = {
                     GroupedListItemSwitch(
                         checked = settings.wallpaperSystemPalette && palette.systemPaletteAvailable,
@@ -250,7 +249,6 @@ internal fun DynamicColorContent(
                 subtitle = stringResource(Res.string.settings_wallpaper_auto_update_hint),
                 checked = settings.wallpaperAutoUpdate,
                 onCheckedChange = onAutoUpdateChange,
-                top = true,
                 bottom = true,
                 trailing = { GroupedListItemSwitch(checked = settings.wallpaperAutoUpdate) },
             )

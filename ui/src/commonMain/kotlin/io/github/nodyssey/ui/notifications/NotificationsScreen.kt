@@ -91,7 +91,6 @@ import io.github.nodyssey.ui.resources.notifications_section_earlier
 import io.github.nodyssey.ui.resources.notifications_section_today
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
-import io.github.plaza.designsys.component.GroupDividerInset
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
@@ -606,7 +605,6 @@ private fun NotificationRow(
                 }
             }
         },
-        dividerInset = GroupDividerInset + NOTIFICATION_AVATAR + GroupDividerInset,
     )
 }
 

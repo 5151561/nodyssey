@@ -6,7 +6,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import kotlin.math.roundToInt
 
@@ -33,8 +33,10 @@ fun CollapsingHeader(
     Column(
         modifier = modifier
             // Outside the layout below, so it clips to the height that layout reports rather than to
-            // the full height the content measured at.
-            .clipToBounds()
+            // the full height the content measured at. Only while folded: fully open, the content
+            // fits its bounds exactly and a clip would only cut the shadows its pills cast below it.
+            // Read in the layer block, so scrolling re-evaluates the clip without recomposing.
+            .graphicsLayer { clip = state.heightOffset < 0f }
             .layout { measurable, constraints ->
                 val placeable = measurable.measure(constraints)
 

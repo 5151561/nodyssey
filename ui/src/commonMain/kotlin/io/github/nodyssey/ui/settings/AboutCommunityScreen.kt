@@ -70,6 +70,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -230,8 +231,10 @@ private fun CommunityStats(
     state: CommunityStatsUiState,
     onRetry: () -> Unit,
 ) {
+    // The layers rather than `surfaceContainer`, which is now the page itself: the stats would sit
+    // on the page in the page's own colour.
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = LocalPlazaLayers.current.card,
         shape = MaterialTheme.shapes.large,
         modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs),
     ) {
@@ -298,7 +301,7 @@ private fun FriendSiteChips(onOpenUri: (String) -> Unit) {
         sites.forEach { (name, uri) ->
             Surface(
                 onClick = { onOpenUri(uri) },
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = LocalPlazaLayers.current.raised,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 shape = CircleShape,
                 modifier = Modifier.widthIn(min = 48.dp),

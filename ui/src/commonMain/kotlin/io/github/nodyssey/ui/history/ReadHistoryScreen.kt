@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -400,10 +401,21 @@ private fun HistoryRow(
             backgroundContent = { RemoveBackdrop() },
         ) {
             // Material's interactive list item, on the card colour — opaque, or the backdrop would
-            // show through the row before it has moved.
+            // show through the row before it has moved. Square in every state for the same reason:
+            // its default corners (and the larger pressed ones) let the red backdrop through at the
+            // four corners of every row.
             ListItem(
                 onClick = onClick,
                 colors = ListItemDefaults.colors(containerColor = layers.card),
+                shapes =
+                ListItemDefaults.shapes(
+                    shape = RectangleShape,
+                    selectedShape = RectangleShape,
+                    pressedShape = RectangleShape,
+                    focusedShape = RectangleShape,
+                    hoveredShape = RectangleShape,
+                    draggedShape = RectangleShape,
+                ),
                 // Swipe is a mouse-and-eyes gesture; TalkBack gets the same action by name. On the
                 // row rather than on the dismiss box so it lands on the node TalkBack actually
                 // focuses.

@@ -24,7 +24,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -180,10 +179,8 @@ fun ProxySettingsScreen(
                 )
             }
 
-            Column(
-                modifier = Modifier.alpha(if (state.enabled) 1f else DISABLED_ALPHA),
-                verticalArrangement = Arrangement.spacedBy(SettingsItemGap),
-            ) {
+            // No alpha over the block: every control in it takes `enabled` and dims itself.
+            Column(verticalArrangement = Arrangement.spacedBy(SettingsItemGap)) {
                 // The type and the four fields are one card: they are one proxy, and a type split
                 // from the address it applies to read as two settings.
                 LayerCard(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {

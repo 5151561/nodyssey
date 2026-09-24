@@ -41,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -76,7 +75,6 @@ import io.github.nodyssey.ui.resources.settings_seed_edit
 import io.github.nodyssey.ui.resources.settings_seed_name
 import io.github.nodyssey.ui.resources.settings_theme
 import io.github.nodyssey.ui.resources.settings_theme_preview
-import io.github.nodyssey.ui.settings.DISABLED_ALPHA
 import io.github.nodyssey.ui.settings.SettingsGroup
 import io.github.nodyssey.ui.settings.SettingsItemGap
 import io.github.nodyssey.ui.settings.SettingsPagePadding
@@ -502,7 +500,6 @@ private fun PaletteStyleRow(
 ) {
     var expanded by remember { mutableStateOf(false) }
     SettingsRow(
-        modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
         leading = { Icon(PlazaIcons.Tonality, contentDescription = null) },
         title = stringResource(Res.string.settings_palette_style),
         subtitle = stringResource(paletteStyleLabel(selected)),
@@ -513,11 +510,7 @@ private fun PaletteStyleRow(
             // Anchored to the arrow for the same reason 语言's menu is on 设置: a `DropdownMenu` hangs
             // off its parent layout node, and the parent here is only the arrow.
             Box {
-                Icon(
-                    Icons.Default.ArrowDropDown,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     PaletteStyleChoices.forEach { style ->
                         DropdownMenuItem(

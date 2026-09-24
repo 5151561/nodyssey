@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.describedAsLoading
+import io.github.plaza.designsys.component.GroupCard
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerPageGutter
@@ -53,16 +54,15 @@ import io.github.plaza.designsys.component.groupedListItemColors
 import io.github.plaza.designsys.theme.Spacing
 
 /**
- * One group of rows. The rows draw the card themselves ([GroupedListItem]: outer corners, hairlines and
- * the shadow, sliced per row), so this only stacks them flush — which is also what lets the same rows
- * be spread over a `LazyColumn` where there is no one group to put them in.
+ * One group: a single [GroupCard] around whatever it holds. Rows, but also the blocks that are not
+ * rows — 主题's source picker and preset grid, 网络自检's report lines — which have no card of their own.
  */
 @Composable
 internal fun SettingsGroup(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxWidth(), content = content)
+    GroupCard(modifier = modifier, content = content)
 }
 
 /** What a settings page scrolls inside: the 12dp card gutter the rest of the layer system uses. */
@@ -195,12 +195,10 @@ internal fun SettingsRow(
 }
 
 /**
- * What a screen dims the settings *behind* a master switch to.
- *
- * Shared by the three screens that have one, for the same reason the group shapes are: a settings
- * screen that dims to a different value than its neighbour looks broken rather than different.
+ * What a [SettingsBlock]'s label dims to while its control is disabled — Material's own disabled
+ * content alpha, so a block reads the same as the disabled rows around it.
  */
-internal const val DISABLED_ALPHA = 0.5f
+internal const val DISABLED_ALPHA = 0.38f
 
 /** A text field on a settings card: one line, its label inside, in the kit's in-card field style. */
 @Composable

@@ -341,6 +341,8 @@ private fun ReportTable(table: QualityReport.Block.Table) {
             )
         },
         labelMinWidth = LABEL_WIDTH,
+        // The report is already the recessed layer; a table on it steps back up to the card.
+        containerColor = LocalPlazaLayers.current.card,
     )
 }
 

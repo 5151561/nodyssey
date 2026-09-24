@@ -36,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
@@ -276,9 +275,6 @@ fun SettingsScreen(
                 // them changes the screen it is read on. The row says what they add up to — the
                 // colour and the style in force — so the answer is readable without going in.
                 SettingsRow(
-                    modifier = Modifier.alpha(
-                        if (state.settings.einkMode) DISABLED_ALPHA else 1f,
-                    ),
                     leading = { Icon(PlazaIcons.Palette, contentDescription = null) },
                     title = stringResource(Res.string.settings_theme),
                     // Greyed rather than hidden, the same call 色彩风格 makes on 主题's own screen: a
@@ -293,7 +289,7 @@ fun SettingsScreen(
                     enabled = !state.settings.einkMode,
                     onClick = onOpenTheme,
                     chevron = true,
-                    trailing = { ThemeSummaryDot() },
+                    trailing = { ThemeSummaryDot(enabled = !state.settings.einkMode) },
                 )
                 // Under 主题 rather than above it: it overrides 明暗 and replaces 主题, and the two
                 // it greys out read first, the way a master switch reads after what it governs.

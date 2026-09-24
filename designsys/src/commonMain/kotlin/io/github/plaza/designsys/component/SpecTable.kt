@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 
@@ -67,6 +69,8 @@ fun SpecTable(
      * reserve for their labels, so a card's field list and its tables share one label edge.
      */
     labelMinWidth: Dp = MIN_COLUMN_WIDTH,
+    /** Recessed into the card by default; a table inside something already recessed passes the card. */
+    containerColor: Color = LocalPlazaLayers.current.inset,
 ) {
     if (rows.isEmpty()) return
     val cells = rememberScrollState()
@@ -80,7 +84,7 @@ fun SpecTable(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.colorScheme.surfaceContainer),
+            .background(containerColor),
     ) {
         val available = maxWidth
         val widths =

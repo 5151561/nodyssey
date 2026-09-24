@@ -52,7 +52,6 @@ import io.github.nodyssey.ui.resources.post_reply_count
 import io.github.nodyssey.ui.resources.search_user_comments
 import io.github.nodyssey.ui.resources.search_user_joined
 import io.github.nodyssey.ui.resources.search_user_topics
-import io.github.plaza.designsys.component.GroupDividerInset
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerCard
@@ -251,7 +250,6 @@ internal fun UserResultGroup(
                 },
                 supportingContent = { Text(userDetail(user)) },
                 trailingContent = { GroupedRowTrailing(showChevron = true) },
-                dividerInset = GroupDividerInset + UserResultAvatarSize + GroupDividerInset,
             )
         }
     }

@@ -62,6 +62,7 @@ import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.theme.LocalEinkMode
+import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
@@ -199,7 +200,7 @@ private fun TermsContent(document: TermsDocument, modifier: Modifier = Modifier)
                 contentAlignment = Alignment.BottomCenter,
             ) {
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    color = LocalPlazaLayers.current.raised,
                     shape = CircleShape,
                     modifier = Modifier.padding(bottom = Spacing.sm),
                 ) {
@@ -224,7 +225,7 @@ private fun TermsMetadata(effectiveDate: String?) {
     ) {
         effectiveDate?.let {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                color = LocalPlazaLayers.current.raised,
                 shape = CircleShape,
             ) {
                 Text(

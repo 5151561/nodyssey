@@ -1,7 +1,11 @@
 package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -14,14 +18,33 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -42,10 +65,15 @@ import io.github.plaza.designsys.theme.cardShadow
  *   rows are flush, square at the seams and rounded only at the group's outer corners ([groupShape]),
  *   with an inset hairline at the top of every row but the first.
  * - **The card's shadow, across rows.** A group is often spread over the items of a `LazyColumn`, so
- *   each row casts a slice of it ([groupSliceShadow]); drawn per row unclipped, each would lay a band
- *   across its neighbour.
+ *   each row casts a slice of it ([groupSlice]); drawn per row unclipped, each would lay a band
+ *   across its neighbour. Inside a [GroupCard] the card is already drawn and the row adds only its
+ *   hairline.
  *
  * [first] and [last] say where the row sits in its group; a group of one is both.
+ *
+ * A switch row ([checked]) goes through Material's plain `onClick` overload rather than its `checked`
+ * one: the `checked` overload hard-codes `Role.Checkbox`, and a row drawn with a [Switch] that
+ * TalkBack announces as a checkbox is a regression from the `Role.Switch` these rows had before.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -67,12 +95,21 @@ fun GroupedListItem(
     overlineContent: (@Composable () -> Unit)? = null,
     supportingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
-    /** Where the hairline above the row starts: past a 24dp leading icon by default, at the text otherwise. */
-    dividerInset: Dp = if (leadingContent != null) GroupDividerInsetWithIcon else GroupDividerInset,
+    /**
+     * Where the hairline above the row starts. Null lines it up with the headline, measured, so it
+     * follows whatever the leading content is — an icon, an avatar — rather than a width each caller
+     * has to add up (and Material's own leading gap is 12dp in these rows, not the 16dp a sum guesses).
+     */
+    dividerInset: Dp? = null,
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     colors: ListItemColors = groupedListItemColors(),
 ) {
     val layers = LocalPlazaLayers.current
+    val textStart = remember { TextStart() }
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val headline: @Composable () -> Unit = {
+        Box(Modifier.onPlaced { textStart.headlinePlaced(it, rtl) }) { headlineContent() }
+    }
     val shape = groupShape(first, last)
     val shapes =
         ListItemDefaults.shapes(
@@ -83,14 +120,26 @@ fun GroupedListItem(
             hoveredShape = shape,
             draggedShape = shape,
         )
-    val decorated = modifier.groupSlice(layers, first, last, dividerInset)
+    val decorated =
+        modifier
+            .onPlaced { textStart.row = it }
+            .groupSlice(
+                layers = layers,
+                first = first,
+                last = last,
+                drawCard = !LocalInGroupCard.current,
+                dividerStart = { dividerInset?.toPx() ?: textStart.px.takeUnless { it.isNaN() } ?: GroupDividerInset.toPx() },
+            )
     when {
         checked != null && onCheckedChange != null ->
             SegmentedListItem(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
+                onClick = { onCheckedChange(!checked) },
                 shapes = shapes,
-                modifier = decorated,
+                modifier =
+                decorated.semantics {
+                    role = Role.Switch
+                    toggleableState = ToggleableState(checked)
+                },
                 enabled = enabled,
                 leadingContent = leadingContent,
                 trailingContent = trailingContent,
@@ -98,7 +147,7 @@ fun GroupedListItem(
                 supportingContent = supportingContent,
                 verticalAlignment = verticalAlignment,
                 colors = colors,
-                content = headlineContent,
+                content = headline,
             )
 
         selected != null && onClick != null ->
@@ -114,7 +163,7 @@ fun GroupedListItem(
                 supportingContent = supportingContent,
                 verticalAlignment = verticalAlignment,
                 colors = colors,
-                content = headlineContent,
+                content = headline,
             )
 
         onClick != null || onLongClick != null ->
@@ -131,14 +180,14 @@ fun GroupedListItem(
                 onLongClick = onLongClick,
                 onLongClickLabel = onLongClickLabel,
                 colors = colors,
-                content = headlineContent,
+                content = headline,
             )
 
         // Material keeps its non-interactive segmented overload out of the common API; the classic
         // `ListItem` draws the same row, and takes the group's shape as a clip instead of a parameter.
         else ->
             ListItem(
-                headlineContent = headlineContent,
+                headlineContent = headline,
                 modifier = decorated,
                 overlineContent = overlineContent,
                 supportingContent = supportingContent,
@@ -150,8 +199,12 @@ fun GroupedListItem(
 }
 
 /**
- * Transparent in every state: the card itself is painted by [groupSlice], so a pressed or selected
- * row stays part of its card and only Material's state layer shows on top.
+ * Transparent in every state: the card itself is painted by [groupSlice], so a pressed, selected or
+ * disabled row stays part of its card and only Material's state layer shows on top. Disabled matters
+ * most — Material's own disabled container is `surface`, which is the *page* in dark mode, so a
+ * disabled row would cut a page-coloured band through its card. The content still dims the way
+ * Material dims it.
+ *
  * [contentColor] tints the headline and the leading icon together — the one destructive row in a
  * group (退出登录) differs from its neighbours in nothing else.
  */
@@ -167,16 +220,62 @@ fun groupedListItemColors(
         ListItemDefaults.segmentedColors(
             containerColor = card,
             selectedContainerColor = card,
+            disabledContainerColor = card,
             contentColor = contentColor,
             leadingContentColor = contentColor,
         )
     } else {
-        ListItemDefaults.segmentedColors(containerColor = card, selectedContainerColor = card)
+        ListItemDefaults.segmentedColors(
+            containerColor = card,
+            selectedContainerColor = card,
+            disabledContainerColor = card,
+        )
     }
 }
 
 val GroupDividerInset = 16.dp
-val GroupDividerInsetWithIcon = 56.dp
+
+/**
+ * A group's card drawn once around everything in it, for a group that is not spread over a lazy
+ * list — a settings block, where a header, a grid or a report can share the card with the rows under
+ * it. Content that is not a [GroupedListItem] has nowhere else to get a card from.
+ *
+ * The [GroupedListItem]s inside it stop drawing slices and keep only their hairline, so their
+ * `first` / `last` then decide nothing but whether a row has a line above it.
+ */
+@Composable
+fun GroupCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    LayerCard(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(0.dp),
+        verticalArrangement = Arrangement.Top,
+    ) {
+        CompositionLocalProvider(LocalInGroupCard provides true) { content() }
+    }
+}
+
+private val LocalInGroupCard = staticCompositionLocalOf { false }
+
+/**
+ * Where a row's headline starts, from the row's start edge — written when the headline is placed,
+ * read when the hairline is drawn, so a change moves the line without recomposing the row.
+ */
+private class TextStart {
+    var row: LayoutCoordinates? = null
+    var px by mutableFloatStateOf(Float.NaN)
+
+    fun headlinePlaced(
+        headline: LayoutCoordinates,
+        rtl: Boolean,
+    ) {
+        val row = row?.takeIf { it.isAttached } ?: return
+        val x = row.localPositionOf(headline, Offset.Zero).x
+        px = if (rtl) row.size.width - (x + headline.size.width) else x
+    }
+}
 
 /**
  * The hairline at a row's top edge, drawn over the row rather than laid out as its own node, so the
@@ -184,11 +283,11 @@ val GroupDividerInsetWithIcon = 56.dp
  */
 private fun Modifier.groupDivider(
     layers: PlazaLayers,
-    inset: Dp,
+    start: Density.() -> Float,
 ): Modifier =
     drawWithContent {
         drawContent()
-        val start = inset.toPx()
+        val start = start()
         val y = 0.5.dp.toPx()
         val (from, to) =
             if (layoutDirection == LayoutDirection.Rtl) {
@@ -218,7 +317,17 @@ fun Modifier.groupSlice(
     first: Boolean,
     last: Boolean,
     dividerInset: Dp = GroupDividerInset,
+): Modifier = groupSlice(layers, first, last, drawCard = true, dividerStart = { dividerInset.toPx() })
+
+private fun Modifier.groupSlice(
+    layers: PlazaLayers,
+    first: Boolean,
+    last: Boolean,
+    drawCard: Boolean,
+    dividerStart: Density.() -> Float,
 ): Modifier {
+    val divider = if (first) Modifier else Modifier.groupDivider(layers, dividerStart)
+    if (!drawCard) return then(divider)
     val shape = groupShape(first, last)
     val shadowed =
         if (!layers.shadows) {
@@ -238,9 +347,28 @@ fun Modifier.groupSlice(
     return shadowed
         .clip(shape)
         .background(layers.card)
-        .then(layers.cardBorder?.let { Modifier.border(1.dp, it, shape) } ?: Modifier)
-        .then(if (first) Modifier else Modifier.groupDivider(layers, dividerInset))
+        .then(layers.cardBorder?.let { Modifier.groupOutline(it, first, last) } ?: Modifier)
+        .then(divider)
 }
+
+/**
+ * 墨水屏's outline for one slice: the card's sides, plus its top or bottom only where this slice is
+ * the group's end. The seam edges are drawn past the slice and clipped away, so the sides run
+ * unbroken from row to row and no seam gets a rule of its own on top of the hairline.
+ */
+private fun Modifier.groupOutline(
+    color: Color,
+    first: Boolean,
+    last: Boolean,
+): Modifier =
+    drawWithContent {
+        drawContent()
+        val stroke = 1.dp.toPx()
+        val top = if (first) stroke / 2 else -stroke
+        val bottom = if (last) size.height - stroke / 2 else size.height + stroke
+        val outline = groupShape(first, last).createOutline(Size(size.width - stroke, bottom - top), layoutDirection, this)
+        translate(left = stroke / 2, top = top) { drawOutline(outline, color, style = Stroke(stroke)) }
+    }
 
 /** Comfortably past the widest layer of `cardShadow` — 18dp of blur pushed 6dp down. */
 private val SLICE_SHADOW_BLEED = 32.dp

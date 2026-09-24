@@ -50,6 +50,7 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardShadow
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.ceil
 
 /**
  * One tab of the panel.
@@ -172,30 +173,37 @@ fun EmojiPanel(
                     )
                 }
             }
-            BoxWithConstraints(Modifier.fillMaxWidth().height(GRID_HEIGHT)) {
-                val cell = (maxWidth - CELL_GAP * (COLUMNS - 1)) / COLUMNS
-                if (entries.isEmpty()) {
-                    Text(
-                        text = if (selectedIndex == RECENT) {
-                            stringResource(Res.string.composer_emoji_recent_empty)
-                        } else {
-                            emptyGroupText
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.align(Alignment.Center).padding(horizontal = Spacing.xl),
-                    )
-                } else {
-                    EmojiGrid(
-                        entries = entries,
-                        onSelect = { insert(it.insertion) },
-                        stickerImage = stickerImage,
-                        bottomClearance = cell + CELL_GAP,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                // The panel is sized from its cells rather than the other way round: square cells
+                // under a fixed height showed a different number of rows on every width and left the
+                // backspace key between two of them. More columns, not bigger cells, on a wide sheet.
+                val columns = maxOf(COLUMNS, ceil((maxWidth + CELL_GAP) / (MAX_CELL + CELL_GAP)).toInt())
+                val cell = (maxWidth - CELL_GAP * (columns - 1)) / columns
+                Box(Modifier.fillMaxWidth().height(cell * VISIBLE_ROWS + CELL_GAP * (VISIBLE_ROWS - 1))) {
+                    if (entries.isEmpty()) {
+                        Text(
+                            text = if (selectedIndex == RECENT) {
+                                stringResource(Res.string.composer_emoji_recent_empty)
+                            } else {
+                                emptyGroupText
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = Spacing.xl),
+                        )
+                    } else {
+                        EmojiGrid(
+                            entries = entries,
+                            columns = columns,
+                            onSelect = { insert(it.insertion) },
+                            stickerImage = stickerImage,
+                            bottomClearance = cell + CELL_GAP,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    BackspaceKey(onClick = onBackspace, modifier = Modifier.align(Alignment.BottomEnd).size(cell))
                 }
-                BackspaceKey(onClick = onBackspace, modifier = Modifier.align(Alignment.BottomEnd).size(cell))
             }
         }
     }
@@ -231,13 +239,14 @@ private fun GroupPill(
 @Composable
 private fun EmojiGrid(
     entries: List<EmojiEntry>,
+    columns: Int,
     onSelect: (EmojiEntry) -> Unit,
     stickerImage: @Composable (EmojiEntry.Sticker, String?, Modifier) -> Unit,
     bottomClearance: Dp,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(COLUMNS),
+        columns = GridCells.Fixed(columns),
         modifier = modifier,
         contentPadding = PaddingValues(bottom = bottomClearance),
         horizontalArrangement = Arrangement.spacedBy(CELL_GAP),
@@ -310,5 +319,8 @@ private const val RECENT = -1
 /** Every sticker ever inserted is not a useful tab; three rows of the grid is. */
 private const val RECENT_LIMIT = 18
 private val CELL_GAP = 8.dp
-private val GRID_HEIGHT = 170.dp
+private const val VISIBLE_ROWS = 3
+
+/** Past this a wide sheet gets another column instead of bigger cells. */
+private val MAX_CELL = 64.dp
 private val STICKER_SIZE = 36.dp
