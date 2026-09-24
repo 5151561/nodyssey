@@ -344,7 +344,7 @@ private fun FrequencySheet(
 }
 
 /** The three intervals the store accepts, by name. Anything else is a value this build never wrote. */
-private fun pollMinutesLabel(minutes: Int): StringResource =
+internal fun pollMinutesLabel(minutes: Int): StringResource =
     when (minutes) {
         15 -> Res.string.notify_frequency_15
         60 -> Res.string.notify_frequency_60

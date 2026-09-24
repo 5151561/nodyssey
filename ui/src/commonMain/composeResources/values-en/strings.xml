@@ -286,9 +286,9 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_mode">Light or dark</string>
     <string name="settings_one_hand">One-handed mode</string>
-    <string name="settings_one_hand_hint">Second-level screens get a pull-down title bar taking up to two fifths of the screen; off is an ordinary one</string>
+    <string name="settings_one_hand_hint">Leaves a pull-down title area at the top of inner screens</string>
     <string name="settings_eink">E-ink mode</string>
-    <string name="settings_eink_hint">For electronic paper: black and white, no animation, and always light</string>
+    <string name="settings_eink_hint">Pure black and white, no animation or shadows</string>
     <string name="settings_theme_eink_hint">E-ink mode has taken over the colours</string>
 
     <string name="settings_language">Language</string>
@@ -320,9 +320,9 @@
     <string name="settings_palette_style_monochrome">Monochrome</string>
 
     <string name="settings_theme_preview">Preview</string>
-    <string name="settings_theme_preview_board">Everyday</string>
-    <string name="settings_theme_preview_meta">nssk · 3 hours ago</string>
-    <string name="settings_theme_preview_title">Finally rewrote the check-in script with coroutines</string>
+    <string name="settings_theme_preview_tag">Tag</string>
+    <string name="settings_theme_preview_meta">Secondary text</string>
+    <string name="settings_theme_preview_title">Theme preview: a card in these colours</string>
     <string name="settings_theme_preview_primary">Primary</string>
     <string name="settings_theme_preview_secondary">Secondary</string>
     <string name="settings_theme_preview_accent">Accent</string>
@@ -353,37 +353,36 @@
     <string name="settings_wallpaper_auto_update_hint">Read the colours again at the next launch after a wallpaper change</string>
     <string name="settings_wallpaper_unreadable">Cannot read the wallpaper</string>
     <string name="settings_wallpaper_unreadable_hint">The system did not hand over the wallpaper colours, so the previous seed %1$s is still in use.</string>
-    <string name="settings_body_size">Text size</string>
+    <string name="settings_body_size">Reading text size</string>
     <string name="settings_sticker_uniform">One size for every sticker</string>
-    <string name="settings_sticker_uniform_hint">On, every sticker is drawn at the same adjustable size; off, each keeps the size it was made at</string>
+    <string name="settings_sticker_uniform_hint">Stickers are drawn at a fixed size</string>
     <string name="settings_sticker_size">Sticker size</string>
     <string name="settings_sticker_preview_caption">Stickers are this big</string>
-    <string name="settings_text_preview">Preview: what a long passage reads like at this size.</string>
+    <string name="settings_text_preview">This is a preview of the reading size: post text and list titles are shown at this size.</string>
     <string name="settings_content">Content</string>
     <string name="settings_app_links">Site links</string>
     <string name="settings_app_links_hint_on">On: NodeSeek post, user and notification links tapped in other apps open here</string>
-    <string name="settings_app_links_hint_off">Off: site links still open in a browser. Tap to turn on Open supported links in the system settings</string>
+    <string name="settings_app_links_summary_on">Opens in the app</string>
+    <string name="settings_app_links_summary_off">Opens in the browser</string>
     <string name="settings_report_format">Benchmark reports</string>
-    <string name="settings_report_format_hint">Whether a benchmark report inside a post is laid out again as cards or shown as it was posted</string>
     <string name="settings_report_format_adapted">Laid out</string>
     <string name="settings_report_format_source">As posted</string>
     <string name="settings_home_page_bar">Page bar on home</string>
-    <string name="settings_home_page_bar_hint">Shows the page number and a jump button at the foot of home; the list still loads as you scroll</string>
+    <string name="settings_home_page_bar_hint">Shows the page number at the bottom right of home</string>
     <string name="settings_wifi_images">Load images on Wi-Fi only</string>
-    <string name="settings_wifi_images_hint">Placeholders on mobile data</string>
+    <string name="settings_wifi_images_hint">On mobile data, tap an image to load it</string>
     <string name="settings_clear_cache">Clear the cache</string>
-    <string name="settings_clear_cache_size">%1$s in use</string>
+    <string name="settings_clear_cache_size">Images and posts, %1$s</string>
     <string name="settings_about">About</string>
     <string name="settings_about_app">About Nodyssey</string>
     <string name="settings_update_on_launch">Check for updates at launch</string>
-    <string name="settings_update_on_launch_hint">A new version raises one reminder after launch; off means checking by hand from the About screen</string>
     <string name="settings_update_dev_channel">Offer dev builds</string>
-    <string name="settings_update_dev_channel_hint">A dev build is a test package with no release behind it and may be unstable; off means stable releases only. On by default when the installed build is itself a dev one</string>
+    <string name="settings_update_dev_channel_hint">May be unstable</string>
     <string name="settings_licenses">Open-source licences</string>
 
     <string name="settings_network">Network</string>
     <string name="settings_proxy_entry">Proxy</string>
-    <string name="settings_proxy_entry_hint">HTTP or SOCKS5, for this app’s own requests; other apps on the phone are unaffected</string>
+    <string name="settings_entry_off">Off</string>
     <string name="proxy_title">Proxy</string>
     <string name="proxy_master_title">Use a proxy</string>
     <string name="proxy_master_hint">Proxies the requests this app makes; every other app on the phone still connects directly</string>
@@ -411,8 +410,7 @@
     <string name="proxy_advanced_hint">The app itself only speaks HTTP and SOCKS5. With a client like Clash or mihomo on the phone, open its mixed port there, put 127.0.0.1 and that port here, and let it deal with the node protocol.</string>
     <string name="proxy_webview_hint">Signing in uses the system WebView, which has its own networking and is untouched by anything here.</string>
     <string name="settings_doh_entry">Encrypted DNS</string>
-    <string name="settings_doh_entry_hint_off">Off; on, the app resolves its hostnames over DoH, past local DNS hijacking and poisoning</string>
-    <string name="settings_doh_entry_hint_on">On — the app resolves its hostnames over DoH</string>
+    <string name="settings_doh_summary_chain">%2$d servers, %1$s first</string>
     <string name="doh_title">Encrypted DNS</string>
     <string name="doh_master_title">Use encrypted DNS</string>
     <string name="doh_master_hint">The app resolves hostnames over DoH; every other app on the phone carries on as before</string>
@@ -451,7 +449,6 @@
     <string name="doh_proxy_hint">While a proxy is on, hostnames are resolved at the proxy and nothing here applies to those requests.</string>
     <string name="doh_webview_hint">Signing in uses the system WebView, which has its own networking and the system private DNS, untouched by this.</string>
     <string name="settings_network_check_entry">Network check</string>
-    <string name="settings_network_check_entry_hint">Runs one real request and lists the proxy, VPN, DNS and measured speed; the screen to screenshot when reporting that the app is slow</string>
     <string name="network_check_title">Network check</string>
     <string name="network_check_rerun">Run again</string>
     <string name="network_check_running">Checking…</string>
@@ -601,7 +598,8 @@
 
     <string name="notify_settings_title">Notifications</string>
     <string name="notify_master_title">Tell me about new messages</string>
-    <string name="notify_settings_entry_hint">Checks for unread in the background and posts a system notification</string>
+    <string name="settings_notify_summary_every">Checks every %1$s</string>
+    <string name="settings_notify_summary_quiet">Quiet 23:00–07:00</string>
     <string name="notify_master_hint">Checks for unread in the background and posts a system notification; the site has no push service, so it cannot be instant</string>
     <string name="notify_frequency">How often to check</string>
     <string name="notify_check_section">Checking</string>
@@ -811,8 +809,6 @@
     <string name="search_pane_empty">Pick a result and it opens here</string>
     <string name="notifications_pane_empty">Pick a message and it opens here</string>
     <string name="space_pane_empty">Pick a post and it opens here</string>
-
-    <string name="pager_total_approx">%1$d+ pages</string>
 
     <string name="space_tab_general">Overview</string>
     <string name="space_tab_topics">Posts</string>
@@ -1119,6 +1115,12 @@
     <string name="imagehost_provider_smms">SM.MS · public</string>
     <string name="imagehost_provider_imgbb">imgbb · public</string>
     <string name="imagehost_provider_custom">Custom host · configured by hand</string>
+    <string name="imagehost_short_nodeimage">NodeImage</string>
+    <string name="imagehost_short_lsky">Lsky Pro</string>
+    <string name="imagehost_short_easyimage">EasyImage</string>
+    <string name="imagehost_short_smms">SM.MS</string>
+    <string name="imagehost_short_imgbb">imgbb</string>
+    <string name="imagehost_short_custom">Custom host</string>
 
     <string name="imagehost_hint_nodeimage">The one the web editor uses. Copy the key from the API page in the top right of nodeimage.com</string>
     <string name="imagehost_hint_lsky">Enter your own site address; generate the token under Settings › API in the Lsky admin</string>

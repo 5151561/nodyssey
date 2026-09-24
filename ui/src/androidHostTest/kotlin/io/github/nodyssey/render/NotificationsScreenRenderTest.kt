@@ -170,7 +170,7 @@ class NotificationsScreenRenderTest {
             listOf(
                 notification("1", "轻舟", 12, "自建 NAS 一年，聊聊我踩过的那些坑和真香时刻", NotificationCategory.REPLIES, 3),
                 notification("2", "codemonkey", 56, "四盘位 NAS 选 ZFS 还是 Btrfs？", NotificationCategory.MENTIONS, 40),
-                notification("3", "厨房杀手", 78, "有没有那种用了就回不去的小众 App", NotificationCategory.REPLIES, 111),
+                notification("3", "厨房杀手", 78, "小众 App 推荐", NotificationCategory.REPLIES, 111),
                 notification("4", "省钱达人", 90, "关于最近 VPS 涨价，说说我的续费策略", NotificationCategory.REPLIES, 790, unread = false),
                 notification("5", "kvm_fan", 91, "小内存机器跑 Docker 的几个优化", NotificationCategory.MENTIONS, 2 * 1440 + 380, unread = false),
                 notification("6", "过过路人", 92, "黑五机场怎么选？把我对比的几家整理成了表格", NotificationCategory.REPLIES, 4 * 1440, unread = false),

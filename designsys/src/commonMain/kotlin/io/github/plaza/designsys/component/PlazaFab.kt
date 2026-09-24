@@ -1,7 +1,5 @@
 package io.github.plaza.designsys.component
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -19,14 +17,13 @@ import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.floatShadow
 
 /**
- * The app's one extended FAB: Material's, a step down to 44dp at a control's 14dp corner, in
- * `primaryContainer`, lifted by the layer system's [floatShadow] rather than by Material's own
+ * The app's one extended FAB: Material's, at Material's own size, in `primaryContainer` at a
+ * control's 14dp corner, lifted by the layer system's [floatShadow] rather than by Material's own
  * elevation — see [io.github.plaza.designsys.theme.PlazaLayers].
  *
- * The size is set from outside because Material offers no FAB this small: `SmallExtendedFloatingActionButton`
- * is the 56dp one. A fixed height is honoured because the FAB's own 56dp floor is a default minimum,
- * which yields to any constraint the caller sets. The paddings inside stay Material's, which is why
- * the pill is a little wider than the Lean artboards draw it.
+ * The size is deliberately not set. The Lean round had it at 44dp, and Material's collapsed width is
+ * its FAB token (56dp) with no parameter to change it, so a 44dp-high button folded into a 56×44
+ * slab rather than a square. Left alone it folds into the 56dp square Material draws.
  *
  * [expanded] folds the label away and keeps the icon, the way the feed and the thread tuck the FAB
  * while the reader scrolls on. The label is also set as the button's description, because the
@@ -48,7 +45,7 @@ fun PlazaExtendedFab(
                 style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
             )
         },
-        icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(PlazaFabIconSize)) },
+        icon = { Icon(icon, contentDescription = null) },
         onClick = onClick,
         expanded = expanded,
         shape = ControlShape,
@@ -56,13 +53,13 @@ fun PlazaExtendedFab(
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
         modifier = modifier
-            .height(PlazaFabHeight)
             .floatShadow(ControlShape, LocalPlazaLayers.current.shadows)
             .semantics { contentDescription = text },
     )
 }
 
-/** What [PlazaExtendedFab] stands at, collapsed or not — for a list keeping its foot clear of it. */
-val PlazaFabHeight = 44.dp
-
-private val PlazaFabIconSize = 20.dp
+/**
+ * What [PlazaExtendedFab] stands at, collapsed or not — for a list keeping its foot clear of it.
+ * Material's FAB container height, which its defaults do not expose.
+ */
+val PlazaFabHeight = 56.dp

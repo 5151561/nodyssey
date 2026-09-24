@@ -131,6 +131,12 @@ import io.github.nodyssey.ui.resources.imagehost_provider_smms
 import io.github.nodyssey.ui.resources.imagehost_section_connection
 import io.github.nodyssey.ui.resources.imagehost_section_images
 import io.github.nodyssey.ui.resources.imagehost_section_provider
+import io.github.nodyssey.ui.resources.imagehost_short_custom
+import io.github.nodyssey.ui.resources.imagehost_short_easyimage
+import io.github.nodyssey.ui.resources.imagehost_short_imgbb
+import io.github.nodyssey.ui.resources.imagehost_short_lsky
+import io.github.nodyssey.ui.resources.imagehost_short_nodeimage
+import io.github.nodyssey.ui.resources.imagehost_short_smms
 import io.github.nodyssey.ui.resources.imagehost_site_helper
 import io.github.nodyssey.ui.resources.imagehost_site_invalid
 import io.github.nodyssey.ui.resources.imagehost_site_label
@@ -836,6 +842,16 @@ internal fun ImageHostProvider.nameRes(): StringResource = when (this) {
     ImageHostProvider.SMMS -> Res.string.imagehost_provider_smms
     ImageHostProvider.IMGBB -> Res.string.imagehost_provider_imgbb
     ImageHostProvider.CUSTOM -> Res.string.imagehost_provider_custom
+}
+
+/** The name alone, without what kind of host it is — for a line that has the host's state beside it. */
+internal fun ImageHostProvider.shortNameRes(): StringResource = when (this) {
+    ImageHostProvider.NODE_IMAGE -> Res.string.imagehost_short_nodeimage
+    ImageHostProvider.LSKY_PRO -> Res.string.imagehost_short_lsky
+    ImageHostProvider.EASY_IMAGE -> Res.string.imagehost_short_easyimage
+    ImageHostProvider.SMMS -> Res.string.imagehost_short_smms
+    ImageHostProvider.IMGBB -> Res.string.imagehost_short_imgbb
+    ImageHostProvider.CUSTOM -> Res.string.imagehost_short_custom
 }
 private fun ImageHostProvider.hintRes(): StringResource = when (this) {
     ImageHostProvider.NODE_IMAGE -> Res.string.imagehost_hint_nodeimage

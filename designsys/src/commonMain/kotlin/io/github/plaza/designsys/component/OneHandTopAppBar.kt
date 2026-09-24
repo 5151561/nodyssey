@@ -40,44 +40,51 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.plaza.designsys.theme.LocalOneHandMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardShadow
-import io.github.plaza.designsys.theme.readableWidth
 import kotlin.math.roundToInt
 
 /**
- * A One UI style collapsing app bar: the toolbar, then a band of blank under it with a large title
- * resting on its bottom-left edge, which the reader drags to whatever height suits them.
+ * A One UI style collapsing app bar: a band of blank above the toolbar with the title centred in it,
+ * which the reader drags to whatever height suits them.
  *
- * The point is reach. On a phone this tall the top of the screen sits outside the thumb's arc, so the
- * screen opens with a share of the top given away and the content — and the big title heading it —
- * starts lower down. From there
+ * The point is reach. On a phone this tall the title row sits outside the thumb's arc, so the screen
+ * opens with a share of the top given away and the title dropped into the middle of it. From there
  * it tracks the finger one to one, anywhere between nothing and [MAX_BAR_FRACTION] of the screen,
  * and **stays where it is let go**. There is no snapping to either end and no settling animation:
  * how much of the screen to spend on reach is the reader's call, made continuously, and a bar that
  * springs to a canned height the moment they lift their finger takes that call away from them —
  * which is exactly what it feels like.
  *
+ * The collapsed row is a plain Material toolbar and stays pinned. Everything the expansion adds sits
+ * *above* it, which is what walks the back button and the actions down the screen with the content
+ * instead of leaving them at the top out of reach. That is the whole of 单手模式, and it is why the
+ * toolbar is not at the top: a bar that pins the toolbar there and opens its blank underneath, as the
+ * 轻盈层叠 artboards drew it, brings the title down and leaves every button it has where the thumb
+ * cannot get to them.
+ *
  * The gesture model is Material's
  * [androidx.compose.material3.TopAppBarDefaults.exitUntilCollapsedScrollBehavior]: fold before the
  * page moves, reopen only once the page is back at its top.
  *
  * Hand-rolled rather than Material's `TwoRowsTopAppBar` over that behaviour, which was weighed at the
- * pinned material3 (1.12.0-alpha03). The pair does cover most of this bar — a title slot told which
- * row it is in, `expandedHeight` as the toolbar plus [oneHandExpandedBlank], and null snap and fling
- * specs, which stop it settling, so "stays where it is let go" is not the reason. The reasons are
- * three things the design draws that it has no parameter for:
+ * pinned material3 (1.12.0-alpha03). Null snap and fling specs stop it settling, so "stays where it
+ * is let go" is not the reason. The reasons are what the bar draws that it has no parameter for:
  *
- * - **The large title's place.** 24dp in from the edge and 16dp above the content, heading the
- *   [readableWidth] column on a tablet. `TwoRowsTopAppBar` takes no padding for its bottom row and
- *   sets that title with Material's own insets.
+ * - **The toolbar under the blank.** `TwoRowsTopAppBar` pins its top row — navigation icon, small
+ *   title, actions — to the top of the window and grows its bottom row beneath it, which is the
+ *   layout this bar exists to turn upside down.
+ * - **Two alignments.** The expanded title is centred and the collapsed one is not, and
+ *   `titleHorizontalAlignment` is one value handed to both rows — so centring the big title
+ *   necessarily centres the small one, and a centred toolbar title on a settings page reads as a
+ *   different app.
  * - **One title's worth of ink at every height.** [expandedTitleAlpha] and [collapsedTitleAlpha]
  *   always sum to one; Material fades its two titles on separate curves, and the midpoint of a drag
  *   reads fainter than either end.
@@ -85,15 +92,6 @@ import kotlin.math.roundToInt
  *   having scrolled under the bar ([OneHandAppBarState.isContentOverlapped]). Material's
  *   `TopAppBarColors` blends by collapsed fraction — which never moves where the blank is zero, as
  *   with 单手模式 off or in a landscape window — and draws no shadow at all.
- *
- * Revisit when a material3 release gives `TwoRowsTopAppBar` a padding for its bottom title and a
- * container keyed to overlap, or when the design lets these three go. The blank's sizing, the
- * fold/unfold animation and the lift would still be this file's to draw after such a move.
- *
- * The toolbar row stays pinned at the top and the blank opens beneath it, as the 轻盈层叠 artboards
- * draw it (设置 6a, 通知 5a): back arrow and actions where Material puts them, a 36sp title flush left
- * at the foot of the blank, the content under that. The toolbar's own small title fades in as the
- * blank closes, so the name is never on screen twice.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,6 +134,59 @@ fun OneHandTopAppBar(
         modifier = modifier.cardShadow(RectangleShape, enabled = lifted && layers.shadows).fillMaxWidth(),
     ) {
         Column(Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets)) {
+            Box(
+                modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clipToBounds()
+                    // Height read here rather than through `Modifier.height` so a scroll re-lays out
+                    // without recomposing: the bar changes every frame the finger moves.
+                    .layout { measurable, constraints ->
+                        val blank = state.heightPx.roundToInt().coerceAtLeast(0)
+                        val placeable =
+                            measurable.measure(
+                                constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
+                            )
+                        layout(constraints.maxWidth, blank) {
+                            placeable.place(0, (blank - placeable.height) / 2)
+                        }
+                    }
+                    .padding(horizontal = Spacing.lg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier =
+                    Modifier
+                        // Same reason as the height: alpha read in the draw phase, not the
+                        // composition one.
+                        .graphicsLayer { alpha = expandedTitleAlpha(state.fraction) }
+                        .then(
+                            if (expandedTitleIsLive) Modifier else Modifier.clearAndSetSemantics {},
+                        ),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = Spacing.xs),
+                        )
+                    }
+                }
+            }
             Row(
                 modifier =
                 Modifier
@@ -178,63 +229,6 @@ fun OneHandTopAppBar(
                     }
                 }
                 actions()
-            }
-            Box(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clipToBounds()
-                    // Height read here rather than through `Modifier.height` so a scroll re-lays out
-                    // without recomposing: the bar changes every frame the finger moves.
-                    .layout { measurable, constraints ->
-                        val blank = state.heightPx.roundToInt().coerceAtLeast(0)
-                        val placeable =
-                            measurable.measure(
-                                constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
-                            )
-                        layout(constraints.maxWidth, blank) {
-                            placeable.place(0, blank - placeable.height)
-                        }
-                    },
-                contentAlignment = Alignment.BottomStart,
-            ) {
-                Column(
-                    modifier =
-                    Modifier
-                        // The same centred column the content under it is laid in, so on a tablet
-                        // the title heads that column rather than the window's edge hundreds of dp
-                        // to its left. On a phone the column is the window and nothing moves.
-                        .readableWidth()
-                        // Filling the column, not centred in it: `readableWidth` centres what it wraps.
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.xl)
-                        // Same reason as the height: alpha read in the draw phase, not the
-                        // composition one.
-                        .padding(bottom = Spacing.lg)
-                        .graphicsLayer { alpha = expandedTitleAlpha(state.fraction) }
-                        .then(
-                            if (expandedTitleIsLive) Modifier else Modifier.clearAndSetSemantics {},
-                        ),
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.displaySmall.copy(letterSpacing = (-0.5).sp),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (subtitle != null) {
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = Spacing.xs),
-                        )
-                    }
-                }
             }
         }
     }

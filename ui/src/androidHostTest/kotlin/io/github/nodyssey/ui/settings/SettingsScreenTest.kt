@@ -50,13 +50,13 @@ class SettingsScreenTest {
         }
 
         val slider = composeRule.onNodeWithTag(BODY_FONT_SIZE_SLIDER_TAG)
-        composeRule.onNodeWithText("16sp", useUnmergedTree = true).assertTextEquals("16sp")
+        composeRule.onNodeWithText("16", useUnmergedTree = true).assertTextEquals("16")
         slider.performTouchInput {
             down(percentOffset(0.2f, 0.5f))
             moveTo(center, delayMillis = 100)
         }
 
-        composeRule.onNodeWithText("16sp", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithText("16", useUnmergedTree = true).assertDoesNotExist()
         assertTrue(appliedScale == null)
 
         slider.performTouchInput { up() }

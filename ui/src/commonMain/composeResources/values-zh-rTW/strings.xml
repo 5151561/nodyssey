@@ -280,9 +280,9 @@
     <string name="settings_theme_dark">深色</string>
     <string name="settings_theme_mode">明暗</string>
     <string name="settings_one_hand">單手模式</string>
-    <string name="settings_one_hand_hint">二級頁面用可下拉的大標題列，最多佔四成螢幕；關掉是普通標題列</string>
+    <string name="settings_one_hand_hint">二級頁頂部留出可下拉的大標題區</string>
     <string name="settings_eink">電子紙模式</string>
-    <string name="settings_eink_hint">為電子紙螢幕準備：黑白高對比、沒有動效，並固定為淺色</string>
+    <string name="settings_eink_hint">純黑白，關閉動效和陰影</string>
     <string name="settings_theme_eink_hint">電子紙模式已接管配色</string>
 
     <string name="settings_language">語言</string>
@@ -314,9 +314,9 @@
     <string name="settings_palette_style_monochrome">單色</string>
 
     <string name="settings_theme_preview">預覽</string>
-    <string name="settings_theme_preview_board">日常</string>
-    <string name="settings_theme_preview_meta">nssk · 3 小時前</string>
-    <string name="settings_theme_preview_title">終於把簽到指令碼改成協程版了</string>
+    <string name="settings_theme_preview_tag">標籤</string>
+    <string name="settings_theme_preview_meta">次要文字</string>
+    <string name="settings_theme_preview_title">這是主題預覽，卡片和按鈕會是這個配色</string>
     <string name="settings_theme_preview_primary">主按鈕</string>
     <string name="settings_theme_preview_secondary">次按鈕</string>
     <string name="settings_theme_preview_accent">強調</string>
@@ -347,37 +347,36 @@
     <string name="settings_wallpaper_auto_update_hint">換桌布後下次啟動重新取色</string>
     <string name="settings_wallpaper_unreadable">讀不到桌布</string>
     <string name="settings_wallpaper_unreadable_hint">系統沒有交出桌布配色，已沿用上次的種子色 %1$s。</string>
-    <string name="settings_body_size">字級</string>
-    <string name="settings_sticker_uniform">表情統一縮限</string>
-    <string name="settings_sticker_uniform_hint">開啟後所有表情一樣大，可調；關閉則各按表情原本的大小顯示</string>
+    <string name="settings_body_size">閱讀字級</string>
+    <string name="settings_sticker_uniform">表情統一大小</string>
+    <string name="settings_sticker_uniform_hint">貼圖按固定尺寸顯示</string>
     <string name="settings_sticker_size">表情大小</string>
     <string name="settings_sticker_preview_caption">表情就這麼大</string>
-    <string name="settings_text_preview">預覽：中文長文的閱讀體驗。</string>
+    <string name="settings_text_preview">這是閱讀字級的預覽，文章內文和清單標題會按這個大小顯示。</string>
     <string name="settings_content">內容</string>
     <string name="settings_app_links">站內連結</string>
     <string name="settings_app_links_hint_on">已開啟：在別的 App 裡點 NodeSeek 的文章、使用者、通知連結會直接進來</string>
-    <string name="settings_app_links_hint_off">未開啟：站內連結仍由瀏覽器開啟。點這裡去系統設定裡開啟「開啟支援的連結」</string>
+    <string name="settings_app_links_summary_on">在 App 內開啟</string>
+    <string name="settings_app_links_summary_off">在瀏覽器開啟</string>
     <string name="settings_report_format">測評報告</string>
-    <string name="settings_report_format_hint">文章裡的跑分報告是重排成卡片還是照原樣顯示</string>
     <string name="settings_report_format_adapted">適配格式</string>
     <string name="settings_report_format_source">顯示原文</string>
     <string name="settings_home_page_bar">首頁翻頁列</string>
-    <string name="settings_home_page_bar_hint">在首頁底部顯示頁碼和跳頁按鈕；清單照樣捲動載入</string>
+    <string name="settings_home_page_bar_hint">在首頁右下角顯示頁碼</string>
     <string name="settings_wifi_images">僅 Wi-Fi 下載入圖片</string>
-    <string name="settings_wifi_images_hint">行動網路顯示佔位圖</string>
+    <string name="settings_wifi_images_hint">行動網路下點擊才載入</string>
     <string name="settings_clear_cache">清除快取</string>
-    <string name="settings_clear_cache_size">已佔用 %1$s</string>
+    <string name="settings_clear_cache_size">圖片與文章快取 %1$s</string>
     <string name="settings_about">關於</string>
     <string name="settings_about_app">關於 Nodyssey</string>
     <string name="settings_update_on_launch">啟動時檢查更新</string>
-    <string name="settings_update_on_launch_hint">有新版就在啟動後提醒一次；關掉後只在關於頁手動查</string>
     <string name="settings_update_dev_channel">接收 dev 版更新</string>
-    <string name="settings_update_dev_channel_hint">dev 版是沒正式發版的測試包，可能不穩定；關掉後只推正式版。裝的就是 dev 版時預設開著</string>
+    <string name="settings_update_dev_channel_hint">可能不穩定</string>
     <string name="settings_licenses">開源授權</string>
 
     <string name="settings_network">網路</string>
     <string name="settings_proxy_entry">代理</string>
-    <string name="settings_proxy_entry_hint">HTTP / SOCKS5，代理 App 自己的請求；手機上其它 App 不受影響</string>
+    <string name="settings_entry_off">未開啟</string>
     <string name="proxy_title">代理</string>
     <string name="proxy_master_title">啟用代理</string>
     <string name="proxy_master_hint">代理 App 內的網路請求；手機上的其它 App 照常直連</string>
@@ -405,8 +404,7 @@
     <string name="proxy_advanced_hint">App 自己只會說 HTTP 和 SOCKS5。手機上裝了 Clash、mihomo 一類用戶端的話，在那邊開混合連接埠，這裡填 127.0.0.1 和那個連接埠，節點協定交給它處理。</string>
     <string name="proxy_webview_hint">登入用的是系統 WebView，它走自己的網路，不受這裡的設定影響。</string>
     <string name="settings_doh_entry">加密 DNS</string>
-    <string name="settings_doh_entry_hint_off">未開啟；開啟後 App 內的網域走 DoH 解析，繞開本地 DNS 劫持和汙染</string>
-    <string name="settings_doh_entry_hint_on">已開啟，App 內的網域走 DoH 解析</string>
+    <string name="settings_doh_summary_chain">%1$s 等 %2$d 個</string>
     <string name="doh_title">加密 DNS</string>
     <string name="doh_master_title">啟用加密 DNS</string>
     <string name="doh_master_hint">App 內的請求改用 DoH 解析網域；手機上的其它 App 照常</string>
@@ -445,7 +443,6 @@
     <string name="doh_proxy_hint">開著代理的時候，網域交給代理那邊解析，這裡的設定對走代理的請求不起作用。</string>
     <string name="doh_webview_hint">登入用的是系統 WebView，它走自己的網路和系統的私人 DNS，不受這裡影響。</string>
     <string name="settings_network_check_entry">網路自檢</string>
-    <string name="settings_network_check_entry_hint">測一次連線，把代理、VPN、DNS 和實際速度列出來；回報「很慢」的時候截這張圖</string>
     <string name="network_check_title">網路自檢</string>
     <string name="network_check_rerun">重新檢測</string>
     <string name="network_check_running">檢測中…</string>
@@ -595,7 +592,8 @@
 
     <string name="notify_settings_title">通知</string>
     <string name="notify_master_title">新訊息通知</string>
-    <string name="notify_settings_entry_hint">背景定期檢查未讀並發系統通知</string>
+    <string name="settings_notify_summary_every">每 %1$s檢查</string>
+    <string name="settings_notify_summary_quiet">勿擾 23:00–07:00</string>
     <string name="notify_master_hint">背景定期檢查未讀並發系統通知；站台無推播服務，無法做到即時</string>
     <string name="notify_frequency">檢查頻率</string>
     <string name="notify_check_section">檢查</string>
@@ -805,8 +803,6 @@
     <string name="search_pane_empty">選一則結果，內文會顯示在這裡</string>
     <string name="notifications_pane_empty">選一則訊息，內容會顯示在這裡</string>
     <string name="space_pane_empty">選一篇文章，內文會顯示在這裡</string>
-
-    <string name="pager_total_approx">共 %1$d+ 頁</string>
 
     <string name="space_tab_general">概況</string>
     <string name="space_tab_topics">主題文</string>
@@ -1112,6 +1108,12 @@
     <string name="imagehost_provider_smms">SM.MS · 公共</string>
     <string name="imagehost_provider_imgbb">imgbb · 公共</string>
     <string name="imagehost_provider_custom">自訂圖床 · 手動設定</string>
+    <string name="imagehost_short_nodeimage">NodeImage</string>
+    <string name="imagehost_short_lsky">蘭空圖床</string>
+    <string name="imagehost_short_easyimage">簡單圖床</string>
+    <string name="imagehost_short_smms">SM.MS</string>
+    <string name="imagehost_short_imgbb">imgbb</string>
+    <string name="imagehost_short_custom">自訂圖床</string>
 
     <string name="imagehost_hint_nodeimage">網頁版編輯器用的那家。金鑰在 nodeimage.com 右上角「API」頁面複製</string>
     <string name="imagehost_hint_lsky">填自己架的站台位址，權杖在蘭空後台「設定 › 介面」產生</string>

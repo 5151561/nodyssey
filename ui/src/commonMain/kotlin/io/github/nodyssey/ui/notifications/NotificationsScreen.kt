@@ -47,13 +47,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
@@ -578,6 +582,7 @@ private fun NotificationRow(
     nowMillis: Long,
     onClick: () -> Unit,
 ) {
+    val sentenceStyle = MaterialTheme.typography.bodySmall
     GroupedListItem(
         first = first,
         last = last,
@@ -586,23 +591,42 @@ private fun NotificationRow(
         verticalAlignment = Alignment.Top,
         contentPadding = NotificationRowPadding,
         leadingContent = {
-            UserAvatar(url = item.avatarUrl, name = item.actorName, size = NOTIFICATION_AVATAR)
-        },
-        headlineContent = {
-            Text(
-                text = notificationSentence(item),
-                style = MaterialTheme.typography.bodySmall,
-                color =
-                if (item.isUnread) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
+            UserAvatar(
+                url = item.avatarUrl,
+                name = item.actorName,
+                size = NOTIFICATION_AVATAR,
+                // Top-aligned, the avatar lines up with the sentence's box, and the box starts a
+                // half-leading above the first line's ink — so the avatar stood that much proud of
+                // the words beside it.
+                modifier = Modifier.padding(top = firstLineInkTop(sentenceStyle)),
             )
         },
-        supportingContent =
-        timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
-            { Text(stamp, style = MaterialTheme.typography.labelSmall) }
+        // The time goes under the sentence inside the headline rather than in `supportingContent`.
+        // Material (1.5.0-alpha24) stands any row with a supporting line at its two-line height,
+        // 72dp, and no minimum set from outside lowers it — `heightIn` is not passed through — so a
+        // one-line sentence and its time, 55dp of words, sat on 17dp of blank. As one block the row
+        // is a one-line item, floored at 56, and grows with the sentence from there. Move the time
+        // back if a later material3 lets a supporting row be as short as its content.
+        headlineContent = {
+            Column {
+                Text(
+                    text = notificationSentence(item),
+                    style = sentenceStyle,
+                    color =
+                    if (item.isUnread) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+                timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
+                    Text(
+                        stamp,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         },
         // The slot is kept on read rows too, so a sentence wraps at the same width whichever state it
         // is in and marking the list read does not reflow it. Dropped to sit on the sentence's first
@@ -696,6 +720,22 @@ private fun NotificationTab.label(): String =
 /** `%1$s` / `%2$s` in the sentence templates; the class keeps the dollar out of the raw string. */
 private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
+
+/**
+ * How far below the top of a text box its first line starts to show ink: the half-leading the line
+ * height adds above the glyphs, plus the hair a glyph sits inside its own em box. At 13/19 that is
+ * 4dp, which is what a render measures for a hanzi and a Latin ascender alike. Worked out from the
+ * style rather than fixed so it follows the reading-size preference.
+ */
+@Composable
+private fun firstLineInkTop(style: TextStyle): Dp {
+    val fontSize = style.fontSize.value
+    val lineHeight = style.lineHeight.takeIf { it.isSp }?.value ?: fontSize
+    return with(LocalDensity.current) { ((lineHeight - fontSize) / 2 + fontSize * GLYPH_EM_INSET).sp.toDp() }
+}
+
+/** How far below the top of its em box a glyph's ink starts, as a share of the font size. */
+private const val GLYPH_EM_INSET = 0.08f
 
 /** 3e's avatar size, down from 5a's 40. */
 private val NOTIFICATION_AVATAR = 28.dp

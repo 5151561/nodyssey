@@ -14,6 +14,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemColors
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -141,6 +143,13 @@ fun GroupedListItem(
                 drawCard = !LocalInGroupCard.current,
                 dividerStart = { dividerInset?.toPx() ?: textStart.px.takeUnless { it.isNaN() } ?: GroupDividerInset.toPx() },
             )
+    // A row's second line at 12/16, a step under its title, as every 轻盈层叠 artboard draws it.
+    // Material sets that slot in its own supporting token — bodyMedium, 15/25 in this type scale —
+    // and neither `SegmentedListItem` nor `ListItemDefaults` takes a style for it, so it is provided
+    // inside the slot, where it lands after Material's. A caller's explicit `style` still wins. Goes
+    // when ListItem takes a supporting text style of its own.
+    val supporting: (@Composable () -> Unit)? =
+        supportingContent?.let { content -> { ProvideTextStyle(MaterialTheme.typography.labelSmall, content) } }
     when {
         checked != null && onCheckedChange != null ->
             SegmentedListItem(
@@ -154,7 +163,7 @@ fun GroupedListItem(
                 enabled = enabled,
                 leadingContent = leadingContent,
                 trailingContent = trailingContent,
-                supportingContent = supportingContent,
+                supportingContent = supporting,
                 verticalAlignment = verticalAlignment,
                 colors = colors,
                 contentPadding = contentPadding,
@@ -170,7 +179,7 @@ fun GroupedListItem(
                 enabled = enabled,
                 leadingContent = leadingContent,
                 trailingContent = trailingContent,
-                supportingContent = supportingContent,
+                supportingContent = supporting,
                 verticalAlignment = verticalAlignment,
                 colors = colors,
                 contentPadding = contentPadding,
@@ -185,7 +194,7 @@ fun GroupedListItem(
                 enabled = enabled,
                 leadingContent = leadingContent,
                 trailingContent = trailingContent,
-                supportingContent = supportingContent,
+                supportingContent = supporting,
                 verticalAlignment = verticalAlignment,
                 onLongClick = onLongClick,
                 onLongClickLabel = onLongClickLabel,
@@ -200,7 +209,7 @@ fun GroupedListItem(
             ListItem(
                 headlineContent = headline,
                 modifier = decorated,
-                supportingContent = supportingContent,
+                supportingContent = supporting,
                 leadingContent = leadingContent,
                 trailingContent = trailingContent,
                 colors = colors,

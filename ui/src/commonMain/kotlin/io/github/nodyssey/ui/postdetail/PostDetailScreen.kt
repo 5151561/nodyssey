@@ -888,7 +888,9 @@ private fun DetailBottomActions(
     Column(
         modifier = modifier.padding(Spacing.lg),
         horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        // 4dp, not 8: the rail's bottom key already carries 4dp of touch-target slack under its
+        // paint, and the two together are the 8dp the design puts between the rail and the FAB.
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         PageJumpRail(
             expanded = toolbarExpanded,
@@ -1025,13 +1027,13 @@ private val TopBarIconSize = 20.dp
 /**
  * The room to keep below the thread until the floating controls have been measured — one frame.
  *
- * The retracted rail's own arithmetic: the group's 16dp of bottom padding, the FAB, the 8dp gap
- * above it, and roughly the page label the rail keeps when its arrows are away, plus a line of air.
- * An underestimate on the frame it is used for is invisible; the measurement replaces it before
+ * The retracted rail's own arithmetic: the group's 16dp of bottom padding, the FAB, the 4dp gap
+ * above it, and the single page key the rail keeps when its arrows are away, plus a line of air. An
+ * underestimate on the frame it is used for is invisible; the measurement replaces it before
  * anything is scrolled.
  */
 private val ThreadBottomBarRoom =
-    Spacing.lg + PlazaFabHeight + Spacing.sm + Spacing.xxl + Spacing.sm
+    Spacing.lg + PlazaFabHeight + Spacing.xs + Sizes.minTouchTarget + Spacing.sm
 
 /**
  * The thread as one scroll.

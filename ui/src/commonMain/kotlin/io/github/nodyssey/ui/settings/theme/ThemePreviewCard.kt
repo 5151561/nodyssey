@@ -7,13 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,13 +27,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.settings_theme_preview_accent
-import io.github.nodyssey.ui.resources.settings_theme_preview_board
 import io.github.nodyssey.ui.resources.settings_theme_preview_meta
 import io.github.nodyssey.ui.resources.settings_theme_preview_primary
 import io.github.nodyssey.ui.resources.settings_theme_preview_secondary
+import io.github.nodyssey.ui.resources.settings_theme_preview_tag
 import io.github.nodyssey.ui.resources.settings_theme_preview_title
 import io.github.plaza.designsys.component.LayerCardShape
-import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.TonalTagShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
@@ -58,6 +52,9 @@ import org.jetbrains.compose.resources.stringResource
  * so the ambient scheme *is* the answer, including under 动态取色, where the system's palette cannot
  * be regenerated from a seed at all.
  *
+ * Every word on it says what it is — 标签, 次要文字, 主按钮 — rather than playing a post: a made-up
+ * board, author and title read as content somebody wrote, and the card is only here for its colours.
+ *
  * Type is in literal `sp` rather than from the type scale: this is a picture of an app, and a
  * picture that grew with 正文字号 would stop fitting its own frame.
  */
@@ -66,8 +63,8 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val layers = LocalPlazaLayers.current
     val shape = LayerCardShape
-    // A card like every card in the feed, on the page like they are: the preview is a post as the
-    // home list draws it, so it takes the same white, the same shadow and, on 墨水屏, the same rule.
+    // A card like every card in the feed, on the page like they are: it is drawn the way the home
+    // list draws one, so it takes the same white, the same shadow and, on 墨水屏, the same rule.
     Surface(
         modifier = modifier.cardShadow(shape, layers.shadows).fillMaxWidth().clearAndSetSemantics {},
         color = layers.card,
@@ -84,7 +81,7 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        stringResource(Res.string.settings_theme_preview_board),
+                        stringResource(Res.string.settings_theme_preview_tag),
                         style = TextStyle(fontSize = 10.5.sp),
                         color = scheme.onSecondaryContainer,
                         modifier =
@@ -106,10 +103,6 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    PreviewStat(Icons.Default.ThumbUp, "12", scheme.onSurfaceVariant)
-                    PreviewStat(PlazaIcons.ModeComment, "28", scheme.onSurfaceVariant)
-                }
             }
             HorizontalDivider(color = scheme.outlineVariant)
             Row(
@@ -138,21 +131,6 @@ internal fun ThemePreviewCard(modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun PreviewStat(
-    icon: ImageVector,
-    count: String,
-    tint: Color,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(14.dp))
-        Text(count, style = TextStyle(fontSize = 11.sp), color = tint)
     }
 }
 

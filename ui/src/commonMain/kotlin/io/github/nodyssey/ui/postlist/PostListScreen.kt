@@ -35,6 +35,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,6 +48,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +72,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -816,7 +819,9 @@ private fun FeedPageBar(
     Column(
         modifier = modifier.padding(Spacing.lg),
         horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        // The thread's measurement, for the thread's reason: the rail's bottom key carries 4dp of
+        // touch-target slack under its paint, so 4dp here draws as the design's 8dp.
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         PageJumpRail(
             expanded = expanded,
@@ -1324,13 +1329,20 @@ private val PostCardPadding = PaddingValues(start = 14.dp, end = 14.dp, top = Sp
 /** Between the card's three lines. */
 private val PostCardLineGap = 6.dp
 
-/** A pinned notice: one line on a tonal strip, above the cards rather than among them. */
+/**
+ * A pinned notice: one line on a tonal strip, above the cards rather than among them.
+ *
+ * Material's clickable `Surface` stands every surface in a 48dp touch slot, and a 36dp strip was
+ * drawn centred in one: 6dp of nothing above and below each strip, so two pinned notices sat 18dp
+ * apart where the cards under them sit 6. The slot is switched off here — the strip is the full
+ * width of the page, which is target enough — so the gap between strips is the list's own.
+ */
 @Composable
 private fun PinnedRow(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-) {
+) = CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.medium,

@@ -36,10 +36,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.dns.DohServer
+import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.data.settings.ReportFormat
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.ThemeMode
+import io.github.nodyssey.data.settings.UserSettings
+import io.github.nodyssey.ui.account.shortNameRes
 import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
@@ -49,25 +53,25 @@ import io.github.nodyssey.ui.resources.imagehost_connected
 import io.github.nodyssey.ui.resources.imagehost_not_connected
 import io.github.nodyssey.ui.resources.imagehost_title
 import io.github.nodyssey.ui.resources.notify_master_title
-import io.github.nodyssey.ui.resources.notify_settings_entry_hint
 import io.github.nodyssey.ui.resources.notify_settings_title
+import io.github.nodyssey.ui.resources.proxy_type_http
+import io.github.nodyssey.ui.resources.proxy_type_socks
 import io.github.nodyssey.ui.resources.settings_about
 import io.github.nodyssey.ui.resources.settings_about_app
 import io.github.nodyssey.ui.resources.settings_about_app_update
 import io.github.nodyssey.ui.resources.settings_app_links
-import io.github.nodyssey.ui.resources.settings_app_links_hint_off
-import io.github.nodyssey.ui.resources.settings_app_links_hint_on
+import io.github.nodyssey.ui.resources.settings_app_links_summary_off
+import io.github.nodyssey.ui.resources.settings_app_links_summary_on
 import io.github.nodyssey.ui.resources.settings_appearance
 import io.github.nodyssey.ui.resources.settings_body_size
-import io.github.nodyssey.ui.resources.settings_body_size_value
 import io.github.nodyssey.ui.resources.settings_clear_cache
 import io.github.nodyssey.ui.resources.settings_clear_cache_size
 import io.github.nodyssey.ui.resources.settings_content
 import io.github.nodyssey.ui.resources.settings_doh_entry
-import io.github.nodyssey.ui.resources.settings_doh_entry_hint_off
-import io.github.nodyssey.ui.resources.settings_doh_entry_hint_on
+import io.github.nodyssey.ui.resources.settings_doh_summary_chain
 import io.github.nodyssey.ui.resources.settings_eink
 import io.github.nodyssey.ui.resources.settings_eink_hint
+import io.github.nodyssey.ui.resources.settings_entry_off
 import io.github.nodyssey.ui.resources.settings_home_page_bar
 import io.github.nodyssey.ui.resources.settings_home_page_bar_hint
 import io.github.nodyssey.ui.resources.settings_language
@@ -79,18 +83,16 @@ import io.github.nodyssey.ui.resources.settings_language_zh_hant
 import io.github.nodyssey.ui.resources.settings_licenses
 import io.github.nodyssey.ui.resources.settings_network
 import io.github.nodyssey.ui.resources.settings_network_check_entry
-import io.github.nodyssey.ui.resources.settings_network_check_entry_hint
+import io.github.nodyssey.ui.resources.settings_notify_summary_every
+import io.github.nodyssey.ui.resources.settings_notify_summary_quiet
 import io.github.nodyssey.ui.resources.settings_one_hand
 import io.github.nodyssey.ui.resources.settings_one_hand_hint
 import io.github.nodyssey.ui.resources.settings_proxy_entry
-import io.github.nodyssey.ui.resources.settings_proxy_entry_hint
 import io.github.nodyssey.ui.resources.settings_report_format
 import io.github.nodyssey.ui.resources.settings_report_format_adapted
-import io.github.nodyssey.ui.resources.settings_report_format_hint
 import io.github.nodyssey.ui.resources.settings_report_format_source
 import io.github.nodyssey.ui.resources.settings_sticker_preview_caption
 import io.github.nodyssey.ui.resources.settings_sticker_size
-import io.github.nodyssey.ui.resources.settings_sticker_size_value
 import io.github.nodyssey.ui.resources.settings_sticker_uniform
 import io.github.nodyssey.ui.resources.settings_sticker_uniform_hint
 import io.github.nodyssey.ui.resources.settings_text_preview
@@ -104,7 +106,6 @@ import io.github.nodyssey.ui.resources.settings_title
 import io.github.nodyssey.ui.resources.settings_update_dev_channel
 import io.github.nodyssey.ui.resources.settings_update_dev_channel_hint
 import io.github.nodyssey.ui.resources.settings_update_on_launch
-import io.github.nodyssey.ui.resources.settings_update_on_launch_hint
 import io.github.nodyssey.ui.resources.settings_version
 import io.github.nodyssey.ui.resources.settings_wifi_images
 import io.github.nodyssey.ui.resources.settings_wifi_images_hint
@@ -307,10 +308,7 @@ fun SettingsScreen(
                 )
                 SettingsBlock(
                     title = stringResource(Res.string.settings_body_size),
-                    value = stringResource(
-                        Res.string.settings_body_size_value,
-                        bodyFontSize.roundToInt(),
-                    ),
+                    value = bodyFontSize.roundToInt().toString(),
                 ) {
                     SettingsSlider(
                         value = bodyFontSize,
@@ -347,10 +345,7 @@ fun SettingsScreen(
                 if (state.settings.stickerUniformSize) {
                     SettingsBlock(
                         title = stringResource(Res.string.settings_sticker_size),
-                        value = stringResource(
-                            Res.string.settings_sticker_size_value,
-                            stickerSize.roundToInt(),
-                        ),
+                        value = stickerSize.roundToInt().toString(),
                     ) {
                         SettingsSlider(
                             value = stickerSize,
@@ -385,9 +380,9 @@ fun SettingsScreen(
                         subtitle =
                         stringResource(
                             if (enabled) {
-                                Res.string.settings_app_links_hint_on
+                                Res.string.settings_app_links_summary_on
                             } else {
-                                Res.string.settings_app_links_hint_off
+                                Res.string.settings_app_links_summary_off
                             },
                         ),
                         onClick = onOpenAppLinkSettings,
@@ -398,7 +393,6 @@ fun SettingsScreen(
                     // 站外链接 used to hold that place and no longer exists; see `ExternalLinks`.
                     top = appLinkHandlingEnabled == null,
                     title = stringResource(Res.string.settings_report_format),
-                    subtitle = stringResource(Res.string.settings_report_format_hint),
                 ) {
                     ConnectedReportFormatButtons(
                         selected = state.settings.reportFormat,
@@ -423,15 +417,17 @@ fun SettingsScreen(
                 )
                 GroupedRow(
                     title = stringResource(Res.string.imagehost_title),
-                    // 已连接 / 未连接 rather than the host's name: what the row is asked on the way
-                    // to writing a post is whether inserting a picture will work at all.
-                    subtitle = stringResource(
-                        if (state.imageHostConnected) {
-                            Res.string.imagehost_connected
-                        } else {
-                            Res.string.imagehost_not_connected
-                        },
-                    ),
+                    // The host, then whether inserting a picture will work at all — the question the
+                    // row is asked on the way to writing a post.
+                    subtitle =
+                    stringResource(state.imageHostProvider.shortNameRes()) + SUBTITLE_SEPARATOR +
+                        stringResource(
+                            if (state.imageHostConnected) {
+                                Res.string.imagehost_connected
+                            } else {
+                                Res.string.imagehost_not_connected
+                            },
+                        ),
                     onClick = onOpenImageHost,
                     icon = PlazaIcons.CloudUpload,
                 )
@@ -461,7 +457,7 @@ fun SettingsScreen(
             SettingsGroup {
                 GroupedRow(
                     title = stringResource(Res.string.notify_master_title),
-                    subtitle = stringResource(Res.string.notify_settings_entry_hint),
+                    subtitle = notificationSummary(state.settings),
                     first = true,
                     last = true,
                     onClick = onOpenNotifications,
@@ -473,24 +469,18 @@ fun SettingsScreen(
             SettingsGroup {
                 GroupedRow(
                     title = stringResource(Res.string.settings_proxy_entry),
-                    subtitle = stringResource(Res.string.settings_proxy_entry_hint),
+                    subtitle = proxySummary(state.proxy),
                     first = true,
-                    last = state.dohEnabled == null && !state.hasNetworkCheck,
+                    last = state.dohChain == null && !state.hasNetworkCheck,
                     onClick = onOpenProxy,
                     icon = PlazaIcons.VpnLock,
                 )
                 // Absent rather than disabled where the platform cannot apply a DoH server at all —
-                // see [SettingsUiState.dohEnabled], and 默认打开方式 above for the same treatment.
-                state.dohEnabled?.let { enabled ->
+                // see [SettingsUiState.dohChain], and 默认打开方式 above for the same treatment.
+                state.dohChain?.let { chain ->
                     GroupedRow(
                         title = stringResource(Res.string.settings_doh_entry),
-                        subtitle = stringResource(
-                            if (enabled) {
-                                Res.string.settings_doh_entry_hint_on
-                            } else {
-                                Res.string.settings_doh_entry_hint_off
-                            },
-                        ),
+                        subtitle = dohSummary(chain),
                         last = !state.hasNetworkCheck,
                         onClick = onOpenDoh,
                         icon = PlazaIcons.Dns,
@@ -502,7 +492,6 @@ fun SettingsScreen(
                 if (state.hasNetworkCheck) {
                     GroupedRow(
                         title = stringResource(Res.string.settings_network_check_entry),
-                        subtitle = stringResource(Res.string.settings_network_check_entry_hint),
                         last = true,
                         onClick = onOpenNetworkCheck,
                         icon = PlazaIcons.NetworkCheck,
@@ -525,7 +514,6 @@ fun SettingsScreen(
                 GroupedRow(
                     icon = PlazaIcons.Update,
                     title = stringResource(Res.string.settings_update_on_launch),
-                    subtitle = stringResource(Res.string.settings_update_on_launch_hint),
                     checked = state.settings.updateCheckOnLaunch,
                     onCheckedChange = onUpdateCheckOnLaunchChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.updateCheckOnLaunch) },
@@ -623,6 +611,46 @@ private fun AppLanguageRow(
 }
 
 private const val SUBTITLE_SEPARATOR = " · "
+
+/**
+ * 新消息通知's second line: how often the check runs and whether 免打扰 holds it back — the two
+ * answers on that screen that change what a reader should expect to see, and when.
+ */
+@Composable
+private fun notificationSummary(settings: UserSettings): String {
+    if (!settings.notificationsEnabled) return stringResource(Res.string.settings_entry_off)
+    val every =
+        stringResource(
+            Res.string.settings_notify_summary_every,
+            stringResource(pollMinutesLabel(settings.notificationPollMinutes)),
+        )
+    return if (settings.notificationQuietHours) {
+        every + SUBTITLE_SEPARATOR + stringResource(Res.string.settings_notify_summary_quiet)
+    } else {
+        every
+    }
+}
+
+/** 代理's second line: 「SOCKS5 · 127.0.0.1:7890」, or 未开启 when requests go direct. */
+@Composable
+private fun proxySummary(proxy: ProxyEndpoint?): String {
+    proxy ?: return stringResource(Res.string.settings_entry_off)
+    val type = stringResource(if (proxy.type == ProxyType.HTTP) Res.string.proxy_type_http else Res.string.proxy_type_socks)
+    // An IPv6 literal is bracketed, as in a URL, or its last group would read as the port.
+    val host = if (':' in proxy.host) "[${proxy.host}]" else proxy.host
+    return type + SUBTITLE_SEPARATOR + host + ":" + proxy.port
+}
+
+/**
+ * 加密 DNS's second line: the server tried first, and how many there are in all when the rest stand
+ * behind it as fallbacks.
+ */
+@Composable
+private fun dohSummary(chain: List<DohServer>): String {
+    val first = chain.firstOrNull() ?: return stringResource(Res.string.settings_entry_off)
+    val name = dohServerLabel(first)
+    return if (chain.size == 1) name else stringResource(Res.string.settings_doh_summary_chain, name, chain.size)
+}
 
 /**
  * The four entries of 语言, in the order the menu lists them.

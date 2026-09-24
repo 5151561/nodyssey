@@ -177,6 +177,7 @@ class PostListScreenRenderTest {
         val FEED =
             listOf(
                 post(1, "【公告】NodeSeek 社区行为准则与版规更新", "管理员", "公告", 42, 8600, "5分钟前", pinned = true),
+                post(8, "【公告】鸡腿与星辰的获取和使用说明", "管理员", "公告", 17, 5200, "2小时前", pinned = true),
                 post(2, "自建 NAS 一年，聊聊我踩过的那些坑和真香时刻", "homelab_er", "技术", 128, 3400, "刚刚", "轻舟", newComments = 6, awarded = true),
                 post(3, "有没有那种用了就回不去的小众 App，求推荐", "轻舟", "日常", 87, 2100, "3分钟前", "nas_newbie", newComments = 2),
                 post(4, "黑五机场怎么选？把我对比的几家整理成了表格", "过路人", "情报", 65, 4800, "12分钟前", "Sakura"),

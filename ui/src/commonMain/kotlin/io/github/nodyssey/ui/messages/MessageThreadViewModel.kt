@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.DirectMessage
 import io.github.nodyssey.data.MessageRepository
 import io.github.nodyssey.data.NotificationCategory
@@ -63,7 +64,11 @@ class MessageThreadViewModel(
     /** Null in tests; the bar then shows [EditorActions.Message] and offers no wrench. */
     private val settings: SettingsRepository? = null,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(MessageThreadUiState(uid = uid, userName = userName))
+    // The avatar is known from the uid alone — it is the URL the thread itself answers with — so the
+    // header draws the picture from the first frame. Left for the fetch, it drew the initial first and
+    // swapped the picture in when the history arrived, even with the picture already cached.
+    private val _uiState =
+        MutableStateFlow(MessageThreadUiState(uid = uid, userName = userName, avatarUrl = NodeSeekSite.avatarUrl(uid)))
     val uiState: StateFlow<MessageThreadUiState> = _uiState.asStateFlow()
 
     /** The composer's text and selection, held here for the same reason the post editor's is. */
@@ -152,7 +157,7 @@ class MessageThreadViewModel(
                                 thread.messages.map(::delivered) +
                                     state.messages.filter { it.status != SendStatus.SENT },
                                 userName = thread.userName.ifBlank { state.userName },
-                                avatarUrl = thread.avatarUrl,
+                                avatarUrl = thread.avatarUrl ?: state.avatarUrl,
                                 level = thread.level,
                                 isLoading = false,
                                 error = null,

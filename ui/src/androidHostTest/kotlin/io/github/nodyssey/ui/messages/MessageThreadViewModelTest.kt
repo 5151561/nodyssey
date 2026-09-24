@@ -47,6 +47,19 @@ class MessageThreadViewModelTest {
     }
 
     @Test
+    fun `the header has the avatar before the history arrives`() =
+        runTest(dispatcher) {
+            val viewModel = viewModel(FakeMessageRepository())
+
+            // Nothing has been fetched yet: the header would otherwise draw the initial and swap the
+            // picture in when the thread loads.
+            assertEquals(NodeSeekSite.avatarUrl(4471), viewModel.uiState.value.avatarUrl)
+
+            advanceUntilIdle()
+            assertEquals(NodeSeekSite.avatarUrl(4471), viewModel.uiState.value.avatarUrl)
+        }
+
+    @Test
     fun `a sent message appears immediately and settles once accepted`() =
         runTest(dispatcher) {
             val repository = FakeMessageRepository()

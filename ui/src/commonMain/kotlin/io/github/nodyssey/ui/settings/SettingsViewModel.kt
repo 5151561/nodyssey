@@ -7,8 +7,15 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
+import io.github.nodyssey.data.dns.DohServer
 import io.github.nodyssey.data.dns.DohSupport
+import io.github.nodyssey.data.dns.resolvesOverHttps
+import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.imagehost.ImageHostRepository
+import io.github.nodyssey.data.proxy.ProxyClientKind
+import io.github.nodyssey.data.proxy.ProxySettings
+import io.github.nodyssey.data.proxy.ProxyType
+import io.github.nodyssey.data.proxy.routes
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.data.settings.ReportFormat
@@ -22,7 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -33,6 +40,7 @@ class SettingsViewModel(
     private val cache: AppCacheStore,
     private val updates: AppUpdateRepository,
     imageHost: ImageHostRepository,
+    proxy: ProxySettings,
     appVersion: AppVersion,
     /** Null where the platform cannot apply one, which is how the 加密 DNS row knows to stay away. */
     doh: DohSupport?,
@@ -47,16 +55,28 @@ class SettingsViewModel(
     private val versionName = appVersion.name.ifBlank { "—" }
 
     /**
-     * The two rows on this screen that report on a screen behind them, folded into one flow.
+     * The rows on this screen that report on a screen behind them, folded into one flow.
      *
      * Folded rather than combined alongside the rest because `combine` has a typed overload for five
-     * flows and this would have been the sixth; two subtitles are a smaller thing than an array of
+     * flows and this would have been the sixth; three subtitles are a smaller thing than an array of
      * `Any?` to unpack.
      */
     private val entries =
-        doh?.settings?.config?.let { config ->
-            combine(imageHost.current, config) { host, doh -> SettingsEntries(host.isConfigured, doh.enabled) }
-        } ?: imageHost.current.map { host -> SettingsEntries(host.isConfigured, dohEnabled = null) }
+        combine(
+            imageHost.current,
+            proxy.config,
+            doh?.settings?.config ?: flowOf(null),
+        ) { host, proxy, doh ->
+            SettingsEntries(
+                imageHostProvider = host.provider,
+                imageHostConnected = host.isConfigured,
+                // Asked the way the forum client asks it, so the row names a proxy exactly when the
+                // requests it is about go through one — an address switched on but left half-typed
+                // routes nothing, and reads as off.
+                proxy = proxy.takeIf { it.routes(ProxyClientKind.FORUM) }?.let { ProxyEndpoint(it.type, it.host, it.port) },
+                dohChain = doh?.let { if (it.resolvesOverHttps()) it.chain else emptyList() },
+            )
+        }
 
     val uiState: StateFlow<SettingsUiState> =
         combine(
@@ -71,8 +91,10 @@ class SettingsViewModel(
                 isClearingCache = clearing,
                 cacheSizeBytes = cacheSize,
                 versionName = versionName,
+                imageHostProvider = entries.imageHostProvider,
                 imageHostConnected = entries.imageHostConnected,
-                dohEnabled = entries.dohEnabled,
+                proxy = entries.proxy,
+                dohChain = entries.dohChain,
                 hasNetworkCheck = hasNetworkCheck,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
@@ -188,6 +210,7 @@ class SettingsViewModel(
                         cache = container.appCacheStore,
                         updates = container.appUpdateRepository,
                         imageHost = container.imageHostRepository,
+                        proxy = container.proxySettings,
                         appVersion = container.appVersion,
                         doh = container.doh,
                         hasNetworkCheck = container.networkDiagnostics != null,
@@ -206,19 +229,31 @@ data class SettingsUiState(
     val versionName: String = "—",
     /** The newer version on GitHub, or null when there is none to offer. */
     val updateVersionName: String? = null,
-    /** Whether the selected image host is usable — the 图床 row's subtitle, and nothing more of it. */
+    /** The selected image host and whether it is usable — the 图床 row's subtitle, 「SM.MS · 已连接」. */
+    val imageHostProvider: ImageHostProvider = ImageHostProvider.DEFAULT,
     val imageHostConnected: Boolean = false,
+    /** Where the forum's requests are sent, or null when they go direct — the 代理 row's subtitle. */
+    val proxy: ProxyEndpoint? = null,
     /**
-     * Whether 加密 DNS is on, or null where the platform has none to offer — in which case the row is
-     * not drawn at all, the same way 默认打开方式 is absent where the system has no such switch.
+     * The DoH servers in the order they are tried, empty while 加密 DNS is not in force, or null where
+     * the platform has none to offer — in which case the row is not drawn at all, the same way 默认打开方式
+     * is absent where the system has no such switch.
      */
-    val dohEnabled: Boolean? = null,
+    val dohChain: List<DohServer>? = null,
     /**
      * Whether 网络自检 exists on this platform. A plain flag rather than a nullable state like
-     * [dohEnabled], because there is nothing about it to report in a subtitle: the row either leads
+     * [dohChain], because there is nothing about it to report in a subtitle: the row either leads
      * somewhere or is not drawn.
      */
     val hasNetworkCheck: Boolean = false,
 )
 
-private data class SettingsEntries(val imageHostConnected: Boolean, val dohEnabled: Boolean?)
+/** The part of a proxy the settings list shows — the credentials stay behind on 代理's own screen. */
+data class ProxyEndpoint(val type: ProxyType, val host: String, val port: Int)
+
+private data class SettingsEntries(
+    val imageHostProvider: ImageHostProvider,
+    val imageHostConnected: Boolean,
+    val proxy: ProxyEndpoint?,
+    val dohChain: List<DohServer>?,
+)

@@ -3,6 +3,8 @@ package io.github.nodyssey.render
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import io.github.nodyssey.data.dns.DefaultDohServers
+import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.settings.SettingsScreen
 import io.github.nodyssey.ui.settings.SettingsUiState
@@ -87,8 +89,9 @@ class SettingsScreenRenderTest {
                 settings = UserSettings(),
                 cacheSizeBytes = 34_500_000,
                 versionName = "1.2.21",
+                imageHostProvider = ImageHostProvider.SMMS,
                 imageHostConnected = true,
-                dohEnabled = true,
+                dohChain = DefaultDohServers.filter { it.checked },
                 hasNetworkCheck = true,
             )
     }

@@ -67,7 +67,7 @@ internal fun SettingsBlock(
     title: String,
     top: Boolean = false,
     subtitle: String? = null,
-    /** The control's current reading, in the primary colour at the end of the title line — 「16sp」. */
+    /** The control's current reading, in the primary colour at the end of the title line — 「16」. */
     value: String? = null,
     /**
      * Dims the label, and only the label.
