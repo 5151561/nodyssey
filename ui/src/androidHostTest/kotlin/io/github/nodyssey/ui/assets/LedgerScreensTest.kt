@@ -4,10 +4,12 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.paging.PagingData
 import io.github.nodyssey.data.CreditEntry
 import io.github.nodyssey.data.StardustEntry
@@ -16,6 +18,7 @@ import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -123,6 +126,23 @@ class LedgerScreensTest {
         composeRule.onNodeWithText("需要登录后查看").assertIsDisplayed()
         // And it is the error state, not a spinner sitting behind it.
         assertEquals(0, composeRule.onAllNodesWithText("余额 ", substring = true).fetchSemanticsNodes().size)
+    }
+
+    /**
+     * The title starts collapsed: open, it pushed this state's only way out below the fold, inside a
+     * status card that scrolls on its own and in a column that does not.
+     */
+    @Test
+    fun `the sign-in button is on screen without scrolling`() {
+        setStardustContent(
+            state = StardustUiState(isLoadingBalance = false, error = SiteError.LoginRequired),
+            entries = emptyList(),
+        )
+
+        // All of it: under an open title it was cut by the bottom edge, which assertIsDisplayed forgives.
+        val button = composeRule.onNodeWithText("登录").assertIsDisplayed().getUnclippedBoundsInRoot()
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertTrue("$button on $screen", button.bottom <= screen.bottom)
     }
 
     private fun setCreditContent(state: CreditUiState) {

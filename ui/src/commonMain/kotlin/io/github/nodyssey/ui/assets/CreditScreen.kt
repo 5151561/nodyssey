@@ -112,7 +112,10 @@ fun CreditScreen(
     modifier: Modifier = Modifier,
 ) {
     val rows = entries.collectAsLazyPagingItems()
-    val appBarState = rememberOneHandAppBarState()
+    // Collapsed to start with: when there are no rows yet, the balance card and a full-height status
+    // card share a column that does not scroll, and under an open title the status card's 登录 / 重试
+    // starts below the fold.
+    val appBarState = rememberOneHandAppBarState(initiallyExpanded = false)
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         topBar = {

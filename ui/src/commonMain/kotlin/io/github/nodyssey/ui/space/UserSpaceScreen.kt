@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -48,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -133,6 +135,7 @@ import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -267,7 +270,12 @@ fun UserSpaceScreen(
 
         // One scrolling page, header card included (3a): the header grew into a card with the bio,
         // the stats and both actions on it, and pinned above a list it would leave the list a strip.
+        // The tabs are the exception: they stick once the header has gone, so a reader forty topics
+        // down can still switch to 评论.
+        val listState = rememberLazyListState()
+        val scope = rememberCoroutineScope()
         LazyColumn(
+            state = listState,
             modifier =
             Modifier
                 .padding(padding)
@@ -279,8 +287,22 @@ fun UserSpaceScreen(
             item(key = "header") {
                 SpaceHeader(state = state, onMessage = onMessage, onToggleFollow = onToggleFollow)
             }
-            item(key = "tabs") {
-                SpaceTabs(state = state, onTabSelected = onTabSelected, modifier = Modifier.padding(vertical = 2.dp))
+            stickyHeader(key = "tabs") {
+                SpaceTabs(
+                    state = state,
+                    onTabSelected = { tab ->
+                        onTabSelected(tab)
+                        // Switched while stuck: the new tab starts at its top, under the tabs. Left
+                        // alone, the list would keep the old tab's row index and open the new one
+                        // somewhere in its middle.
+                        if (listState.firstVisibleItemIndex >= TABS_INDEX) {
+                            scope.launch { listState.scrollToItem(TABS_INDEX) }
+                        }
+                    },
+                    // The page's own colour, so rows scrolling under the stuck tabs do not show
+                    // through between the pills.
+                    modifier = Modifier.background(LocalPlazaLayers.current.page).padding(vertical = 2.dp),
+                )
             }
             spaceTabContent(
                 state = state,
@@ -534,6 +556,9 @@ private fun SpaceTabs(
         modifier = modifier,
     )
 }
+
+/** The tabs' place in the list: right after the header card. */
+private const val TABS_INDEX = 1
 
 private fun LazyListScope.spaceTabContent(
     state: UserSpaceUiState,

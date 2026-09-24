@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -29,9 +31,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,7 +72,11 @@ import org.jetbrains.compose.resources.stringResource
  * on a setting elsewhere is one you have to read every time you open it.
  *
  * The card stays open across taps — bold, then a link, is one visit — and the writer closes it.
- * Opening the emoji panel closes it too; see [MarkdownEditorState.toggleEmoji].
+ * Opening the emoji panel closes it too; see [MarkdownEditorState.toggleEmoji]. Like that panel it
+ * takes the keyboard's place rather than stacking on it: opening it puts the keyboard away, and the
+ * keyboard coming back — the writer tapped into the text — puts the card away. Stacked, the two are
+ * most of a phone's height, and what does not fit is the card's bottom row or the text being
+ * formatted.
  *
  * The wrench ([onCustomize]) moved into the card's footer: the bar's width is spoken for by the
  * pill, and the card is where the writer has already stopped to arrange things.
@@ -92,6 +103,16 @@ fun ComposerEditorBar(
     val onAction: (EditorAction) -> Unit = { action ->
         editorState.dispatch(action, bodyState, onPickImages, onFormatted) { keyboard?.hide() }
     }
+    val openFormat: () -> Unit = {
+        editorState.toggleFormat()
+        keyboard?.hide()
+    }
+    // The inset rather than `WindowInsets.isImeVisible`, which is not in the common source set. Read
+    // through derivedStateOf so the keyboard's animation recomposes this once per edge, not per frame.
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
+    val imeVisible by remember(ime, density) { derivedStateOf { ime.getBottom(density) > 0 } }
+    LaunchedEffect(imeVisible) { if (imeVisible && editorState.formatOpen) editorState.toggleFormat() }
     val motion = MaterialTheme.motionScheme
 
     Column(modifier) {
@@ -112,7 +133,7 @@ fun ComposerEditorBar(
                     active = if (editorState.emojiOpen) setOf(EditorAction.EMOJI) else emptySet(),
                     onAction = onAction,
                     appMenu = appMenu,
-                    onOpenFormat = editorState::toggleFormat,
+                    onOpenFormat = openFormat,
                 )
             }
         }
