@@ -10,11 +10,15 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -27,12 +31,15 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FreeChickenLegs
+import io.github.nodyssey.data.settings.AppLanguage
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.PostReactions
 import io.github.nodyssey.model.ReactionAction
+import io.github.nodyssey.ui.settings.ProvideAppLanguage
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
@@ -877,6 +884,26 @@ class PostDetailScreenTest {
     }
 
     /**
+     * A floor that is only a picture has no 正文, and its panel does not offer to copy one.
+     *
+     * The row used to be there all the same and put the picture's address on the clipboard, saying
+     * 正文已复制.
+     */
+    @Test
+    fun `a floor that is only a picture offers no 复制正文`() {
+        setScreen(
+            signedInState().let { state ->
+                state.copy(body = state.body!!.copy(nodes = listOf(RichNode.BlockImage(url = "https://i.example/a.png", alt = null))))
+            },
+        )
+
+        composeRule.onNodeWithContentDescription("楼层操作").performClick()
+
+        composeRule.onNodeWithText("点赞").assertIsDisplayed()
+        composeRule.onAllNodesWithText("复制正文").assertCountEquals(0)
+    }
+
+    /**
      * A long press on a floor's text selects it and nothing else; the panel answers the header.
      *
      * The card used to listen for the long press as a whole, and a selection's own long press does
@@ -960,6 +987,57 @@ class PostDetailScreenTest {
     fun `the opening post's more button stays whole at 2x text`() = assertOpeningPostActionsStayWhole(2f)
 
     /**
+     * A reply's foot keeps its ⋯ whole too, however wide its tallies and its 回复 get.
+     *
+     * The same Row the opening post's actions were: the ⋯ was measured last and squeezed at 2×.
+     */
+    private fun assertReplyFootStaysWhole(fontScale: Float) {
+        composeRule.setContent {
+            val density = Density(LocalDensity.current.density, fontScale = fontScale)
+            CompositionLocalProvider(LocalDensity provides density) {
+                PlazaTheme {
+                    PostDetailScreen(
+                        state =
+                        PostDetailUiState(
+                            title = "t",
+                            comments =
+                            listOf(
+                                content(
+                                    "a reply",
+                                    author = "nssk",
+                                    floor = "#12",
+                                    reactions = PostReactions(upvoteCount = 1234, likeCount = 5678),
+                                ),
+                            ),
+                            isSignedIn = true,
+                        ),
+                        postUrl = "https://www.nodeseek.com/post-1-1",
+                        onBack = {},
+                        onOpenBrowser = {},
+                        onImageClick = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onVerify = {},
+                    )
+                }
+            }
+        }
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        val more = composeRule.onNodeWithContentDescription("楼层操作").getUnclippedBoundsInRoot()
+        val reply = composeRule.onNodeWithText("回复").getUnclippedBoundsInRoot()
+        assertTrue("⋯ at $more, ${fontScale}x", more.right <= screen.right)
+        assertTrue("回复 at $reply, ${fontScale}x", reply.right <= screen.right)
+        // The button's own 40dp, inside the 48dp its minimum touch size lays out.
+        assertTrue("⋯ is ${more.width} wide at ${fontScale}x", more.width >= 40.dp)
+    }
+
+    @Test
+    fun `a reply's more button stays whole at 1_3x text`() = assertReplyFootStaysWhole(1.3f)
+
+    @Test
+    fun `a reply's more button stays whole at 2x text`() = assertReplyFootStaysWhole(2f)
+
+    /**
      * An edited 楼主 floor with more badges keeps its author's name whole.
      *
      * The header was one Row, which measured the badges and the time first and gave the name what
@@ -1015,6 +1093,83 @@ class PostDetailScreenTest {
 
         composeRule.onNodeWithText("复制正文").performScrollTo().assertIsDisplayed()
     }
+
+    /**
+     * The panel's three tiles are one height, and each holds all of what it says.
+     *
+     * A tally too wide to share 投喂鸡腿's line went under it, and the equal height was measured as if
+     * it had not: the tiles stayed a line short, and the middle one's price — the thing the tile is
+     * there to say — was cut off at its bottom edge.
+     */
+    private fun assertReactionTilesHoldTheirText(language: AppLanguage) {
+        var likeCount by mutableStateOf(0)
+        composeRule.setContent {
+            ProvideAppLanguage(language) {
+                PlazaTheme {
+                    PostDetailScreen(
+                        state =
+                        PostDetailUiState(
+                            title = "t",
+                            body =
+                            content(
+                                "body",
+                                author = "op",
+                                reactions = PostReactions(upvoteCount = 12, likeCount = likeCount, dislikeCount = 3),
+                            ),
+                            isSignedIn = true,
+                            freeChickenLegs = FreeChickenLegs(max = 1, used = 0),
+                        ),
+                        postUrl = "https://www.nodeseek.com/post-1-1",
+                        onBack = {},
+                        onOpenBrowser = {},
+                        onImageClick = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onVerify = {},
+                    )
+                }
+            }
+        }
+        val english = language == AppLanguage.ENGLISH
+        composeRule.onNodeWithContentDescription(if (english) "Floor actions" else "楼层操作").performClick()
+        val prices =
+            if (english) listOf("Free", "1 free today", "Costs 2 drumsticks") else listOf("免费", "今日免费 1 次", "扣 2 鸡腿")
+        val tiles = prices.map { hasClickAction() and hasAnyDescendant(hasText(it)) }
+
+        // 360dp: four digits no longer fit beside 投喂鸡腿, and seven fit nowhere but a line of their own.
+        listOf(5678, 56789, 1234567).forEach { count ->
+            likeCount = count
+            composeRule.waitForIdle()
+            val heights = tiles.map { composeRule.onNode(it, useUnmergedTree = true).getUnclippedBoundsInRoot().height }
+            heights.forEach { assertEquals("$heights at $count", heights[0].value, it.value, 0.5f) }
+            tiles.forEach { tile ->
+                val tileBounds = composeRule.onNode(tile, useUnmergedTree = true).getUnclippedBoundsInRoot()
+                val texts = composeRule.onNode(tile, useUnmergedTree = true).onChildren()
+                repeat(texts.fetchSemanticsNodes().size) { index ->
+                    val text = texts[index]
+                    val bounds = text.getUnclippedBoundsInRoot()
+                    val layouts = mutableListOf<TextLayoutResult>()
+                    text.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                    val layout = layouts.single()
+                    val what = "\"${layout.layoutInput.text}\" at $count"
+                    assertTrue("$what ends at ${bounds.bottom}, below $tileBounds", bounds.bottom <= tileBounds.bottom)
+                    // Laid out whole: a text squeezed shorter than its lines is drawn cut through them.
+                    assertTrue(
+                        "$what is ${layout.size.height}px of ${layout.multiParagraph.height}",
+                        layout.size.height >= layout.multiParagraph.height - 1f,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `the panel's tiles hold a feed tally too wide to share its line`() =
+        assertReactionTilesHoldTheirText(AppLanguage.SIMPLIFIED_CHINESE)
+
+    @Test
+    fun `the panel's tiles hold a feed tally too wide to share its line in English`() =
+        assertReactionTilesHoldTheirText(AppLanguage.ENGLISH)
 
     /** One page of a long thread, loaded on its own — what a jump or a notification produces. */
     private fun jumpedState(

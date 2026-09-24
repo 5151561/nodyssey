@@ -67,6 +67,7 @@ import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
+import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -124,7 +125,9 @@ fun FollowScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        // The centred column every page with a big title lays its content in, so on a tablet the
+        // title heads these tabs and this list rather than sitting a few hundred dp in from them.
+        Column(Modifier.padding(padding).fillMaxSize().readableWidth()) {
             // 9h's underline tabs, sitting flush on the page like the title above them. Each names its
             // count once its list has loaded: the endpoint answers with the whole list, so its length
             // is the site's own number, not a page's worth.

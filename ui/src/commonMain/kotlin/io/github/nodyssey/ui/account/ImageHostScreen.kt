@@ -376,7 +376,10 @@ private fun ProviderCard(
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            // No spacing between rows: each chip's 48dp touch target already reaches 6dp past the
+            // chip above and below it, and those 12dp are the gap. Spacing on top of them drew the
+            // rows about 20dp apart.
+            verticalArrangement = Arrangement.Top,
         ) {
             ImageHostProvider.entries.forEach { provider ->
                 val isSelected = provider == selected

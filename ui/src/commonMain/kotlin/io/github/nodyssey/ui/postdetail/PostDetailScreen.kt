@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1951,7 +1950,13 @@ private fun ReactionPill(
 /**
  * A reply's foot (1b): 点赞 and 投喂 with their tallies on the left, then a quiet 回复 — 编辑 on this
  * account's own floor — and the ⋯ that opens the rest.
+ *
+ * A [FlowRow] for the reason [OpeningPostActions] is one: a Row hands any shortfall to the child it
+ * measures last, which here was the ⋯ — about 21dp wide at twice the text size, and the ⋯ is the
+ * only visible way into the rest of the floor's actions. Wrapped, 回复 and ⋯ move to a line of their
+ * own instead, still against the end.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CommentFoot(
     reactions: PostReactions?,
@@ -1962,14 +1967,14 @@ private fun CommentFoot(
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    FlowRow(
         // Each mark is a TextButton, which keeps 12dp of content padding inside its own bounds. Laid
         // out honestly the first icon starts 12dp right of the margin the name and the body sit on;
         // shifting the row back by that much lines the ink up instead.
         modifier = modifier
             .fillMaxWidth()
             .offset(x = -TEXT_BUTTON_CONTENT_INSET),
-        verticalAlignment = Alignment.CenterVertically,
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg).forEach { action ->
             QuietReaction(
@@ -1983,31 +1988,38 @@ private fun CommentFoot(
                 onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
             )
         }
-        Spacer(Modifier.weight(1f))
-        // The one text button on the row, in the accent: it carries the floor into the editor, which
-        // is what 2c's "回复 #12 · nssk" header is showing.
-        val (action, icon, label) =
-            when {
-                onEdit != null -> Triple(onEdit, Icons.Default.Edit, Res.string.post_edit_action)
-                onReply != null -> Triple(onReply, PlazaIcons.Reply, Res.string.post_reply_action)
-                else -> Triple(null, null, null)
+        // One item, so 回复 and ⋯ wrap together; the weight then spends what is left of whichever
+        // line it lands on, which keeps the pair against the end — as on the opening post.
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The one text button on the row, in the accent: it carries the floor into the editor,
+            // which is what 2c's "回复 #12 · nssk" header is showing.
+            val (action, icon, label) =
+                when {
+                    onEdit != null -> Triple(onEdit, Icons.Default.Edit, Res.string.post_edit_action)
+                    onReply != null -> Triple(onReply, PlazaIcons.Reply, Res.string.post_reply_action)
+                    else -> Triple(null, null, null)
+                }
+            if (action != null && icon != null && label != null) {
+                TextButton(
+                    onClick = action,
+                    // The ⋯ beside it brings its own touch slack, so the pair can sit close.
+                    contentPadding = PaddingValues(horizontal = Spacing.md),
+                    modifier = Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET),
+                ) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        stringResource(label),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(start = Spacing.xs),
+                    )
+                }
             }
-        if (action != null && icon != null && label != null) {
-            TextButton(
-                onClick = action,
-                // The ⋯ beside it brings its own touch slack, so the pair can sit close.
-                contentPadding = PaddingValues(horizontal = Spacing.md),
-                modifier = Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET),
-            ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(
-                    stringResource(label),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(start = Spacing.xs),
-                )
-            }
+            Box(Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET)) { FloorMoreButton(onMore) }
         }
-        Box(Modifier.offset(x = TEXT_BUTTON_CONTENT_INSET)) { FloorMoreButton(onMore) }
     }
 }
 
@@ -2260,10 +2272,11 @@ private fun FloorActionSheet(
                         add(Triple(PlazaIcons.FormatQuote, stringResource(Res.string.post_quote_floor), it))
                     }
                     // The whole floor, code and lists and tables included — see [copyableText]. A floor
-                    // with no text at all (a picture, a poll) has nothing to offer here, and a row that
-                    // copied an empty string would still say it had copied the body.
-                    val bodyText = content.nodes.copyableText()
-                    if (bodyText.isNotEmpty()) {
+                    // with no text at all (a picture, a poll) has nothing to offer here: a row that
+                    // copied an empty string, or only a picture's address, would still say it had
+                    // copied the body.
+                    if (content.nodes.hasCopyableText()) {
+                        val bodyText = content.nodes.copyableText()
                         add(
                             Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
                                 copy("post", bodyText, copied)
@@ -2301,7 +2314,6 @@ private fun FloorActionSheet(
  * 鸡腿 — or 已表态 once spent. The price is on the tile because the tile is where the choice is made;
  * the confirmation still says it again before anything is spent.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReactionTile(
     action: ReactionAction,
@@ -2337,11 +2349,16 @@ private fun ReactionTile(
         }
         // Two lines for the label and the price rather than one: a third of a phone's width holds
         // 点赞 and 扣 2 鸡腿, but not "Send a drumstick" or "Costs 2 drumsticks", and the price is the
-        // thing this tile is here to say. The tally moves under a label that needs the width.
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
+        // thing this tile is here to say.
+        //
+        // The tally always has a line of its own under the label. It used to share the label's line
+        // in a FlowRow and wrap under it when too wide, but the panel gives the three tiles one height
+        // through IntrinsicSize.Min, and measured that way the FlowRow came out a line short whenever
+        // it wrapped: at 360dp a four-digit 投喂 tally pushed 今日免费 1 次 out through the bottom of
+        // its tile. A Column's intrinsic height is just its lines, so the tiles grow with it — and the
+        // three are built alike whatever their tallies, where the FlowRow could put one tally beside
+        // its label and the next one under it.
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 stringResource(action.labelRes()),
                 style = MaterialTheme.typography.titleSmall,

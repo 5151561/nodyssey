@@ -188,17 +188,6 @@ class MessageThreadViewModel(
     }
 
     /**
-     * The MD On/Off switch — which stays on while a quote is waiting to go out.
-     *
-     * A quote card goes out as a `>` block, and only MD makes that a quotation: switched off, the other
-     * side would get the literal markup, and nothing on the card says that is about to happen. The
-     * switch comes free again once the quotes are sent or dismissed; [quote] is what turned it on.
-     */
-    fun toggleMarkdown() {
-        _uiState.update { if (it.isMarkdown && it.quotes.isNotEmpty()) it else it.copy(isMarkdown = !it.isMarkdown) }
-    }
-
-    /**
      * Holds a bubble over the message bar as a quote card (3e), to go out as a blockquote ahead of
      * whatever is typed.
      *
@@ -206,9 +195,6 @@ class MessageThreadViewModel(
      * and nothing that points at an earlier message — so this is the app's own, written the way the
      * reply editor's 引用 writes one. Without the floor header: that header names an author and links
      * a floor, and in a thread with exactly two people in it, it would only be restating one of them.
-     *
-     * Turning MD on is part of the action, not a side effect: with the switch off the server takes
-     * the text verbatim, and the quotation would arrive as a line beginning with a literal `>`.
      *
      * State rather than text in the draft, which is what this used to be: 3e draws the quotation as a
      * card above the field, and a card is the one thing that can say whose words they are without
@@ -219,10 +205,7 @@ class MessageThreadViewModel(
      */
     fun quote(message: MessageBubble) {
         _uiState.update { state ->
-            state.copy(
-                quotes = state.quotes.filterNot { it.id == message.id } + message,
-                isMarkdown = true,
-            )
+            state.copy(quotes = state.quotes.filterNot { it.id == message.id } + message)
         }
     }
 
@@ -240,7 +223,7 @@ class MessageThreadViewModel(
                 id = "pending-${pendingSeed++}",
                 isMine = true,
                 content = content,
-                isMarkdown = _uiState.value.isMarkdown,
+                isMarkdown = true,
                 sentAtMillis = clock.nowMillis(),
                 sentAtText = null,
                 status = SendStatus.SENDING,
@@ -268,7 +251,10 @@ class MessageThreadViewModel(
                 repository.send(
                     uid = _uiState.value.uid,
                     content = bubble.content,
-                    markdown = _uiState.value.isMarkdown,
+                    // Always. The site has an MD On/Off switch, and this composer does not offer it:
+                    // everything it writes — a quote card's `>` block, an image, every formatting
+                    // key — is Markdown, and MD off would deliver all of it as literal markup.
+                    markdown = true,
                 )
             }.onSuccess { accepted ->
                 replace(bubble.id) {
@@ -377,8 +363,6 @@ data class MessageThreadUiState(
     val attachments: List<ImageAttachment> = emptyList(),
     /** Bubbles picked with 引用, oldest first; they go out as blockquotes ahead of the draft. */
     val quotes: List<MessageBubble> = emptyList(),
-    /** The site's own MD On/Off switch; off sends the text verbatim. */
-    val isMarkdown: Boolean = true,
     /** The formatting strip's keys and the wrench panel's pool. Defaults until settings arrive. */
     val toolbar: ToolbarLayout = toolbarLayout(emptyList(), EditorActions.Message),
     val nowMillis: Long = 0L,

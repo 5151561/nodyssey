@@ -87,6 +87,12 @@ fun ComposerEditorBar(
     bodyState: TextFieldState,
     editorState: MarkdownEditorState,
     modifier: Modifier = Modifier,
+    /**
+     * The quick bar and the 格式 card only, not the emoji panel under them — a host that keeps its
+     * text to a readable column narrows the keys with it here. The panel stands in for the keyboard
+     * and takes the width a keyboard would, which [modifier] would have narrowed along with the keys.
+     */
+    barModifier: Modifier = Modifier,
     /** The host owns the photo picker, so [EditorAction.IMAGE] comes back out rather than acting. */
     onPickImages: () -> Unit = {},
     /** Runs after markup is applied — both editors put focus back in the body with it. */
@@ -118,6 +124,7 @@ fun ComposerEditorBar(
     Column(modifier) {
         AnimatedContent(
             targetState = editorState.formatOpen,
+            modifier = barModifier,
             transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
             label = "composer-format",
         ) { formatOpen ->

@@ -383,22 +383,35 @@ private val SLICE_SHADOW_BLEED = 32.dp
  * Cast from the row's own shape, a middle row's side shadow faded out towards both of its seams, so
  * the card's edges came out as a notch of light at every seam. Stretched, every slice casts a section
  * of one long card, and [groupSlice]'s clip trims it back to the row.
+ *
+ * Always as a path, whatever [groupShape] hands back. Compose's shadow renderer (ui-graphics
+ * 1.12.0-rc01, `ShadowRenderer.updateParamsFromOutline`) keeps only the corner radius of an
+ * `Outline.Rectangle`, and of an `Outline.Rounded` whose corners are all alike, and casts that at the
+ * node's own size and position — so a middle row, whose shape is a plain rectangle, lost its stretch
+ * and went on fading at both seams. A path is the one outline it casts where it is. Remove the
+ * conversion if the renderer comes to honour a rectangle's bounds.
  */
 private class SliceShadowShape(
     private val first: Boolean,
     private val last: Boolean,
 ) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        // A group of one is the whole card, and has nothing to stretch past.
+        if (first && last) return groupShape(first = true, last = true).createOutline(size, layoutDirection, density)
         val bleed = with(density) { SLICE_SHADOW_BLEED.toPx() }
         val top = if (first) 0f else -bleed
         val bottom = if (last) size.height else size.height + bleed
         val outline = groupShape(first, last).createOutline(Size(size.width, bottom - top), layoutDirection, density)
         val shift = Offset(0f, top)
-        return when (outline) {
-            is Outline.Rectangle -> Outline.Rectangle(outline.rect.translate(shift))
-            is Outline.Rounded -> Outline.Rounded(outline.roundRect.translate(shift))
-            is Outline.Generic -> Outline.Generic(Path().apply { addPath(outline.path, shift) })
-        }
+        return Outline.Generic(
+            Path().apply {
+                when (outline) {
+                    is Outline.Rectangle -> addRect(outline.rect.translate(shift))
+                    is Outline.Rounded -> addRoundRect(outline.roundRect.translate(shift))
+                    is Outline.Generic -> addPath(outline.path, shift)
+                }
+            },
+        )
     }
 
     override fun equals(other: Any?): Boolean = other is SliceShadowShape && other.first == first && other.last == last

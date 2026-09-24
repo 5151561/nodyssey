@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,7 +35,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -114,9 +112,7 @@ import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.composer_image_default_name
 import io.github.nodyssey.ui.resources.message_bubble_actions
 import io.github.nodyssey.ui.resources.message_copied
-import io.github.nodyssey.ui.resources.message_input_hint_markdown
-import io.github.nodyssey.ui.resources.message_input_hint_plain
-import io.github.nodyssey.ui.resources.message_markdown_toggle
+import io.github.nodyssey.ui.resources.message_input_hint
 import io.github.nodyssey.ui.resources.message_quote_action
 import io.github.nodyssey.ui.resources.message_quote_chip
 import io.github.nodyssey.ui.resources.message_quote_chip_mine
@@ -132,8 +128,6 @@ import io.github.nodyssey.ui.resources.message_thread_subtitle_level
 import io.github.nodyssey.ui.resources.message_thread_title
 import io.github.nodyssey.ui.resources.message_thread_title_unknown
 import io.github.nodyssey.ui.resources.message_tool_customize
-import io.github.nodyssey.ui.resources.message_tool_markdown_off
-import io.github.nodyssey.ui.resources.message_tool_markdown_on
 import io.github.nodyssey.ui.resources.message_tools
 import io.github.nodyssey.ui.resources.notification_time_pair
 import io.github.nodyssey.ui.richtext.PostRichContent
@@ -188,7 +182,6 @@ fun MessageThreadRoute(
         onOpenSpace = onOpenSpace,
         onLinkClick = onLinkClick,
         onRetryLoad = viewModel::refresh,
-        onToggleMarkdown = viewModel::toggleMarkdown,
         onSend = viewModel::send,
         onRetrySend = viewModel::retry,
         onQuote = viewModel::quote,
@@ -220,7 +213,6 @@ fun MessageThreadScreen(
     /** The other side's space. The title block is the handle onto it; see the top bar. */
     onOpenSpace: () -> Unit,
     onRetryLoad: () -> Unit,
-    onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
     onRetrySend: (String) -> Unit,
     /** 引用: holds the bubble over the message bar. See `MessageThreadViewModel.quote`. */
@@ -246,14 +238,6 @@ fun MessageThreadScreen(
     val webUrl = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(state.uid)
     var customizing by rememberSaveable { mutableStateOf(false) }
     var panel by rememberSaveable { mutableStateOf(ComposerPanel.NONE) }
-    // Turning MD off takes the formatting tiles away, and neither the emoji panel nor the sheet it
-    // arranges may be left behind with no key on screen to close them.
-    LaunchedEffect(state.isMarkdown) {
-        if (!state.isMarkdown) {
-            if (panel == ComposerPanel.EMOJI) panel = ComposerPanel.TOOLS
-            customizing = false
-        }
-    }
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -324,7 +308,6 @@ fun MessageThreadScreen(
                 state = state,
                 panel = panel,
                 onPanelChange = { panel = it },
-                onToggleMarkdown = onToggleMarkdown,
                 onSend = onSend,
                 onRemoveQuote = onRemoveQuote,
                 onPickImages = onPickImages,
@@ -717,8 +700,21 @@ private fun MessageStatusLine(
     val clock = message.sentAtMillis?.let(TimeFormat::clock) ?: message.sentAtText
     val style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Normal)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val retryLabel = stringResource(Res.string.action_retry)
     Row(
-        modifier = Modifier.padding(horizontal = 6.dp),
+        modifier =
+        if (message.status == SendStatus.FAILED) {
+            // The whole line is the one target, 「⚠ 发送失败 · 重试」 together: wide enough on its own,
+            // and its words end where every other status line's do. 重试 used to be a 48dp box of
+            // its own, and under a bubble of mine — against the end of the screen — whatever of
+            // that box the word did not fill was empty space pushing the line inwards.
+            Modifier
+                .heightIn(min = Sizes.minTouchTarget)
+                .clickable(onClickLabel = retryLabel, role = Role.Button, onClick = onRetrySend)
+                .padding(horizontal = 6.dp)
+        } else {
+            Modifier.padding(horizontal = 6.dp)
+        },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -747,22 +743,11 @@ private fun MessageStatusLine(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Text(text = "·", style = style, color = MaterialTheme.colorScheme.error)
-                // The touch target runs on past the word rather than around it: centred in a 48dp
-                // box, 「重试」 stood well clear of the 「·」 it belongs to.
-                Box(
-                    modifier =
-                    Modifier
-                        .clickable(onClick = onRetrySend)
-                        .defaultMinSize(minWidth = Sizes.minTouchTarget, minHeight = Sizes.minTouchTarget)
-                        .padding(horizontal = 2.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        text = stringResource(Res.string.action_retry),
-                        style = style.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+                Text(
+                    text = retryLabel,
+                    style = style.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
 
             SendStatus.SENT ->
@@ -784,12 +769,13 @@ internal enum class ComposerPanel { NONE, TOOLS, EMOJI }
  * that takes the keyboard's place when the + key is on (3d, 3e).
  *
  * The + key replaces the formatting strip this bar used to carry above itself. 3e folds the strip,
- * the MD switch, the photo picker and the emoji key into one grid of tiles behind it, so the bar at
- * rest is three things — +, the field, send — and the conversation keeps the height the strip took.
- * The grid is still the strip underneath: its keys are the arranged ones (`state.toolbar`), the
- * wrench is its last tile, and with MD off the formatting tiles are absent rather than disabled —
- * the server takes the text verbatim then, and a key that inserted `**` would be offering syntax
- * that arrives as literal asterisks.
+ * the photo picker and the emoji key into one grid of tiles behind it, so the bar at rest is three
+ * things — +, the field, send — and the conversation keeps the height the strip took. The grid is
+ * still the strip underneath: its keys are the arranged ones (`state.toolbar`), and the wrench is its
+ * last tile.
+ *
+ * 3e also draws the site's MD On/Off switch in the grid. It is left out: a message always goes out
+ * as Markdown — see where `MessageThreadViewModel` delivers one.
  */
 @Composable
 private fun MessageComposer(
@@ -797,7 +783,6 @@ private fun MessageComposer(
     state: MessageThreadUiState,
     panel: ComposerPanel,
     onPanelChange: (ComposerPanel) -> Unit,
-    onToggleMarkdown: () -> Unit,
     onSend: () -> Unit,
     onRemoveQuote: (String) -> Unit,
     onPickImages: (List<PickedImage>) -> Unit,
@@ -828,8 +813,6 @@ private fun MessageComposer(
     }
 
     Column(Modifier.fillMaxWidth()) {
-        // Outside the MD branch: an upload started before the toggle was flipped is still running,
-        // and its cell is the only place the user can see that, or cancel it.
         AttachmentTray(
             attachments = state.attachments,
             onRemove = onRemoveAttachment,
@@ -864,7 +847,6 @@ private fun MessageComposer(
         }
         MessageInputBar(
             draftState = draftState,
-            isMarkdown = state.isMarkdown,
             canSend = state.canSend,
             panelOpen = panel != ComposerPanel.NONE,
             onTogglePanel = {
@@ -880,7 +862,6 @@ private fun MessageComposer(
             ComposerPanel.TOOLS ->
                 ToolGrid(
                     state = state,
-                    onToggleMarkdown = onToggleMarkdown,
                     onAction = { action ->
                         when (action) {
                             EditorAction.IMAGE -> pickImages()
@@ -921,7 +902,6 @@ private fun MessageComposer(
 @Composable
 private fun MessageInputBar(
     draftState: TextFieldState,
-    isMarkdown: Boolean,
     canSend: Boolean,
     panelOpen: Boolean,
     onTogglePanel: () -> Unit,
@@ -957,7 +937,6 @@ private fun MessageInputBar(
         }
         MessageDraftField(
             draftState = draftState,
-            isMarkdown = isMarkdown,
             modifier =
             Modifier
                 .weight(1f)
@@ -986,16 +965,12 @@ private fun MessageInputBar(
 @Composable
 private fun MessageDraftField(
     draftState: TextFieldState,
-    isMarkdown: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val layers = LocalPlazaLayers.current
     EditorTextField(
         state = draftState,
-        hint =
-        stringResource(
-            if (isMarkdown) Res.string.message_input_hint_markdown else Res.string.message_input_hint_plain,
-        ),
+        hint = stringResource(Res.string.message_input_hint),
         textStyle =
         MaterialTheme.typography.bodyLarge.copy(
             fontSize = 15.sp,
@@ -1033,9 +1008,8 @@ private fun MessageDraftField(
 /**
  * 3e's grid behind the + key, four tiles to a row.
  *
- * The keys that open something — 相册 and 表情 — lead, then the MD switch, then the formatting keys
- * in the order the wrench arranged them, then the wrench itself. With MD off only the switch is left:
- * the rest would all be inserting Markdown into a message the server will take verbatim.
+ * The keys that open something — 相册 and 表情 — lead, then the formatting keys in the order the
+ * wrench arranged them, then the wrench itself.
  *
  * 3e also draws a 拍照 tile. The composers pick images through the platform photo picker and nothing
  * else, so there is no camera for a tile to open; it is left out rather than drawn as a dead key.
@@ -1043,50 +1017,30 @@ private fun MessageDraftField(
 @Composable
 private fun ToolGrid(
     state: MessageThreadUiState,
-    onToggleMarkdown: () -> Unit,
     onAction: (EditorAction) -> Unit,
     onCustomize: () -> Unit,
 ) {
     val tiles = buildList<@Composable () -> Unit> {
-        if (state.isMarkdown) {
-            state.toolbar.enabled.filter { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
-                add {
-                    ToolTile(
-                        icon = if (action == EditorAction.IMAGE) PlazaIcons.PhotoLibrary else action.icon,
-                        label = stringResource(action.label),
-                        onClick = { onAction(action) },
-                    )
-                }
+        state.toolbar.enabled.filter { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
+            add {
+                ToolTile(
+                    icon = if (action == EditorAction.IMAGE) PlazaIcons.PhotoLibrary else action.icon,
+                    label = stringResource(action.label),
+                    onClick = { onAction(action) },
+                )
+            }
+        }
+        state.toolbar.enabled.filterNot { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
+            add {
+                ToolTile(icon = action.icon, label = stringResource(action.label), onClick = { onAction(action) })
             }
         }
         add {
             ToolTile(
-                icon = PlazaIcons.Markdown,
-                label =
-                stringResource(
-                    if (state.isMarkdown) Res.string.message_tool_markdown_on else Res.string.message_tool_markdown_off,
-                ),
-                selected = state.isMarkdown,
-                toggleLabel = stringResource(Res.string.message_markdown_toggle),
-                // A quote waiting to go out is a `>` block, which is only a quotation with MD on —
-                // see [MessageThreadViewModel.toggleMarkdown].
-                enabled = !(state.isMarkdown && state.quotes.isNotEmpty()),
-                onClick = onToggleMarkdown,
+                icon = Icons.Default.Build,
+                label = stringResource(Res.string.message_tool_customize),
+                onClick = onCustomize,
             )
-        }
-        if (state.isMarkdown) {
-            state.toolbar.enabled.filterNot { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
-                add {
-                    ToolTile(icon = action.icon, label = stringResource(action.label), onClick = { onAction(action) })
-                }
-            }
-            add {
-                ToolTile(
-                    icon = Icons.Default.Build,
-                    label = stringResource(Res.string.message_tool_customize),
-                    onClick = onCustomize,
-                )
-            }
         }
     }
     Column(Modifier.fillMaxWidth()) {
@@ -1110,52 +1064,28 @@ private fun ToolGrid(
     }
 }
 
-/**
- * One tile of the grid: a 60dp rounded square with its name under it.
- *
- * [selected] makes it a switch — the MD tile is the site's MD On/Off, and a screen reader has to hear
- * it as one, named by [toggleLabel] rather than by the 开/关 its caption changes between.
- */
+/** One tile of the grid: a 60dp rounded square with its name under it. */
 @Composable
 private fun ToolTile(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    selected: Boolean? = null,
-    toggleLabel: String? = null,
-    enabled: Boolean = true,
 ) {
     val layers = LocalPlazaLayers.current
-    val on = selected == true
     // The press shows on the rounded square, not on the whole cell's rectangle: the cell is the
     // target, but a ripple over the caption and the gaps drew a box none of the tiles look like.
     val interactionSource = remember { MutableInteractionSource() }
-    val interaction =
-        if (selected != null) {
-            Modifier.toggleable(
-                value = selected,
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                role = Role.Switch,
-                onValueChange = { onClick() },
-            )
-        } else {
-            Modifier.clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                role = Role.Button,
-                onClick = onClick,
-            )
-        }
     // The whole cell is the target, not only the square, so the caption under it is one too.
     Column(
         modifier =
         Modifier
             .fillMaxWidth()
-            .then(interaction)
-            .alpha(if (enabled) 1f else DISABLED_TILE_ALPHA),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -1165,21 +1095,17 @@ private fun ToolTile(
                 .size(TOOL_TILE_SIZE)
                 .cardShadow(MaterialTheme.shapes.largeIncreased, layers.shadows)
                 .clip(MaterialTheme.shapes.largeIncreased)
-                .background(if (on) MaterialTheme.colorScheme.primary else layers.raised)
+                .background(layers.raised)
                 .indication(interactionSource, ripple())
                 .then(layers.cardBorder?.let { Modifier.border(1.dp, it, MaterialTheme.shapes.largeIncreased) } ?: Modifier),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                icon,
-                contentDescription = toggleLabel,
-                tint = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             // Held to its quarter of the row and wrapped there. Let spill past it, a caption at a
             // large text size or in English ran over the captions either side and off the screen.
             textAlign = TextAlign.Center,
@@ -1188,9 +1114,6 @@ private fun ToolTile(
         )
     }
 }
-
-/** Material's disabled-content opacity. */
-private const val DISABLED_TILE_ALPHA = 0.38f
 
 @Composable
 private fun ThreadMenu(onOpenBrowser: () -> Unit) {
@@ -1314,7 +1237,6 @@ private fun MessageThreadPreview() {
             onOpenBrowser = {},
             onOpenSpace = {},
             onRetryLoad = {},
-            onToggleMarkdown = {},
             onSend = {},
             onRetrySend = {},
             onQuote = {},

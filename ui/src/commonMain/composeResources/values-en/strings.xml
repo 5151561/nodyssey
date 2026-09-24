@@ -256,9 +256,7 @@
     <string name="message_thread_title_unknown">Message</string>
     <string name="message_thread_empty">No messages yet — say something</string>
     <string name="message_thread_open_space">See their space</string>
-    <string name="message_input_hint_markdown">Message (Markdown on)</string>
-    <string name="message_input_hint_plain">Message</string>
-    <string name="message_markdown_toggle">Markdown on or off</string>
+    <string name="message_input_hint">Message</string>
     <string name="message_send">Send</string>
     <string name="message_status_sending">Sending</string>
     <string name="message_status_failed">Not sent</string>
@@ -269,8 +267,6 @@
     <string name="message_quote_chip_mine">Quoting my message</string>
     <string name="message_quote_remove">Remove quote</string>
     <string name="message_tools">Attachments and formatting</string>
-    <string name="message_tool_markdown_on">Markdown · On</string>
-    <string name="message_tool_markdown_off">Markdown · Off</string>
     <string name="message_tool_customize">Customize</string>
     <string name="message_copied">Message copied</string>
 

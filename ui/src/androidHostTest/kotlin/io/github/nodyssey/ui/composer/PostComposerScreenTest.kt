@@ -5,6 +5,7 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -14,11 +15,14 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -145,6 +149,31 @@ class PostComposerScreenTest {
 
         composeRule.onNodeWithContentDescription("加粗").assertDoesNotExist()
         composeRule.onNodeWithText("格式").assertIsDisplayed()
+    }
+
+    /**
+     * On a tablet the quick bar and the 格式 card keep to the column the title and the body are in,
+     * and the emoji panel spans the window.
+     *
+     * The panel stands in for the keyboard, and a keyboard is the window's width. Narrowing the whole
+     * editor bar to the text column narrowed the panel along with the keys it was meant for.
+     */
+    @Test
+    @Config(qualifiers = "w1000dp-h800dp")
+    fun `on a wide window the emoji panel spans the window while the bar keeps to the text`() {
+        setScreen(draftState())
+        val column = (1000.dp - Sizes.readableContentWidth) / 2
+
+        composeRule.onNodeWithContentDescription("表情").performClick()
+
+        val key = composeRule.onNodeWithContentDescription("表情").getUnclippedBoundsInRoot()
+        assertTrue("the bar's 表情 key at ${key.left}", key.left >= column)
+        val pill = composeRule.onNodeWithText("最近使用").getUnclippedBoundsInRoot()
+        assertTrue("the panel's first pill at ${pill.left}", pill.left < column)
+
+        composeRule.onNodeWithText("格式").performClick()
+        val bold = composeRule.onNodeWithContentDescription("加粗").getUnclippedBoundsInRoot()
+        assertTrue("the card's 加粗 key at ${bold.left}", bold.left >= column)
     }
 
     @Test

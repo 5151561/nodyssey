@@ -113,6 +113,7 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
@@ -218,7 +219,9 @@ fun ReadHistoryScreen(
             )
         },
     ) { padding ->
-        Box(Modifier.padding(padding).fillMaxSize()) {
+        // The centred column every page with a big title lays its content in, so on a tablet the
+        // title heads this list rather than sitting a few hundred dp in from it.
+        Box(Modifier.padding(padding).fillMaxSize().readableWidth()) {
             when {
                 state.isLoading -> LoadingState()
 

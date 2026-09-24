@@ -552,8 +552,9 @@ private fun EditorContent(
             bodyState = bodyState,
             editorState = editorState,
             // The column the title and the body are in, so on a tablet the eight format keys are not
-            // stretched across the window into bars a few hundred dp wide each.
-            modifier = Modifier.readableWidth(),
+            // stretched across the window into bars a few hundred dp wide each. The bar only: the
+            // emoji panel under it stands in for the keyboard, and spans the window as one does.
+            barModifier = Modifier.readableWidth(),
             onPickImages = onPickImages,
             onCustomize = { customizing = true },
             // The bar takes focus when it is tapped, and a caret the user cannot see is a caret

@@ -16,6 +16,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.plaza.designsys.theme.PlazaTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -94,6 +96,39 @@ class ImageHostScreenTest {
 
         composeRule.onNode(hasText(NODE_IMAGE) and hasText(NODE_IMAGE_HINT)).assertDoesNotExist()
         composeRule.onNodeWithText(NODE_IMAGE_HINT).assertIsDisplayed()
+    }
+
+    /**
+     * Each chip keeps its 48dp target, and the rows of them add nothing on top of it.
+     *
+     * The target reaches 6dp past the 36dp chip above and below, so those 12dp are the gap the eye
+     * sees between two rows. The row spacing the chips used to have was laid over that as well, and
+     * the gap came out at about 20dp.
+     */
+    @Test
+    fun `the host chips keep their touch targets and nothing more between rows`() {
+        setContent()
+
+        val chips =
+            listOf(
+                NODE_IMAGE,
+                "兰空图床 Lsky Pro · 自建",
+                "简单图床 EasyImage · 自建",
+                SMMS,
+                "imgbb · 公共",
+                "自定义图床 · 手动配置",
+            ).map { composeRule.onNodeWithText(it).fetchSemanticsNode() }
+        val density = chips.first().layoutInfo.density.density
+        chips.forEach { chip -> assertTrue("${chip.touchBoundsInRoot}px", chip.touchBoundsInRoot.height / density + 0.5f >= 48f) }
+        // One chip per row is enough: the rows are what is being spaced.
+        val rows = chips.groupBy { it.boundsInRoot.top }.toSortedMap().values.map { row -> row.first() }
+        assertTrue("${rows.size} rows", rows.size > 1)
+        rows.zipWithNext().forEach { (upper, lower) ->
+            // The targets meet, and what the eye sees between the chips is their slack alone.
+            assertEquals(upper.touchBoundsInRoot.bottom / density, lower.touchBoundsInRoot.top / density, 0.5f)
+            val gap = (lower.boundsInRoot.top - upper.boundsInRoot.bottom) / density
+            assertTrue("rows ${gap}dp apart", gap <= 12.5f)
+        }
     }
 
     private companion object {

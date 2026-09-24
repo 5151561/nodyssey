@@ -121,6 +121,7 @@ import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.floatShadow
+import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -336,7 +337,9 @@ fun BookmarksScreen(
         floatingActionButtonPosition = FabPosition.End,
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
+            // The centred column every page with a big title lays its content in, so on a tablet
+            // the title heads this list rather than sitting a few hundred dp in from it.
+            Column(Modifier.fillMaxSize().readableWidth()) {
                 if (!state.inSelection) {
                     BookmarkFilterRow(state = state, onFilter = onFilter)
                     // Not while a selection is up: that mode has its own toolbar and its own bar, and

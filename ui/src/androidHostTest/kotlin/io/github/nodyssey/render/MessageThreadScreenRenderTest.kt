@@ -55,7 +55,6 @@ class MessageThreadScreenRenderTest {
                 onOpenBrowser = {},
                 onOpenSpace = {},
                 onRetryLoad = {},
-                onToggleMarkdown = {},
                 onSend = {},
                 onRetrySend = {},
                 onQuote = {},

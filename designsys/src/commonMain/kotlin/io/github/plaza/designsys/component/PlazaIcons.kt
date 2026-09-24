@@ -845,18 +845,6 @@ object PlazaIcons {
         )
     }
 
-    /** The MD switch's tile — a framed `M` and a down arrow, Markdown's own mark. */
-    val Markdown: ImageVector by lazy {
-        materialIcon(
-            name = "Markdown",
-            pathData =
-            "M20,4H4C2.9,4 2,4.9 2,6v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6C22,4.9 21.1,4 20,4z" +
-                "M20,18H4V6h16V18z" +
-                "M5.5,15.5v-7H7l2,2.5 2,-2.5h1.5v7H11v-4.8l-2,2.5 -2,-2.5v4.8z" +
-                "M16,8.5h1.5v4h2l-2.75,3.25 -2.75,-3.25h2z",
-        )
-    }
-
     // --- Settings rows ----------------------------------------------------------
 
     /** 墨水屏模式 — half a disc, black on one side and paper on the other. */

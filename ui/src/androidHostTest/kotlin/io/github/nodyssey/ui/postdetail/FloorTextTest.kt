@@ -3,6 +3,8 @@ package io.github.nodyssey.ui.postdetail
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** 复制正文 copies the whole floor, not the excerpt the panel's head shows. */
@@ -43,5 +45,31 @@ class FloorTextTest {
     @Test
     fun `a floor with nothing to read copies nothing`() {
         assertEquals("", listOf(RichNode.VotePlaceholder(voteId = 1)).copyableText())
+        assertFalse(listOf(RichNode.VotePlaceholder(voteId = 1)).hasCopyableText())
+    }
+
+    /** A picture's address is not 正文, so a floor that is only pictures has no text to copy. */
+    @Test
+    fun `a floor that is only a picture has no text to copy`() {
+        val nodes =
+            listOf(
+                RichNode.BlockImage(url = "https://i.example/a.png", alt = null),
+                paragraph(InlineNode.Image(url = "https://i.example/b.png", alt = "截图")),
+            )
+
+        assertFalse(nodes.hasCopyableText())
+    }
+
+    /** Beside words a picture is still copied, as its address — a copy that lost it would read as whole. */
+    @Test
+    fun `a picture among words is copied as its address`() {
+        val nodes =
+            listOf(
+                paragraph(text("晒单")),
+                RichNode.BlockImage(url = "https://i.example/a.png", alt = null),
+            )
+
+        assertTrue(nodes.hasCopyableText())
+        assertEquals("晒单\n\nhttps://i.example/a.png", nodes.copyableText())
     }
 }

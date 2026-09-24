@@ -2,13 +2,15 @@ package io.github.nodyssey.ui.messages
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -36,9 +38,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The message bar's half of the shared editor (7f, redrawn as 3d/3e with the keys in a grid behind +).
  *
- * The MD toggle is the whole contract here: with it off the server takes the text verbatim, so a
- * formatting key would insert syntax that arrives as literal asterisks. The keys are therefore absent
- * rather than disabled, and these tests are what keep it that way.
+ * A message always goes out as Markdown, so the grid has no MD switch and its formatting keys are
+ * always there.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -51,11 +52,9 @@ class MessageComposerTest {
 
     private fun setScreen(
         draft: String = "",
-        markdown: Boolean = true,
         fontScale: Float = 1f,
     ) {
         composeRule.setContent {
-            var isMarkdown by remember { mutableStateOf(markdown) }
             draftState = remember { TextFieldState(draft) }
             val density = Density(LocalDensity.current.density, fontScale = fontScale)
             CompositionLocalProvider(LocalDensity provides density) {
@@ -65,7 +64,6 @@ class MessageComposerTest {
                         MessageThreadUiState(
                             uid = 4471,
                             userName = "iwil",
-                            isMarkdown = isMarkdown,
                             hasDraftText = draft.isNotBlank(),
                             messages =
                             listOf(
@@ -87,7 +85,6 @@ class MessageComposerTest {
                         onOpenBrowser = {},
                         onOpenSpace = {},
                         onRetryLoad = {},
-                        onToggleMarkdown = { isMarkdown = !isMarkdown },
                         onSend = {},
                         onRetrySend = {},
                         onQuote = {},
@@ -127,16 +124,18 @@ class MessageComposerTest {
 
     /**
      * At twice the text size a caption wraps inside its own quarter of the row. It used to be laid
-     * out unbounded, and 「Markdown · 开」 ran over the captions either side of it.
+     * out unbounded, and a long caption ran over the captions either side of it.
      */
     @Test
     fun `a tool caption stays inside its own tile at 2x text`() {
         setScreen(fontScale = 2f)
         openTools()
 
-        val caption = composeRule.onNodeWithText("Markdown · 开", useUnmergedTree = true).getUnclippedBoundsInRoot()
         val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
-        assertTrue("caption at $caption", caption.width <= screen.width / 4)
+        listOf("表情", "加粗", "行内代码", "链接", "自定义").forEach { label ->
+            val caption = composeRule.onNodeWithText(label, useUnmergedTree = true).getUnclippedBoundsInRoot()
+            assertTrue("$label at $caption", caption.width <= screen.width / 4)
+        }
     }
 
     /** The grid's tiles are targets too, and they are only on screen once the + key is on. */
@@ -224,16 +223,18 @@ class MessageComposerTest {
     private fun defaultLayout() = toolbarLayout(emptyList(), EditorActions.Message)
 
     @Test
-    fun `turning MD off takes the formatting keys away rather than disabling them`() {
+    fun `the grid offers no MD switch`() {
         setScreen()
         openTools()
 
-        composeRule.onNodeWithContentDescription("Markdown 开关").performClick()
-
-        composeRule.onNodeWithText("加粗").assertDoesNotExist()
-        composeRule.onNodeWithText("表情").assertDoesNotExist()
-        // The switch itself stays, or there would be no way to turn it back on.
-        composeRule.onNodeWithText("Markdown · 关").assertIsDisplayed()
+        // The + key is the one switch left on the bar; the MD tile was the grid's.
+        val switches =
+            composeRule
+                .onAllNodes(isToggleable())
+                .fetchSemanticsNodes()
+                .map { it.config.getOrNull(SemanticsProperties.ContentDescription) }
+        assertEquals(listOf(listOf("附件与格式")), switches)
+        composeRule.onAllNodes(hasContentDescription("Markdown", substring = true), useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test

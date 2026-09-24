@@ -311,9 +311,7 @@
     <string name="message_thread_subtitle_level">UID %1$d · Lv %2$d</string>
     <string name="message_thread_empty">还没有消息，说点什么吧</string>
     <string name="message_thread_open_space">查看主页</string>
-    <string name="message_input_hint_markdown">发消息（Markdown 已开）</string>
-    <string name="message_input_hint_plain">发消息</string>
-    <string name="message_markdown_toggle">Markdown 开关</string>
+    <string name="message_input_hint">发消息</string>
     <string name="message_send">发送</string>
     <string name="message_status_sending">发送中</string>
     <string name="message_status_failed">发送失败</string>
@@ -328,10 +326,6 @@
     <string name="message_quote_remove">取消引用</string>
     <!-- The + key left of the message bar, which opens the tool grid -->
     <string name="message_tools">附件与格式</string>
-    <!-- Tool grid: the MD switch tile while on -->
-    <string name="message_tool_markdown_on">Markdown · 开</string>
-    <!-- Tool grid: the MD switch tile while off -->
-    <string name="message_tool_markdown_off">Markdown · 关</string>
     <!-- Tool grid: the tile that opens the toolbar arrangement sheet -->
     <string name="message_tool_customize">自定义</string>
     <string name="message_copied">消息已复制</string>

@@ -79,7 +79,6 @@ class MessageBubbleActionsTest {
                     onOpenBrowser = {},
                     onOpenSpace = {},
                     onRetryLoad = {},
-                    onToggleMarkdown = {},
                     onSend = {},
                     onRetrySend = {},
                     onQuote = { quoted += it.content },

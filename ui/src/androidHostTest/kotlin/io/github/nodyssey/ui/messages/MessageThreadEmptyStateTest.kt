@@ -44,7 +44,6 @@ class MessageThreadEmptyStateTest {
                     onOpenBrowser = {},
                     onOpenSpace = {},
                     onRetryLoad = {},
-                    onToggleMarkdown = {},
                     onSend = {},
                     onRetrySend = {},
                     onQuote = {},

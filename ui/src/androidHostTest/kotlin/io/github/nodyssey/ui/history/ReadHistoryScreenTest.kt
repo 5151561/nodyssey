@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import io.github.nodyssey.data.ReadHistoryEntry
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.ui.assertContentUnderBigTitle
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
@@ -82,6 +83,15 @@ class ReadHistoryScreenTest {
 
     private fun openMenu() {
         composeRule.onNodeWithContentDescription("更多").performClick()
+    }
+
+    /** On a tablet the list sits in the same centred column as the big title over it. */
+    @Test
+    @Config(qualifiers = "w1000dp-h800dp")
+    fun `on a wide window the list sits under its title`() {
+        setScreen(ReadHistoryUiState(isLoading = false, entries = listOf(entry(7))))
+
+        composeRule.assertContentUnderBigTitle(title = "浏览历史", content = composeRule.onNodeWithText("今天"))
     }
 
     @Test

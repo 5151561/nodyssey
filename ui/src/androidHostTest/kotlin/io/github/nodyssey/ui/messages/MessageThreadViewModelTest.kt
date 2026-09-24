@@ -107,19 +107,20 @@ class MessageThreadViewModelTest {
             assertTrue(messages.any { it.status == SendStatus.FAILED && it.content == "在吗" })
         }
 
+    /** There is no MD switch to leave off: what the composer writes is Markdown, and goes out as it. */
     @Test
-    fun `the markdown switch travels with the send`() =
+    fun `every message goes out as Markdown`() =
         runTest(dispatcher) {
             val repository = FakeMessageRepository()
             val viewModel = viewModel(repository)
             advanceUntilIdle()
 
-            viewModel.toggleMarkdown()
-            viewModel.draftState.setTextAndPlaceCursorAtEnd("**不要加粗**")
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("**加粗**")
             viewModel.send()
             advanceUntilIdle()
 
-            assertEquals(false, repository.lastMarkdown)
+            assertEquals(true, repository.lastMarkdown)
+            assertTrue(viewModel.uiState.value.messages.last().isMarkdown)
         }
 
     /**
@@ -142,22 +143,17 @@ class MessageThreadViewModelTest {
             assertEquals(0, notifications.counts.value.messages)
         }
 
-    /**
-     * 引用. The message waits over the bar as a card (3e) and goes out as a blockquote ahead of the
-     * reply — which is only Markdown if the switch is on, so quoting turns it on.
-     */
+    /** 引用. The message waits over the bar as a card (3e) and goes out as a blockquote ahead of the reply. */
     @Test
     fun `引用 sends the message as a blockquote ahead of the reply`() =
         runTest(dispatcher) {
             val repository = FakeMessageRepository()
             val viewModel = viewModel(repository)
             advanceUntilIdle()
-            viewModel.toggleMarkdown()
 
             viewModel.quote(viewModel.uiState.value.messages.single())
             // The draft is left alone: the quotation is the card's, not the field's.
             assertEquals("", viewModel.draftState.text.toString())
-            assertTrue(viewModel.uiState.value.isMarkdown)
 
             viewModel.draftState.setTextAndPlaceCursorAtEnd("问到了吗")
             viewModel.send()
@@ -198,30 +194,6 @@ class MessageThreadViewModelTest {
             advanceUntilIdle()
 
             assertEquals("> 在的\n\n> 那明天见\n\n看到了", repository.lastContent)
-        }
-
-    /**
-     * The switch cannot be turned off under a waiting quote: the quote goes out as a `>` block, and
-     * with MD off the other side got the literal markup.
-     */
-    @Test
-    fun `MD stays on while a quote is waiting, and comes free once it is gone`() =
-        runTest(dispatcher) {
-            val repository = FakeMessageRepository()
-            val viewModel = viewModel(repository)
-            advanceUntilIdle()
-
-            viewModel.quote(bubble("在的", id = "a"))
-            viewModel.toggleMarkdown()
-            assertTrue(viewModel.uiState.value.isMarkdown)
-
-            viewModel.draftState.setTextAndPlaceCursorAtEnd("看到了")
-            viewModel.send()
-            advanceUntilIdle()
-            assertEquals(true, repository.lastMarkdown)
-
-            viewModel.toggleMarkdown()
-            assertEquals(false, viewModel.uiState.value.isMarkdown)
         }
 
     @Test

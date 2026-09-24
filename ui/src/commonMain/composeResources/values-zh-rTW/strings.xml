@@ -250,9 +250,7 @@
     <string name="message_thread_title_unknown">私訊</string>
     <string name="message_thread_empty">還沒有訊息，說點什麼吧</string>
     <string name="message_thread_open_space">檢視主頁</string>
-    <string name="message_input_hint_markdown">傳訊息（Markdown 已開）</string>
-    <string name="message_input_hint_plain">傳訊息</string>
-    <string name="message_markdown_toggle">Markdown 開關</string>
+    <string name="message_input_hint">傳訊息</string>
     <string name="message_send">傳送</string>
     <string name="message_status_sending">傳送中</string>
     <string name="message_status_failed">傳送失敗</string>
@@ -263,8 +261,6 @@
     <string name="message_quote_chip_mine">引用 我的訊息</string>
     <string name="message_quote_remove">取消引用</string>
     <string name="message_tools">附件與格式</string>
-    <string name="message_tool_markdown_on">Markdown · 開</string>
-    <string name="message_tool_markdown_off">Markdown · 關</string>
     <string name="message_tool_customize">自訂</string>
     <string name="message_copied">訊息已複製</string>
 

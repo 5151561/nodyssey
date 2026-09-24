@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performTouchInput
 import io.github.nodyssey.data.OfflineFailure
 import io.github.nodyssey.data.OfflineState
 import io.github.nodyssey.data.OfflineUsage
+import io.github.nodyssey.ui.assertContentUnderBigTitle
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
@@ -114,6 +115,15 @@ class BookmarksScreenTest {
                 )
             }
         }
+    }
+
+    /** On a tablet the list sits in the same centred column as the big title over it. */
+    @Test
+    @Config(qualifiers = "w1000dp-h800dp")
+    fun `on a wide window the list sits under its title`() {
+        setScreen(state())
+
+        composeRule.assertContentUnderBigTitle(title = "收藏", content = composeRule.onNodeWithText("已经离线的帖子"))
     }
 
     /**
