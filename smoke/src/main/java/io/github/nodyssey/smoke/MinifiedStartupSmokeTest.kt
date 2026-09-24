@@ -71,9 +71,9 @@ class MinifiedStartupSmokeTest {
             assertTrue("the app did not draw its bottom navigation after 新手引导 was skipped", drew)
         }
 
-        // By description rather than by text: 搜索 left the bottom navigation for an icon in 首页's
-        // own app bar, and an icon button's accessible name is its content description.
-        val search = device.wait(Until.findObject(By.pkg(APP).desc(SEARCH_ACTION)), UI_TIMEOUT_MS)
+        // By the hint it wears: 搜索 is a field-shaped button in 首页's own app bar, and the button's
+        // accessible name is that text — its magnifier glyph carries no description.
+        val search = device.wait(Until.findObject(By.pkg(APP).text(SEARCH_ENTRY)), UI_TIMEOUT_MS)
         assertNotNull("the 搜索 action is missing from 首页's app bar", search)
         search.click()
 
@@ -83,10 +83,11 @@ class MinifiedStartupSmokeTest {
         // asserted 首页 was still on screen, which only held on the tablet-width emulator it was
         // written against (a navigation rail sits beside the IME instead of under it). Now 搜索 is a
         // pushed screen rather than a tab, so on a phone there is no bottom bar there to assert on
-        // at all.
+        // at all. 用户 is the second half of 搜索's 帖子 / 用户 switch, which is on screen from the first
+        // frame; the board picker that used to be matched here moved into a sheet that opens on demand.
         assertTrue(
             "the app stopped drawing after opening 搜索",
-            device.wait(Until.hasObject(By.pkg(APP).text(BOARD_SECTION)), UI_TIMEOUT_MS),
+            device.wait(Until.hasObject(By.pkg(APP).text(USERS_TAB)), UI_TIMEOUT_MS),
         )
     }
 
@@ -162,8 +163,8 @@ class MinifiedStartupSmokeTest {
         /** `app_name`, which is `translatable="false"` — what the system puts in "X isn't responding". */
         const val APP_LABEL = "Nodyssey"
 
-        /** The app bar action's content description, not a tab label — see where it is used. */
-        val SEARCH_ACTION: Pattern = Pattern.compile("搜索|搜尋|Search")
-        val BOARD_SECTION: Pattern = Pattern.compile("版块|版塊|Board")
+        /** The hint on 首页's search button, not a tab label — see where it is used. */
+        val SEARCH_ENTRY: Pattern = Pattern.compile("搜索帖子或用户|搜尋文章或用戶|Search posts or users")
+        val USERS_TAB: Pattern = Pattern.compile("用户|使用者|Users")
     }
 }
