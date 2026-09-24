@@ -6,6 +6,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +37,7 @@ fun ComposerAppMenu(
     var open by remember { mutableStateOf(false) }
 
     Box(modifier) {
-        IconButton(onClick = { open = true }, modifier = Modifier.size(KEY_SIZE)) {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(KEY_SIZE), shape = MaterialTheme.shapes.medium) {
             Icon(
                 PlazaIcons.Apps,
                 contentDescription = stringResource(Res.string.composer_app_menu),
@@ -65,4 +66,4 @@ fun ComposerAppMenu(
 }
 
 /** The quick bar's key size, so this button measures the same as the keys beside it. */
-private val KEY_SIZE = 48.dp
+private val KEY_SIZE = 40.dp

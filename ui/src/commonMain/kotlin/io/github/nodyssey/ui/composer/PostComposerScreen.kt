@@ -5,14 +5,15 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
@@ -121,8 +122,8 @@ import io.github.plaza.designsys.editor.ComposerEditorBar
 import io.github.plaza.designsys.editor.EditorAction
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
+import io.github.plaza.designsys.theme.CommentBody
 import io.github.plaza.designsys.theme.LocalPlazaLayers
-import io.github.plaza.designsys.theme.PostBody
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardBorderStroke
 import io.github.plaza.designsys.theme.paddingWithKeyboard
@@ -399,7 +400,7 @@ private fun ComposerTopBar(
             draftStatus?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     // The slot is what the two view toggles and 发布 leave, which in English or at a
@@ -413,6 +414,7 @@ private fun ComposerTopBar(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(Res.string.action_cancel),
+                    modifier = Modifier.size(TopBarIconSize),
                 )
             }
         },
@@ -427,6 +429,8 @@ private fun ComposerTopBar(
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = LocalPlazaLayers.current.card),
+        // The thread's bar height (2b), as 3c draws this one: a status line, two toggles and 发布.
+        expandedHeight = TopBarHeight,
     )
 }
 
@@ -447,7 +451,7 @@ private fun ViewModeToggle(
             checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ),
     ) {
-        Icon(icon, contentDescription = stringResource(mode.labelRes))
+        Icon(icon, contentDescription = stringResource(mode.labelRes), modifier = Modifier.size(TopBarIconSize))
     }
 }
 
@@ -465,10 +469,12 @@ private fun PublishButton(
     isEditing: Boolean,
     onClick: () -> Unit,
 ) {
+    // The reply sheet's 32dp button: Material's extra-small step, square-cornered.
     Button(
         onClick = onClick,
         enabled = enabled && !isPublishing,
-        contentPadding = ButtonDefaults.SmallContentPadding,
+        shape = ButtonDefaults.squareShape,
+        contentPadding = PublishButtonPadding,
         colors = if (isPublishing) {
             ButtonDefaults.buttonColors(
                 disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -477,7 +483,7 @@ private fun PublishButton(
         } else {
             ButtonDefaults.buttonColors()
         },
-        modifier = Modifier.padding(end = Spacing.sm),
+        modifier = Modifier.padding(end = Spacing.md).heightIn(min = ButtonDefaults.ExtraSmallContainerHeight),
     ) {
         if (isPublishing) {
             PlazaSpinner(
@@ -488,13 +494,13 @@ private fun PublishButton(
             )
             Text(
                 text = stringResource(if (isEditing) Res.string.composer_saving else Res.string.composer_publishing),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(start = Spacing.sm),
+                style = publishLabelStyle(),
+                modifier = Modifier.padding(start = Spacing.xs),
             )
         } else {
             Text(
                 text = stringResource(if (isEditing) Res.string.action_save else Res.string.action_publish),
-                style = MaterialTheme.typography.labelLarge,
+                style = publishLabelStyle(),
             )
         }
     }
@@ -652,8 +658,8 @@ private fun BodyField(
     EditorTextField(
         state = bodyState,
         hint = stringResource(Res.string.composer_body_hint),
-        textStyle = PostBody.copy(color = MaterialTheme.colorScheme.onSurface),
-        hintStyle = PostBody,
+        textStyle = CommentBody.copy(color = MaterialTheme.colorScheme.onSurface),
+        hintStyle = CommentBody,
         modifier = modifier
             .readableWidth()
             .focusRequester(focusRequester)
@@ -709,7 +715,7 @@ private fun TitleField(
     )
 }
 
-private val TitleStyle = TextStyle(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold)
+private val TitleStyle = TextStyle(fontSize = 19.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp)
 private const val TITLE_MAX_LINES = 3
 
 /**
@@ -748,11 +754,11 @@ private fun ComposerOptions(
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = PageMargin, vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         state.authorName?.let { name ->
-            UserAvatar(url = state.authorAvatarUrl, name = name, size = 36.dp)
+            UserAvatar(url = state.authorAvatarUrl, name = name, size = OptionHeight)
         }
         // Not offered on an edit: `edit-discussion` takes no board, and moving a thread between
         // boards is a moderator action rather than something its author can do here.
@@ -819,29 +825,30 @@ private fun ComposerChip(
     val layers = LocalPlazaLayers.current
     Surface(
         onClick = onClick,
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.small,
         color = if (filled) MaterialTheme.colorScheme.primaryContainer else layers.inset,
         contentColor = if (filled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
         border = when {
             error -> BorderStroke(1.dp, MaterialTheme.colorScheme.error)
             else -> layers.cardBorderStroke
         },
-        modifier = Modifier.height(32.dp),
+        // 28dp drawn, the avatar's height beside it; Material still hit-tests the chip at 48.
+        modifier = Modifier.height(OptionHeight),
     ) {
         Row(
-            modifier = Modifier.padding(start = if (leading != null) 10.dp else Spacing.md, end = Spacing.sm),
+            modifier = Modifier.padding(start = if (leading != null) Spacing.sm else 10.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            leading?.let { Icon(it, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            leading?.let { Icon(it, contentDescription = null, modifier = Modifier.padding(end = 2.dp).size(14.dp)) }
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = if (filled) FontWeight.SemiBold else FontWeight.Medium,
                 maxLines = 1,
             )
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -963,5 +970,18 @@ private val IMAGE_MARKDOWN = Regex("""!\[[^]]*]\([^)]+\)""")
 
 private const val MAX_IMAGES_PER_PICK = 9
 
-/** The page's text margin in 1d — wider than the 16dp list margin, because this is a page, not a list. */
-private val PageMargin = 20.dp
+/** The page's text margin: 16dp since 3c, the reply sheet's and the list's. */
+private val PageMargin = 16.dp
+
+/** The bar's height and its glyphs', the thread's (2b) as 3c draws them. */
+private val TopBarHeight = 48.dp
+private val TopBarIconSize = 20.dp
+
+/** The avatar and the two pills beside it in the who-where-to-whom row. */
+private val OptionHeight = 28.dp
+
+/** 3c's 16dp a side; the reply sheet's button, which also carries an icon, keeps Material's extra-small padding. */
+private val PublishButtonPadding = PaddingValues(horizontal = Spacing.lg)
+
+@Composable
+private fun publishLabelStyle(): TextStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)

@@ -354,17 +354,6 @@ fun PageJumpSheet(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
-        // Material's own handle reserves 22dp above and below the bar; the design gives it 24dp in all.
-        dragHandle = {
-            Box(modifier = Modifier.padding(vertical = 10.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(width = DragHandleWidth, height = DragHandleHeight)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.outlineVariant),
-                )
-            }
-        },
     ) {
         Column(
             modifier = Modifier
@@ -668,8 +657,6 @@ private val SheetKeyHeight = 48.dp
 private val FieldHeight = 60.dp
 private val GoButtonSize = 44.dp
 private val JumpTileMinHeight = 56.dp
-private val DragHandleWidth = 32.dp
-private val DragHandleHeight = 4.dp
 
 private val FieldNumberStyle =
     TextStyle(

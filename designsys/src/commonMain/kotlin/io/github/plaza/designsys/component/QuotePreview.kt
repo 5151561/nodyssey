@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -43,24 +44,24 @@ fun QuotePreview(
     onRemove: (() -> Unit)? = null,
     removeLabel: String? = null,
 ) {
+    // With a ✕ the row is the button's 48dp and nothing more: the two 16dp lines fit inside it.
     val padding =
-        PaddingValues(
-            start = 12.dp,
-            end = if (onRemove != null) 4.dp else 12.dp,
-            top = if (onRemove != null) 4.dp else 12.dp,
-            bottom = if (onRemove != null) 4.dp else 12.dp,
-        )
+        if (onRemove != null) {
+            PaddingValues(start = 10.dp)
+        } else {
+            PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+        }
     val row: @Composable () -> Unit = {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             leading()
             Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = titleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -68,7 +69,7 @@ fun QuotePreview(
                 excerpt?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it.replace('\n', ' '),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -81,6 +82,7 @@ fun QuotePreview(
                         Icons.Default.Close,
                         contentDescription = removeLabel,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
                     )
                 }
             }
@@ -89,7 +91,7 @@ fun QuotePreview(
     if (inset) {
         Surface(
             modifier = modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.largeIncreased,
+            shape = MaterialTheme.shapes.medium,
             color = LocalPlazaLayers.current.inset,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
@@ -98,7 +100,7 @@ fun QuotePreview(
     } else {
         LayerCard(
             modifier = modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.largeIncreased,
+            shape = MaterialTheme.shapes.medium,
             contentPadding = padding,
         ) {
             row()

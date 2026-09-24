@@ -51,7 +51,10 @@ import io.github.plaza.designsys.component.UserAvatar
 import org.jetbrains.compose.resources.stringResource
 
 /** A result card is a step smaller than the feed's, so its corners are a step tighter: `shapes.large`. */
-private val ResultCardPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+private val ResultCardPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp)
+
+/** Between the title and the line under it. */
+private val ResultCardGap = 6.dp
 
 /** 44dp, the artboard's: a user result is the person, so the avatar is larger than a card header's. */
 private val UserResultAvatarSize = 44.dp
@@ -77,12 +80,12 @@ internal fun SearchPostCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         contentPadding = ResultCardPadding,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(ResultCardGap),
     ) {
         HighlightedText(
             text = summary.title,
             query = highlight,
-            style = postCardTitleStyle(sizeSp = 16f, lineHeightSp = 24f),
+            style = postCardTitleStyle(sizeSp = 15f, lineHeightSp = 22f),
             // A read thread keeps its card and dims its title, the same as the feed does.
             color = if (post.isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             fontWeight = if (post.isRead) FontWeight.Medium else FontWeight.SemiBold,
@@ -117,7 +120,7 @@ internal fun SearchPostCardPlaceholder() {
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         contentPadding = ResultCardPadding,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(ResultCardGap),
     ) {
         SkeletonBar(fraction = 0.9f, height = 16.dp)
         SkeletonBar(fraction = 0.6f, height = 16.dp)

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -22,6 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -35,22 +37,21 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBarDefaults
-import androidx.compose.material3.SearchBarValue
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
-import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -65,13 +66,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -103,6 +108,7 @@ import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.action_search
 import io.github.nodyssey.ui.resources.action_sort
 import io.github.nodyssey.ui.resources.search_advanced
 import io.github.nodyssey.ui.resources.search_advanced_active
@@ -379,18 +385,19 @@ private val SearchUiState.hasCustomOptions: Boolean
 /**
  * The back arrow and the search pill.
  *
- * [SearchBarDefaults.InputField] is used on its own rather than inside a
- * [androidx.compose.material3.SearchBar]: the collapsed search bar wraps its field in
- * `DisableSoftKeyboard`, because in that pattern typing happens in the expanded copy drawn over it.
- * This screen has no collapsed state to speak of — it is a destination whose whole body is the
- * search view — so the field has to be the one that takes the keyboard. The [SearchBarValue.Expanded]
- * state passed to it is the same statement: what is below the field is the expanded view.
+ * The pill is the home screen's search pill, the same raised white on the grey page and the same
+ * 40dp under 12dp corners (2a, 3d), so arriving here from it reads as the pill waking up rather than a
+ * new screen. There is no separate submit button: the keyboard's search key submits, and so does
+ * 高级搜索's button.
  *
- * The pill is the home screen's search pill, the same raised white on the grey page, so arriving
- * here from it reads as the pill waking up rather than a new screen. There is no separate submit
- * button: the keyboard's search key submits, and so does 高级搜索's button.
+ * Material's [TextField] rather than `SearchBarDefaults.InputField`, which this used to be. The
+ * search bar's field pads its text for a 56dp bar and takes no padding parameter, so at 40dp it cut
+ * the query in half; `TextField` takes one. What else the search bar's field did is done here by
+ * hand: the search key ([KeyboardOptions]) and the 搜索 a screen reader hears for the field. Its
+ * other announcement, that suggestions are available — made because the field was always
+ * "expanded", having no collapsed search bar around it — is dropped: this screen shows results, not
+ * suggestions. Go back to it if it grows a padding.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchInputRow(
     queryState: TextFieldState,
@@ -403,51 +410,65 @@ private fun SearchInputRow(
 ) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    val searchBarState = rememberSearchBarState(initialValue = SearchBarValue.Expanded)
     val layers = LocalPlazaLayers.current
+    val searchLabel = stringResource(Res.string.action_search)
 
     Row(
         modifier =
         Modifier
             .fillMaxWidth()
-            .padding(start = if (onBack != null) Spacing.xs else Spacing.md, end = Spacing.md, top = Spacing.sm),
+            .padding(start = if (onBack != null) Spacing.xs else Spacing.md, end = Spacing.md, top = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.action_back))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(Res.string.action_back),
+                    modifier = Modifier.size(SearchIconSize),
+                )
             }
         }
-        SearchBarDefaults.InputField(
-            textFieldState = queryState,
-            searchBarState = searchBarState,
-            onSearch = {
+        TextField(
+            state = queryState,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            onKeyboardAction = {
                 onSearch()
                 // The results are what was asked for; the keyboard would cover four of them.
                 focusManager.clearFocus()
             },
+            lineLimits = TextFieldLineLimits.SingleLine,
             modifier =
             Modifier
                 .weight(1f)
-                .cardShadow(CircleShape, layers.shadows)
-                .cardBorder(layers, CircleShape)
-                .focusRequester(focusRequester),
-            placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            shape = CircleShape,
-            // The field's own container is transparent by default because a search bar paints it from
-            // the outside. Standing on its own, it has to paint itself — the raised layer, like the
-            // home screen's pill.
+                .height(SearchFieldHeight)
+                .cardShadow(SearchFieldShape, layers.shadows)
+                .cardBorder(layers, SearchFieldShape)
+                .focusRequester(focusRequester)
+                .semantics { contentDescription = searchLabel },
+            textStyle = searchFieldTextStyle(),
+            placeholder = { Text(placeholder, style = searchFieldTextStyle(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            shape = SearchFieldShape,
+            // The raised layer, like the home screen's pill, and no underline: a filled field's
+            // indicator would draw a rule across the bottom of a pill.
             colors =
-            SearchBarDefaults.inputFieldColors(
+            TextFieldDefaults.colors(
                 focusedContainerColor = layers.raised,
                 unfocusedContainerColor = layers.raised,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
             ),
+            contentPadding = PaddingValues(start = 14.dp),
             trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.padding(end = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                     if (queryState.text.isNotEmpty()) {
-                        IconButton(onClick = { queryState.clearText() }) {
-                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.search_clear_query))
+                        IconButton(onClick = { queryState.clearText() }, modifier = Modifier.size(SearchKeySize)) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(Res.string.search_clear_query),
+                                modifier = Modifier.size(SearchIconSize - 2.dp),
+                            )
                         }
                     }
                     onOpenOptions?.let { OptionsButton(active = optionsActive, onClick = it) }
@@ -461,26 +482,53 @@ private fun SearchInputRow(
     }
 }
 
-/** 调节: opens 高级搜索. The dot says the search is scoped, and TalkBack reads the same as a state. */
+/**
+ * 调节: opens 高级搜索, as a tonal key at the pill's end (3d). The dot says the search is scoped, and
+ * TalkBack reads the same as a state.
+ */
 @Composable
 private fun OptionsButton(
     active: Boolean,
     onClick: () -> Unit,
 ) {
     val activeDescription = stringResource(Res.string.search_advanced_active)
-    IconButton(
+    FilledTonalIconButton(
         onClick = onClick,
-        modifier = Modifier.semantics { if (active) stateDescription = activeDescription },
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.size(SearchKeySize).semantics { if (active) stateDescription = activeDescription },
     ) {
         BadgedBox(
             badge = {
                 if (active) Badge(containerColor = MaterialTheme.colorScheme.primary)
             },
         ) {
-            Icon(PlazaIcons.Tune, contentDescription = stringResource(Res.string.search_advanced))
+            Icon(
+                PlazaIcons.Tune,
+                contentDescription = stringResource(Res.string.search_advanced),
+                modifier = Modifier.size(SearchIconSize - 2.dp),
+            )
         }
     }
 }
+
+/** The pill's height and corners — the home screen's search pill (2a). */
+private val SearchFieldHeight = 40.dp
+private val SearchFieldShape = RoundedCornerShape(12.dp)
+
+/** The keys inside the pill, drawn at 32dp; Material still hit-tests them at 48. */
+private val SearchKeySize = 32.dp
+
+/** The glyphs in the search row, a step under Material's 24. */
+private val SearchIconSize = 20.dp
+
+@Composable
+private fun searchFieldTextStyle(): TextStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
+
+/** The board tag and 排序 under the tabs. */
+private val ScopeChipHeight = 28.dp
+
+@Composable
+private fun scopeLabelStyle(): TextStyle = MaterialTheme.typography.labelMedium
 
 /** Placeholder as the rest of the sentence the scope has already started. */
 @Composable
@@ -565,14 +613,16 @@ private fun ResultScopeRow(
             InputChip(
                 selected = true,
                 onClick = onOpenOptions,
-                label = { Text(title) },
-                modifier = Modifier.heightIn(min = PlazaChipDefaults.Height),
-                shape = PlazaChipDefaults.shape,
+                label = { Text(title, style = scopeLabelStyle()) },
+                // 3d draws the scope as a small tag in the line rather than a full chip; 28dp is as
+                // far as it goes while the ✕ inside it stays a target. Material hit-tests it at 48.
+                modifier = Modifier.height(ScopeChipHeight),
+                shape = MaterialTheme.shapes.small,
                 trailingIcon = {
                     Box(
                         modifier =
                         Modifier
-                            .size(28.dp)
+                            .size(24.dp)
                             .clip(CircleShape)
                             .clickable(onClickLabel = stringResource(Res.string.search_clear_board, title)) {
                                 onBoardChange(null)
@@ -582,7 +632,7 @@ private fun ResultScopeRow(
                         Icon(
                             Icons.Default.Close,
                             contentDescription = stringResource(Res.string.search_clear_board, title),
-                            modifier = Modifier.size(InputChipDefaults.IconSize),
+                            modifier = Modifier.size(14.dp),
                         )
                     }
                 },
@@ -593,10 +643,10 @@ private fun ResultScopeRow(
             FilterChip(
                 selected = false,
                 onClick = onOpenOptions,
-                label = { Text(stringResource(Res.string.search_all_boards)) },
-                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                modifier = Modifier.heightIn(min = PlazaChipDefaults.Height),
-                shape = PlazaChipDefaults.shape,
+                label = { Text(stringResource(Res.string.search_all_boards), style = scopeLabelStyle()) },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.height(ScopeChipHeight),
+                shape = MaterialTheme.shapes.small,
                 colors = PlazaChipDefaults.filterChipColors(),
                 border = PlazaChipDefaults.border(),
             )
@@ -606,12 +656,14 @@ private fun ResultScopeRow(
             TextButton(onClick = { showSortMenu = true }) {
                 Text(
                     stringResource(state.sort.labelRes()),
+                    style = scopeLabelStyle(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Icon(
                     Icons.Default.ArrowDropDown,
                     contentDescription = stringResource(Res.string.action_sort),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
                 )
             }
             DropdownMenu(

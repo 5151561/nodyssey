@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSheetDefaults
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.resources.Res
 import io.github.plaza.designsys.resources.composer_toolbar_add
@@ -75,7 +76,11 @@ fun ToolbarCustomizeSheet(
     onReset: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = PlazaSheetDefaults.shape,
+        dragHandle = { PlazaSheetDefaults.DragHandle() },
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

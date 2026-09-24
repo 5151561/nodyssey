@@ -2287,18 +2287,18 @@ private fun FloorActionSheet(
                 // and the sheet only clips what it cannot show — 复制正文 and the note under it
                 // were simply out of reach there. The sheet hands the scroll its drag first.
                 .verticalScroll(rememberScrollState())
-                .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                .padding(start = Spacing.md, end = Spacing.md, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // The panel's head: whose floor this is, and the first line of it, so the reader knows
             // what they are marking.
             QuotePreview(
                 title = listOfNotNull(content.authorName, content.floor).joinToString(" · "),
                 excerpt = content.nodes.excerpt(),
-                leading = { UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment) },
+                leading = { UserAvatar(url = content.avatarUrl, name = content.authorName, size = FloorSheetAvatar) },
             )
             // One height for the three, since a label or a price may take a second line.
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(IntrinsicSize.Min)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.height(IntrinsicSize.Min)) {
                 listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg, ReactionAction.Dislike).forEach { action ->
                     val reactions = content.reactions
                     ReactionTile(
@@ -2346,14 +2346,20 @@ private fun FloorActionSheet(
                             onDismiss()
                             action()
                         },
-                        leadingContent = { Icon(icon, contentDescription = null) },
-                        headlineContent = { Text(label) },
+                        leadingContent = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        headlineContent = {
+                            Text(label, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium))
+                        },
+                        // Three short verbs under the tiles, a step under a settings page's 56dp rows.
+                        // 3a draws them at 44; an interactive list row keeps Material's 48dp target.
+                        contentPadding = PaddingValues(horizontal = 14.dp),
+                        modifier = Modifier.heightIn(min = Sizes.minTouchTarget),
                     )
                 }
             }
             Text(
                 text = stringResource(Res.string.post_reaction_irreversible),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -2390,15 +2396,15 @@ private fun ReactionTile(
         contentColor = ink,
         enabled = onClick != null && !spent && !pending,
         border = LocalPlazaLayers.current.cardBorderStroke,
-        contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.sm, top = 14.dp, bottom = Spacing.md),
+        contentPadding = PaddingValues(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 9.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
         modifier = modifier,
     ) {
         if (pending) {
-            PlazaSpinner(modifier = Modifier.describedAsLoading(), strokeWidth = 2.dp, size = 24.dp)
+            PlazaSpinner(modifier = Modifier.describedAsLoading(), strokeWidth = 2.dp, size = ReactionTileIcon)
         } else {
-            Icon(action.icon(), contentDescription = null)
+            Icon(action.icon(), contentDescription = null, modifier = Modifier.size(ReactionTileIcon))
         }
         // Two lines for the label and the price rather than one: a third of a phone's width holds
         // 点赞 and 扣 2 鸡腿, but not "Send a drumstick" or "Costs 2 drumsticks", and the price is the
@@ -2414,7 +2420,7 @@ private fun ReactionTile(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 stringResource(action.labelRes()),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
@@ -2438,6 +2444,12 @@ private fun ReactionTile(
         )
     }
 }
+
+/** The floor's face at the head of the 楼层互动 panel, as 3a draws it. */
+private val FloorSheetAvatar = 24.dp
+
+/** A mark's glyph on its tile, as 3a draws it: a hair under Material's 24. */
+private val ReactionTileIcon = 22.dp
 
 /**
  * What a mark costs, as the tile states it.

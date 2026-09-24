@@ -103,7 +103,7 @@ internal fun uploadFailureText(
  * everything is moving at once. A failed cell is itself the retry target — the label says so — and
  * the batch retry lives on the Snackbar the caller shows.
  *
- * The status is written inside the tile rather than under it (1d): 88dp tiles are big enough to
+ * The status is written inside the tile rather than under it (1d): 72dp tiles are big enough to
  * carry it, and a caption row under every tile was a second line of type for what is mostly "已上传".
  * That one is the exception — a finished upload shows its check mark and says its status only to a
  * screen reader, because on a photo the word is noise once the mark is there.
@@ -119,8 +119,8 @@ fun AttachmentTray(
     Row(
         modifier = modifier
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = Spacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         attachments.forEach { attachment ->
             AttachmentCell(
@@ -144,7 +144,7 @@ private fun AttachmentCell(
     Box(
         modifier = Modifier
             .size(THUMBNAIL)
-            .clip(MaterialTheme.shapes.largeIncreased)
+            .clip(MaterialTheme.shapes.medium)
             .background(
                 if (attachment.status == UploadStatus.WAITING) {
                     MaterialTheme.colorScheme.surfaceContainer
@@ -153,7 +153,7 @@ private fun AttachmentCell(
                 },
             ).then(
                 if (failed) {
-                    Modifier.border(2.dp, MaterialTheme.colorScheme.error, MaterialTheme.shapes.largeIncreased)
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.error, MaterialTheme.shapes.medium)
                 } else {
                     Modifier
                 },
@@ -180,7 +180,7 @@ private fun AttachmentCell(
                 // leaves the picture readable and the percentage has the middle to itself.
                 LinearProgressIndicator(
                     progress = { attachment.progress },
-                    modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).describedAsLoading(),
+                    modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).describedAsLoading(),
                     trackColor = Color.Transparent,
                     strokeCap = StrokeCap.Butt,
                     gapSize = 0.dp,
@@ -193,8 +193,8 @@ private fun AttachmentCell(
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .size(20.dp)
+                        .padding(BadgeInset)
+                        .size(BadgeSize)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerLowest),
                     contentAlignment = Alignment.Center,
@@ -203,7 +203,7 @@ private fun AttachmentCell(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
                 }
             }
@@ -215,7 +215,7 @@ private fun AttachmentCell(
         RemoveBadge(
             name = attachment.name,
             onClick = onRemove,
-            modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+            modifier = Modifier.align(Alignment.TopEnd).padding(BadgeInset),
         )
     }
 }
@@ -227,8 +227,8 @@ private fun StatusGlyph(
     label: String,
     tint: Color,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -270,7 +270,7 @@ private fun Thumbnail(
             Box(
                 Modifier
                     .size(THUMBNAIL)
-                    .border(2.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.largeIncreased),
+                    .border(2.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium),
             )
         } else {
             Box(Modifier.size(THUMBNAIL).background(Color.Black.copy(alpha = SCRIM_ALPHA)))
@@ -287,7 +287,7 @@ private fun RemoveBadge(
     val description = stringResource(Res.string.composer_image_remove, name)
     Box(
         modifier = modifier
-            .size(22.dp)
+            .size(BadgeSize)
             .clip(CircleShape)
             .background(
                 if (LocalEinkMode.current) {
@@ -304,7 +304,7 @@ private fun RemoveBadge(
             imageVector = Icons.Default.Close,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(14.dp),
+            modifier = Modifier.size(12.dp),
         )
     }
 }
@@ -317,6 +317,10 @@ private fun ImageAttachment.statusLabel(): String = when (status) {
     UploadStatus.WAITING -> stringResource(Res.string.composer_image_waiting)
 }
 
-private val THUMBNAIL = 88.dp
+private val THUMBNAIL = 72.dp
+
+/** The ✕ and the check mark in a tile's corners, and how far in from them. */
+private val BadgeSize = 18.dp
+private val BadgeInset = Spacing.xs
 private const val BADGE_ALPHA = 0.5f
 private const val SCRIM_ALPHA = 0.35f

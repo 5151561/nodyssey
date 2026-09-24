@@ -128,6 +128,7 @@ import io.github.nodyssey.ui.resources.profile_tile_transfer
 import io.github.nodyssey.ui.resources.profile_tools
 import io.github.nodyssey.ui.resources.settings_title
 import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerCardGap
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.LoadingState
 import io.github.plaza.designsys.component.PlazaIcons
@@ -135,8 +136,10 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.TonalTile
 import io.github.plaza.designsys.component.UserAvatar
+import io.github.plaza.designsys.theme.ControlShape
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.floatShadow
@@ -311,8 +314,8 @@ fun ProfileScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
-            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         ) {
             item(key = "account") {
                 AccountCard(state, onOpenSpace = destinations.space, onAssets = destinations.assets)
@@ -354,7 +357,11 @@ private fun SettingsAction(
 ) {
     Box {
         IconButton(onClick = onClick) {
-            Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings_title))
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = stringResource(Res.string.settings_title),
+                modifier = Modifier.size(20.dp),
+            )
         }
         if (hasAppUpdate) {
             UpdateDot(
@@ -377,12 +384,12 @@ private fun AccountCard(
     onAssets: () -> Unit,
 ) {
     LayerCard(
-        shape = MaterialTheme.shapes.extraLarge,
-        contentPadding = PaddingValues(18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        shape = MaterialTheme.shapes.largeIncreased,
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         IdentityRow(state, onOpenSpace)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             val scheme = MaterialTheme.colorScheme
             listOf(
                 Triple(Res.string.profile_chicken, state.chickenCount?.toString() ?: UNKNOWN, scheme.tertiaryContainer),
@@ -396,11 +403,16 @@ private fun AccountCard(
                 TonalTile(
                     onClick = onAssets,
                     containerColor = container,
+                    shape = MaterialTheme.shapes.medium,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = Spacing.sm),
+                    verticalArrangement = Arrangement.Top,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(label), style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(label), style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium))
                     val valueStyle =
                         MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 18.sp,
+                            lineHeight = 24.sp,
                             fontWeight = FontWeight.Bold,
                             fontFeatureSettings = TABULAR_FIGURES,
                         )
@@ -420,7 +432,7 @@ private fun AccountCard(
 }
 
 /** How far a balance steps down before it gives up fitting — still larger than the label above it. */
-private val BALANCE_MIN_FONT_SIZE = 14.sp
+private val BALANCE_MIN_FONT_SIZE = 13.sp
 
 @Composable
 private fun IdentityRow(
@@ -435,13 +447,13 @@ private fun IdentityRow(
             .clip(MaterialTheme.shapes.largeIncreased)
             .clickable(onClickLabel = stringResource(Res.string.profile_space), onClick = onOpenSpace),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        UserAvatar(url = state.avatarUrl, name = state.displayName, size = 60.dp)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        UserAvatar(url = state.avatarUrl, name = state.displayName, size = 44.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(
                 text = state.displayName,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -461,7 +473,7 @@ private fun IdentityRow(
 
                     else -> stringResource(Res.string.profile_member_uid, state.uid)
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -469,6 +481,7 @@ private fun IdentityRow(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
         )
     }
 }
@@ -491,7 +504,7 @@ private fun AttendanceBanner(
     val done = state.hasSignedInToday
     val busy = state.isSigningIn || state.isAttendanceUnknown
     val layers = LocalPlazaLayers.current
-    val shape = MaterialTheme.shapes.largeIncreased
+    val shape = ControlShape
     val container = if (done) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primary
     val content = if (done) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimary
     Surface(
@@ -508,18 +521,18 @@ private fun AttendanceBanner(
             .then(if (done) Modifier.cardShadow(shape, layers.shadows) else Modifier.floatShadow(shape, layers.shadows)),
     ) {
         Row(
-            modifier = Modifier.heightIn(min = 64.dp).padding(start = 20.dp, end = 8.dp),
+            modifier = Modifier.heightIn(min = 52.dp).padding(start = Spacing.lg, end = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                 when {
-                    busy -> PlazaSpinner(Modifier.describedAsLoading(), size = 20.dp, color = content)
-                    done -> Icon(Icons.Default.CheckCircle, contentDescription = null)
-                    else -> Icon(PlazaIcons.EventAvailable, contentDescription = null)
+                    busy -> PlazaSpinner(Modifier.describedAsLoading(), size = 18.dp, color = content)
+                    done -> Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(22.dp))
+                    else -> Icon(PlazaIcons.EventAvailable, contentDescription = null, modifier = Modifier.size(22.dp))
                 }
             }
-            Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+            Column(Modifier.weight(1f).padding(vertical = Spacing.sm)) {
                 Text(
                     text =
                     when {
@@ -532,7 +545,7 @@ private fun AttendanceBanner(
 
                         else -> stringResource(Res.string.profile_attendance_title)
                     },
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -545,7 +558,7 @@ private fun AttendanceBanner(
                 subtitle?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = content.copy(alpha = 0.9f),
                     )
                 }
@@ -556,7 +569,7 @@ private fun AttendanceBanner(
             ) {
                 Text(
                     stringResource(Res.string.profile_attendance_board),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                 )
             }
         }
@@ -647,7 +660,7 @@ private const val PROFILE_GRID_COLUMNS = 4
  */
 @Composable
 private fun ProfileGridCard(tiles: List<ProfileTile>) {
-    LayerCard(contentPadding = PaddingValues(8.dp), verticalArrangement = Arrangement.Top) {
+    LayerCard(contentPadding = PaddingValues(Spacing.xs), verticalArrangement = Arrangement.Top) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = PROFILE_GRID_COLUMNS) {
             tiles.forEach { tile -> ProfileGridTile(tile, Modifier.fillMaxWidth(1f / PROFILE_GRID_COLUMNS)) }
         }
@@ -663,19 +676,19 @@ private fun ProfileGridTile(
     Column(
         modifier =
         modifier
-            .heightIn(min = 68.dp)
-            .clip(MaterialTheme.shapes.large)
-            // The whole tile, icon and caption together, is the target: a bare 24dp glyph is far
+            .heightIn(min = 56.dp)
+            .clip(MaterialTheme.shapes.medium)
+            // The whole tile, icon and caption together, is the target: a bare 20dp glyph is far
             // under Material's minimum, and the caption is what the eye aims at.
             .clickable(onClickLabel = label, onClick = tile.onClick)
-            .padding(vertical = 10.dp, horizontal = 2.dp),
+            .padding(vertical = Spacing.sm, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
     ) {
-        Icon(tile.icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Icon(tile.icon, contentDescription = null, modifier = Modifier.size(20.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

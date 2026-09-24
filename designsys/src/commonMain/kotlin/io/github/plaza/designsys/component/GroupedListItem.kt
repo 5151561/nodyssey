@@ -106,6 +106,14 @@ fun GroupedListItem(
     dividerInset: Dp? = null,
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     colors: ListItemColors = groupedListItemColors(),
+    /**
+     * Material's own unless a denser list says otherwise. Its 56dp one-line minimum goes with it only
+     * when [modifier] sets a minimum height of its own — the row reads the incoming minimum in place
+     * of its token when there is one — so a denser row is `heightIn(min = …)` plus a padding that
+     * fits in it. A clickable row still stops at Material's 48dp touch target. A row with no click
+     * (the plain `ListItem` branch) takes no padding.
+     */
+    contentPadding: PaddingValues = ListItemDefaults.ContentPadding,
 ) {
     val layers = LocalPlazaLayers.current
     val textStart = remember { TextStart() }
@@ -149,6 +157,7 @@ fun GroupedListItem(
                 supportingContent = supportingContent,
                 verticalAlignment = verticalAlignment,
                 colors = colors,
+                contentPadding = contentPadding,
                 content = headline,
             )
 
@@ -164,6 +173,7 @@ fun GroupedListItem(
                 supportingContent = supportingContent,
                 verticalAlignment = verticalAlignment,
                 colors = colors,
+                contentPadding = contentPadding,
                 content = headline,
             )
 
@@ -180,6 +190,7 @@ fun GroupedListItem(
                 onLongClick = onLongClick,
                 onLongClickLabel = onLongClickLabel,
                 colors = colors,
+                contentPadding = contentPadding,
                 content = headline,
             )
 

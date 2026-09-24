@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -154,8 +153,8 @@ fun EmojiPanel(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = Spacing.md, end = Spacing.md, top = Spacing.md, bottom = Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                .padding(start = Spacing.md, end = Spacing.md, top = 10.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -221,16 +220,17 @@ private fun GroupPill(
     Surface(
         selected = selected,
         onClick = onClick,
-        shape = CircleShape,
+        shape = MaterialTheme.shapes.small,
         color = if (selected) MaterialTheme.colorScheme.inverseSurface else layers.raised,
         contentColor = if (selected) MaterialTheme.colorScheme.inverseOnSurface else MaterialTheme.colorScheme.onSurface,
         border = if (selected) null else layers.cardBorderStroke,
-        modifier = Modifier.height(32.dp),
+        // 28dp drawn; Material still hit-tests the pill at 48.
+        modifier = Modifier.height(28.dp),
     ) {
-        Box(Modifier.padding(horizontal = Spacing.md), contentAlignment = Alignment.Center) {
+        Box(Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             )
         }
@@ -273,7 +273,7 @@ private fun EmojiCell(
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(MaterialTheme.shapes.medium)
+            .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
@@ -294,7 +294,7 @@ private fun BackspaceKey(
 ) {
     val layers = LocalPlazaLayers.current
     val description = stringResource(Res.string.composer_emoji_backspace)
-    val shape = MaterialTheme.shapes.medium
+    val shape = MaterialTheme.shapes.small
     Box(
         modifier = modifier
             .cardShadow(shape, layers.shadows)
@@ -308,7 +308,7 @@ private fun BackspaceKey(
         Icon(
             imageVector = PlazaIcons.Backspace,
             contentDescription = null,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -319,7 +319,7 @@ private const val RECENT = -1
 
 /** Every sticker ever inserted is not a useful tab; three rows of the grid is. */
 private const val RECENT_LIMIT = 18
-private val CELL_GAP = 8.dp
+private val CELL_GAP = 6.dp
 private const val VISIBLE_ROWS = 3
 
 /** Past this a wide sheet gets another column instead of bigger cells. */

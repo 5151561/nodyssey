@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.resources.Res
@@ -94,6 +95,8 @@ internal fun ToolbarKey(
     checkable: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
+    /** Under 48 only where the key sits on a bar that pads it out; Material hit-tests it at 48 either way. */
+    size: Dp = KEY_SIZE,
     shape: Shape = MaterialTheme.shapes.medium,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     checkedContainerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
@@ -101,12 +104,12 @@ internal fun ToolbarKey(
 ) {
     // Both branches take the identical modifier, so the two key flavours measure the same and the
     // strip stays on one grid. The glyph is half the box: 24dp inside 48dp is the Material ratio.
-    val modifier = Modifier.size(KEY_SIZE)
+    val modifier = Modifier.size(size)
     val content: @Composable () -> Unit = {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            modifier = Modifier.size(KEY_SIZE / 2),
+            modifier = Modifier.size(size / 2),
         )
     }
 

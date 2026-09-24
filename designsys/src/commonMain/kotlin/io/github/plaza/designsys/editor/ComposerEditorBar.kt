@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -176,21 +177,23 @@ private fun QuickBar(
         shape = LayerCardShape,
         modifier = Modifier.fillMaxWidth().padding(BarMargin),
     ) {
-        Row(modifier = Modifier.padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(start = 2.dp, end = 4.dp, top = 2.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Row(
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 actions.forEach { action ->
-                    // Round rather than the strip's rounded square, because the bar they sit on is a pill.
+                    // 40dp keys, rounded a step inside the bar's own corners; Material still hit-tests
+                    // them at 48.
                     ToolbarKey(
                         icon = action.icon,
                         contentDescription = stringResource(action.label),
                         checkable = action.opensPanel,
                         selected = action in active,
                         onClick = { onAction(action) },
-                        shape = IconButtonDefaults.standardShape,
+                        size = QuickKeySize,
+                        shape = MaterialTheme.shapes.medium,
                         contentColor = MaterialTheme.colorScheme.onSurface,
                         checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                         checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -201,21 +204,21 @@ private fun QuickBar(
             // Surface's click overload sets no role, so the two pills here state theirs.
             Surface(
                 onClick = onOpenFormat,
-                shape = CircleShape,
+                shape = FormatPillShape,
                 color = layers.raised,
                 border = layers.cardBorderStroke,
-                modifier = Modifier.padding(start = 4.dp).height(40.dp).semantics { role = Role.Button },
+                modifier = Modifier.padding(start = 4.dp).height(32.dp).semantics { role = Role.Button },
             ) {
                 Row(
-                    modifier = Modifier.padding(start = 10.dp, end = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(start = 8.dp, end = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(PlazaIcons.TextFormat, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(PlazaIcons.TextFormat, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(
                         text = stringResource(Res.string.composer_format_open),
                         style = MaterialTheme.typography.labelLarge,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -309,6 +312,10 @@ private fun FormatCard(
     }
 }
 
-private val BarMargin = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 10.dp)
+private val BarMargin = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp)
+private val QuickKeySize = 40.dp
+
+/** The 格式 pill's corners — a 32dp button's, a step inside the bar's. */
+private val FormatPillShape = RoundedCornerShape(10.dp)
 private val KeySize = 48.dp
 private const val FORMAT_COLUMNS = 4

@@ -2,6 +2,8 @@ package io.github.nodyssey.ui.composer
 
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTouchHeightIsEqualTo
+import androidx.compose.ui.test.assertTouchWidthIsEqualTo
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -81,13 +83,18 @@ class ReplyComposerScreenTest {
     }
 
     @Test
-    fun `the keys are full size now that 发布 left the strip`() {
+    fun `the keys are drawn at 40dp and still hit-tested at 48`() {
         setSheet(draft())
 
-        // 42dp for as long as 发布 was pinned at the strip's end; the header took it, and the keys
-        // went back to Material's 48dp minimum.
-        composeRule.onNodeWithContentDescription("图片").assertWidthIsEqualTo(48.dp)
-        composeRule.onNodeWithContentDescription("表情").assertWidthIsEqualTo(48.dp)
+        // 3b draws the bar's keys a step under Material's 48dp; what a thumb can hit must not shrink
+        // with them.
+        listOf("图片", "表情").forEach { key ->
+            composeRule
+                .onNodeWithContentDescription(key)
+                .assertWidthIsEqualTo(40.dp)
+                .assertTouchWidthIsEqualTo(48.dp)
+                .assertTouchHeightIsEqualTo(48.dp)
+        }
     }
 
     @Test

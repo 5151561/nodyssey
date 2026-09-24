@@ -276,7 +276,10 @@ fun NotificationsScreen(
                                 modifier = Modifier.size(ButtonDefaults.IconSize),
                             )
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(stringResource(Res.string.notifications_mark_all_read))
+                            Text(
+                                stringResource(Res.string.notifications_mark_all_read),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            )
                         }
                     },
                 )
@@ -581,12 +584,14 @@ private fun NotificationRow(
         enabled = item.postId != null,
         onClick = onClick,
         verticalAlignment = Alignment.Top,
+        contentPadding = NotificationRowPadding,
         leadingContent = {
             UserAvatar(url = item.avatarUrl, name = item.actorName, size = NOTIFICATION_AVATAR)
         },
         headlineContent = {
             Text(
                 text = notificationSentence(item),
+                style = MaterialTheme.typography.bodySmall,
                 color =
                 if (item.isUnread) {
                     MaterialTheme.colorScheme.onSurface
@@ -596,7 +601,9 @@ private fun NotificationRow(
             )
         },
         supportingContent =
-        timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp -> { Text(stamp) } },
+        timestampLabel(item.createdAtMillis, item.createdAtText, nowMillis)?.let { stamp ->
+            { Text(stamp, style = MaterialTheme.typography.labelSmall) }
+        },
         // The slot is kept on read rows too, so a sentence wraps at the same width whichever state it
         // is in and marking the list read does not reflow it. Dropped to sit on the sentence's first
         // line rather than above it.
@@ -690,9 +697,12 @@ private fun NotificationTab.label(): String =
 private val PLACEHOLDER = Regex("""%(\d)[$]s""")
 private const val MAX_BADGE = 99
 
-/** 5a's avatar size. */
-private val NOTIFICATION_AVATAR = 40.dp
-private val UNREAD_DOT = 8.dp
+/** 3e's avatar size, down from 5a's 40. */
+private val NOTIFICATION_AVATAR = 28.dp
+private val UNREAD_DOT = 6.dp
+
+/** 3e's row insets: 12dp a side, where a settings row keeps Material's 16. */
+private val NotificationRowPadding = PaddingValues(horizontal = Spacing.md, vertical = 10.dp)
 
 /**
  * Where the quiet group labels over a list of cards sit — 今天, 更早, 全部私信. Grey rather than the

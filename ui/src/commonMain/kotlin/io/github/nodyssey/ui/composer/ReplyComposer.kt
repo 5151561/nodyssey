@@ -87,6 +87,7 @@ import io.github.plaza.designsys.component.EditorTextField
 import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.PlazaBackHandler
 import io.github.plaza.designsys.component.PlazaIcons
+import io.github.plaza.designsys.component.PlazaSheetDefaults
 import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.StatusAction
@@ -98,6 +99,7 @@ import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.CommentBody
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.readableWidth
 import org.jetbrains.compose.resources.stringResource
@@ -276,20 +278,23 @@ private fun ReplyEditorSheet(
         // A sheet of paper, like the post editor's page (2c): the editor is one card lifted over the
         // thread, and only its bar and the emoji panel under it recede.
         containerColor = LocalPlazaLayers.current.card,
+        shape = PlazaSheetDefaults.shape,
+        dragHandle = { PlazaSheetDefaults.DragHandle() },
     ) {
         Column(modifier = Modifier.fillMaxWidth().imePadding()) {
             // The post editor's top bar in miniature: ✕ · where the reply goes · 预览 · 发布. 发布
             // moved up here from the end of the formatting strip, which is what let the strip go —
             // it was the reason that strip had to squeeze its keys to 42dp.
             Row(
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(start = Spacing.sm, end = Spacing.md),
+                modifier = Modifier.fillMaxWidth().height(Sizes.minTouchTarget).padding(start = Spacing.xs, end = Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 IconButton(onClick = onDismiss, enabled = !state.isPublishing) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(Res.string.action_close),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Text(
@@ -299,7 +304,7 @@ private fun ReplyEditorSheet(
                         stringResource(Res.string.post_reply_editor_title_to_floor, it.floor)
                     } ?: stringResource(Res.string.post_reply_editor_title),
                     style = MaterialTheme.typography.titleSmall,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -318,6 +323,7 @@ private fun ReplyEditorSheet(
                         imageVector = PlazaIcons.Visibility,
                         contentDescription = stringResource(Res.string.action_preview),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
                 PublishReplyButton(
@@ -339,13 +345,13 @@ private fun ReplyEditorSheet(
                             PlazaIcons.FormatQuote,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(16.dp),
                         )
                     },
                     inset = true,
                     onRemove = onClearReplyTo,
                     removeLabel = stringResource(Res.string.post_reply_quote_remove),
-                    modifier = Modifier.padding(horizontal = Spacing.lg),
+                    modifier = Modifier.padding(horizontal = Spacing.md),
                 )
             }
             // The default container fills the width it was given, which is what this field needs:
@@ -354,16 +360,12 @@ private fun ReplyEditorSheet(
             EditorTextField(
                 state = bodyState,
                 hint = stringResource(Res.string.post_reply_editor_hint),
-                textStyle = CommentBody.copy(
-                    fontSize = 16.sp,
-                    lineHeight = 26.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                ),
-                hintStyle = CommentBody.copy(fontSize = 16.sp, lineHeight = 26.sp),
+                textStyle = CommentBody.copy(color = MaterialTheme.colorScheme.onSurface),
+                hintStyle = CommentBody,
                 modifier = Modifier
                     .readableWidth()
                     .heightIn(min = MIN_EDITOR_HEIGHT, max = MAX_EDITOR_HEIGHT)
-                    .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = Spacing.sm),
+                    .padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md, bottom = Spacing.sm),
             )
             AttachmentTray(
                 attachments = state.attachments,
@@ -375,9 +377,9 @@ private fun ReplyEditorSheet(
             state.savedAtMillis?.let {
                 Text(
                     text = stringResource(Res.string.post_reply_draft_saved, formatTime(it)),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = Spacing.sm),
+                    modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm),
                 )
             }
             ComposerErrorStrip(
@@ -567,11 +569,14 @@ private fun PublishReplyButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Material's extra-small size step with its square shape: the Lean round's 32dp button, the
+    // header's one filled thing without being the tallest.
     Button(
         onClick = onClick,
         enabled = enabled && !isPublishing,
-        contentPadding = ButtonDefaults.SmallContentPadding,
-        modifier = modifier,
+        shape = ButtonDefaults.squareShape,
+        contentPadding = ButtonDefaults.ExtraSmallContentPadding,
+        modifier = modifier.heightIn(min = ButtonDefaults.ExtraSmallContainerHeight),
     ) {
         if (isPublishing) {
             PlazaSpinner(
@@ -581,12 +586,12 @@ private fun PublishReplyButton(
                 size = 14.dp,
             )
         } else {
-            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
         }
         Text(
             text = stringResource(if (isPublishing) Res.string.composer_publishing else Res.string.action_publish),
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(start = Spacing.xs + 2.dp),
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.padding(start = Spacing.xs),
         )
     }
 }
@@ -614,7 +619,7 @@ private fun replyErrorReason(error: SiteError, detail: String?): String = when (
 // same `09:44` a message bubble already carries, and this is the app's only other one.
 private fun formatTime(timestamp: Long): String = TimeFormat.clock(timestamp)
 
-private val MIN_EDITOR_HEIGHT = 96.dp
+private val MIN_EDITOR_HEIGHT = 80.dp
 private val MAX_EDITOR_HEIGHT = 260.dp
 private const val MAX_IMAGES_PER_PICK = 9
 private const val SLIDE_FRACTION = 6

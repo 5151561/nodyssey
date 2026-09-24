@@ -15,7 +15,6 @@ import io.github.nodyssey.core.LevelProgress
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.assets_quota_value
 import io.github.nodyssey.ui.resources.level_progress_remaining
-import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
 
@@ -39,7 +38,7 @@ internal fun GrowthProgressBar(
         strokeCap = StrokeCap.Round,
         gapSize = 0.dp,
         drawStopIndicator = {},
-        modifier = modifier.fillMaxWidth().height(6.dp),
+        modifier = modifier.fillMaxWidth().height(4.dp),
     )
 }
 
@@ -55,14 +54,14 @@ internal fun LevelProgressLine(
     progress: LevelProgress,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         GrowthProgressBar(progress = progress.fraction)
         Text(
             text =
             progress.remaining?.let {
                 stringResource(Res.string.level_progress_remaining, progress.chicken, progress.span.next, it, progress.nextRank)
             } ?: stringResource(Res.string.assets_quota_value, progress.chicken, progress.span.next),
-            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
