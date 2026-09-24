@@ -151,7 +151,16 @@ Use four-space indentation, LF endings, UTF-8, and trailing commas in multiline 
 
 ## Testing Guidelines
 
-Name test files `*Test.kt` and place them beside the corresponding package. Parser tests must use committed fixtures, never the live NodeSeek site. Add regression tests for bug fixes and update committed Room schemas whenever entities or migrations change. No numeric coverage target exists; changed behavior should have focused tests.
+Name test files `*Test.kt` and place them beside the corresponding package. Parser tests must use committed fixtures, never the live NodeSeek site. Add a regression test for a logic bug fix and update committed Room schemas whenever entities or migrations change. No numeric coverage target exists; changed behavior should have focused tests.
+
+A test earns its place by failing on a realistic logic bug. Before writing one, name the bug in the production code it would catch; if the only change that can turn it red is a design change, it does not belong in this repository.
+
+- **Do not test how something looks or reads**: dp sizes, bounds, colours, type, spacing, "stays whole at 2× text", screenshot goldens, the wording of a string, or that a label is displayed.
+- **Do not test a pass-through**: a state field drawn behind a bare `if`, a click handed to a callback unchanged, a fake answering what it was told, a constant equal to itself, a setting written and read back through a store that does nothing to it.
+- **Do test what breaks for a user**: parsers against fixtures; algorithms (paging, merging, version comparison, URL building, signing); state machines (optimistic update and rollback, error classification and the recovery it offers); scroll and page restoration; persistence and migrations; sign-out cleanup; and UI branches with a consequence — a signed-out reader sent to sign in, a confirmation before spending.
+- **An assertion must be able to fail.** Check that the fixture does not make the branch under test come out the same either way, and that the assertion is narrower than "not empty" or "some error".
+- **Tests written to drive an implementation are scaffolding.** Delete them before the change is delivered unless they also clear the bar above.
+- **"Covered elsewhere" is a claim to check.** Before deleting a test because another one covers it, confirm that the other test still exists and exercises the same branch.
 
 ## Commit & Pull Request Guidelines
 
