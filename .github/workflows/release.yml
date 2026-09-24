@@ -385,7 +385,7 @@ jobs:
       # runners have one preinstalled and the macOS images do not, which is the whole reason this
       # step exists here and in neither of the other two jobs.
       - name: Set up the Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       # The Kotlin/Native compiler and its toolchain, which live outside `GRADLE_USER_HOME` and so
       # are not covered by the Gradle cache below. Downloading them is over a gigabyte, and it
