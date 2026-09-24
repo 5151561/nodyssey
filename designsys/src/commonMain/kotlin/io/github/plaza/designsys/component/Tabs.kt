@@ -83,9 +83,10 @@ fun UnderlineTabRow(
  *
  * Still Material's [PrimaryTabRow] — selection semantics, keyboard focus and the sliding animation
  * are its own — with the indicator drawn as the thumb behind the labels instead of a line under them.
- * Light draws the track a step darker than the page and the thumb white; without shadows (dark,
- * 墨水屏) the track takes the card tone so the raised thumb stays the lighter of the two, and on
- * paper the thumb's outline does the separating.
+ * Light draws the track a step darker than the page and the thumb white. Dark recesses the track to
+ * the inset tone, the darkest on the ladder, under the raised thumb: with the track at the card tone
+ * the two were one step apart and the selected tab barely read as selected. On paper the track is
+ * the card and the thumb's outline does the separating.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,7 +97,12 @@ fun PillTabRow(
     modifier: Modifier = Modifier,
 ) {
     val layers = LocalPlazaLayers.current
-    val track = if (layers.shadows) MaterialTheme.colorScheme.surfaceContainerHigh else layers.card
+    val track =
+        when {
+            layers.shadows -> MaterialTheme.colorScheme.surfaceContainerHigh
+            layers.cardBorder != null -> layers.card
+            else -> layers.inset
+        }
     PrimaryTabRow(
         selectedTabIndex = selectedTabIndex,
         modifier = modifier.clip(CircleShape).heightIn(min = PillTabHeight),

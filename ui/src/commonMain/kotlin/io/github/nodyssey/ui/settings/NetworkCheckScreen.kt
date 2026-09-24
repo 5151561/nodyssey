@@ -235,6 +235,8 @@ fun NetworkCheckScreen(
                     )
                     Text(
                         text = stringResource(Res.string.network_check_running),
+                        // The idle label's style, or the button's text jumps a size on every run.
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(start = Spacing.sm),
                     )
                 } else {

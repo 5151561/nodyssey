@@ -1,7 +1,8 @@
 package io.github.nodyssey.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -65,14 +66,24 @@ private fun displayRank(style: RoleBadgeStyle): Int =
         RoleBadgeStyle.NEUTRAL -> 5
     }
 
-/** Up to [MAX_ROLE_BADGES] chips plus a +N overflow chip, spaced as b1 §8 draws them. */
+/**
+ * Up to [MAX_ROLE_BADGES] chips plus a +N overflow chip, spaced as b1 §8 draws them.
+ *
+ * Wrapping where they do not fit — at a large text size, beside a long name — rather than squeezing
+ * the last chip until its label breaks inside it.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RoleBadgeRow(
     labels: List<String>,
     modifier: Modifier = Modifier,
 ) {
     val (shown, folded) = visibleRoleBadges(labels)
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         shown.forEach { label -> RoleBadge(label) }
         if (folded > 0) {
             BadgeChip(

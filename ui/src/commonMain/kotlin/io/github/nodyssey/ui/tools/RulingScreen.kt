@@ -454,8 +454,9 @@ private fun RulingRow(
     GroupedListItem(
         first = first,
         last = last,
-        enabled = destination,
-        onClick = { onClick(record) },
+        // No click at all rather than a disabled one: disabled greys the whole record out, and a
+        // decision with nowhere to open is still a decision, not a void one.
+        onClick = if (destination) ({ onClick(record) }) else null,
         // Built as an annotated string rather than one format string so the user name can carry the
         // weight — it is what the eye scans for in a log of other people's punishments.
         headlineContent = {

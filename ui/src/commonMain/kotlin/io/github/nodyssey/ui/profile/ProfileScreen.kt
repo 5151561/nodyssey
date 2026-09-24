@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -401,14 +403,18 @@ private fun AccountCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(label), style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        text = value,
-                        style =
+                    val valueStyle =
                         MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             fontFeatureSettings = TABULAR_FIGURES,
-                        ),
+                        )
+                    Text(
+                        text = value,
+                        style = valueStyle,
                         maxLines = 1,
+                        // Stepped down to fit rather than cut: a third of a phone holds 「344」, not a
+                        // six-digit balance, and clipped digits are a different, wrong number.
+                        autoSize = TextAutoSize.StepBased(minFontSize = BALANCE_MIN_FONT_SIZE, maxFontSize = valueStyle.fontSize),
                     )
                 }
             }
@@ -416,6 +422,9 @@ private fun AccountCard(
         LevelProgress(state)
     }
 }
+
+/** How far a balance steps down before it gives up fitting — still larger than the label above it. */
+private val BALANCE_MIN_FONT_SIZE = 14.sp
 
 @Composable
 private fun IdentityRow(

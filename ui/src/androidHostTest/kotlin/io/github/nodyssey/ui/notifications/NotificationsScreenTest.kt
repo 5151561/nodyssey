@@ -143,6 +143,36 @@ class NotificationsScreenTest {
         rightEdges.forEach { assertEquals(rightEdges.first(), it, 1f) }
     }
 
+    /**
+     * A read row's stamp sits on its name's line, as an unread row's does.
+     *
+     * The stamp and the count were one trailing column, centred on the row: with a badge under it
+     * the stamp rode the name's line, without one it dropped half-way to the snippet, and the column
+     * of times stepped up and down the list.
+     */
+    @Test
+    fun `every conversation's stamp sits on its name's line`() {
+        setContent(
+            state(
+                tab = NotificationTab.MESSAGES,
+                conversations =
+                listOf(
+                    conversation(uid = 2, name = "unread", stamp = NOW - 26 * 60 * 60_000L).copy(unreadCount = 3),
+                    conversation(uid = 3, name = "read", stamp = NOW - 40L * 24 * 60 * 60_000L),
+                ),
+            ),
+        )
+
+        // How far each stamp sits below its own name: the same for both rows, or the column steps.
+        val drops =
+            listOf("unread" to "昨天", "read" to "6月16日").map { (name, stamp) ->
+                val nameBounds = composeRule.onNodeWithText(name, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                val stampBounds = composeRule.onNodeWithText(stamp, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+                stampBounds.center.y - nameBounds.center.y
+            }
+        assertEquals(drops.first(), drops.last(), 1f)
+    }
+
     /** Board 7e: the pinned system conversation shows its Markdown as text, never as syntax. */
     @Test
     fun `system conversation snippet drops its markdown syntax`() {

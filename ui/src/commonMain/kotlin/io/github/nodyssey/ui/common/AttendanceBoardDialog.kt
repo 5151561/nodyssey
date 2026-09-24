@@ -65,8 +65,9 @@ fun AttendanceBoardDialog(
     error: SiteError?,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
+    /** The signed-in account, whose row the board marks; required so that no entry point forgets it. */
+    selfUid: Long?,
     modifier: Modifier = Modifier,
-    selfUid: Long? = null,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,

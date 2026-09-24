@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.mycontent
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -163,7 +164,8 @@ private fun <T : Any> MyContentFilters(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            // The cards' gutter, so the chips start on the same edge as the list under them.
+            .padding(horizontal = LayerPageGutter, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -215,11 +217,12 @@ private fun MenuChip(
         AssistChip(
             onClick = { expanded = true },
             label = { Text(label) },
-            // A control on the page rather than in a card: the raised tone and no outline, the chip
-            // look every filter row has in the layered design.
+            // A control on the page rather than in a card: the raised tone, the chip look every filter
+            // row has in the layered design — and the card outline where there is one, because on
+            // 墨水屏 the raised tone is the page's own paper and the outline is all that shows a chip.
             shape = MaterialTheme.shapes.medium,
             colors = AssistChipDefaults.assistChipColors(containerColor = LocalPlazaLayers.current.raised),
-            border = null,
+            border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
             trailingIcon = {
                 Icon(
                     Icons.Default.ArrowDropDown,

@@ -365,7 +365,8 @@ internal fun BookmarkFilterRow(
         modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm),
+            // The cards' gutter, so the chips start on the edge the list under them starts on.
+            .padding(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         BookmarkChip(

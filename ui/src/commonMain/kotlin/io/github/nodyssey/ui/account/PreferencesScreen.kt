@@ -54,6 +54,7 @@ import io.github.plaza.designsys.component.GroupDividerInset
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.SectionLabel
 import io.github.plaza.designsys.component.SectionNote
@@ -138,7 +139,7 @@ fun PreferencesScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                .padding(horizontal = LayerPageGutter, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             SectionLabel(stringResource(Res.string.account_group_preference))

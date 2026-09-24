@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -977,7 +978,9 @@ private fun AccountButton(
                     .size(40.dp)
                     .cardShadow(CircleShape, LocalPlazaLayers.current.shadows)
                     .clip(CircleShape)
-                    .background(LocalPlazaLayers.current.raised),
+                    .background(LocalPlazaLayers.current.raised)
+                    // The search pill's outline, for the same reason: on 墨水屏 it is the only edge.
+                    .then(LocalPlazaLayers.current.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.Person, contentDescription = null, modifier = Modifier.size(22.dp))
@@ -1038,7 +1041,9 @@ private fun SortButton(
             onClick = { menuOpen = true },
             modifier = Modifier
                 .size(Sizes.minTouchTarget)
-                .cardShadow(CircleShape, layers.shadows),
+                .cardShadow(CircleShape, layers.shadows)
+                // As the search pill beside it: on 墨水屏 the raised tone is the page's paper.
+                .then(layers.cardBorder?.let { Modifier.border(1.dp, it, CircleShape) } ?: Modifier),
             colors =
             IconButtonDefaults.filledIconButtonColors(
                 containerColor = layers.raised,

@@ -25,6 +25,7 @@ import io.github.nodyssey.ui.resources.licenses_dependencies_section
 import io.github.nodyssey.ui.resources.licenses_lockfile_note
 import io.github.nodyssey.ui.resources.licenses_summary
 import io.github.nodyssey.ui.resources.settings_licenses
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
@@ -65,7 +66,7 @@ fun OpenSourceLicensesScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                .padding(horizontal = LayerPageGutter, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Text(

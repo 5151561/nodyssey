@@ -187,8 +187,15 @@ class MessageThreadViewModel(
         }
     }
 
+    /**
+     * The MD On/Off switch — which stays on while a quote is waiting to go out.
+     *
+     * A quote card goes out as a `>` block, and only MD makes that a quotation: switched off, the other
+     * side would get the literal markup, and nothing on the card says that is about to happen. The
+     * switch comes free again once the quotes are sent or dismissed; [quote] is what turned it on.
+     */
     fun toggleMarkdown() {
-        _uiState.update { it.copy(isMarkdown = !it.isMarkdown) }
+        _uiState.update { if (it.isMarkdown && it.quotes.isNotEmpty()) it else it.copy(isMarkdown = !it.isMarkdown) }
     }
 
     /**

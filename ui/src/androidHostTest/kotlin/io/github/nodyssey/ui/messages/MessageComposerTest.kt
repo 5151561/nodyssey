@@ -8,11 +8,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.width
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.UploadStatus
 import io.github.nodyssey.ui.assertEveryTouchTargetAtLeast48dp
@@ -120,6 +123,20 @@ class MessageComposerTest {
     fun `the largest font setting does not shrink any touch target below 48dp`() {
         setScreen(draft = "写到一半", fontScale = 1.5f)
         composeRule.assertEveryTouchTargetAtLeast48dp()
+    }
+
+    /**
+     * At twice the text size a caption wraps inside its own quarter of the row. It used to be laid
+     * out unbounded, and 「Markdown · 开」 ran over the captions either side of it.
+     */
+    @Test
+    fun `a tool caption stays inside its own tile at 2x text`() {
+        setScreen(fontScale = 2f)
+        openTools()
+
+        val caption = composeRule.onNodeWithText("Markdown · 开", useUnmergedTree = true).getUnclippedBoundsInRoot()
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        assertTrue("caption at $caption", caption.width <= screen.width / 4)
     }
 
     /** The grid's tiles are targets too, and they are only on screen once the + key is on. */

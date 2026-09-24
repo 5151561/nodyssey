@@ -270,6 +270,7 @@ fun AssetsScreen(
             error = state.boardError,
             onRetry = onRetryBoard,
             onDismiss = onDismissBoard,
+            selfUid = state.uid,
         )
     }
 }
@@ -447,14 +448,21 @@ private fun QuotaRow(
     GroupedListItem(
         first = first,
         last = false,
-        headlineContent = { Text(label) },
-        trailingContent = {
-            Text(
-                text = quota.label(),
-                style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
-            )
+        // The count on the label's line and the bar under both at the row's full width. With the
+        // count as trailing content the bar stopped where the count began, so 「3 / 20」 and 「0 / 1」
+        // drew bars of different lengths whose ends did not line up.
+        headlineContent = {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, modifier = Modifier.weight(1f))
+                    Text(
+                        text = quota.label(),
+                        style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+                    )
+                }
+                GrowthProgressBar(progress = quota.progress(), modifier = Modifier.padding(top = 6.dp))
+            }
         },
-        supportingContent = { GrowthProgressBar(progress = quota.progress(), modifier = Modifier.padding(top = 6.dp)) },
     )
 }
 

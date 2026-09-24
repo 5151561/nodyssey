@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -166,6 +167,27 @@ class ThemeSettingsScreenTest {
         composeRule.onNodeWithText("海雾").performScrollTo().performClick()
         assertEquals(0xFF2F6D8C.toInt(), applied)
         assertNull(saved)
+    }
+
+    /**
+     * 新建 starts a theme from nothing. It opened with the name of the theme in use, and saving a new
+     * colour under it made a second theme of the same name.
+     */
+    @Test
+    fun `新建 opens the colour sheet without the current theme's name`() {
+        val sea = 0xFF2F6D8C.toInt()
+        setScreen(
+            settings =
+            UserSettings(
+                colorSource = ColorSource.CUSTOM,
+                seedColor = sea,
+                savedThemes = listOf(SavedTheme("海雾", sea)),
+            ),
+        )
+
+        composeRule.onNodeWithText("新建").performScrollTo().performClick()
+
+        composeRule.onAllNodes(hasSetTextAction() and hasText("海雾")).assertCountEquals(0)
     }
 
     @Test

@@ -13,6 +13,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -289,7 +291,17 @@ internal fun BoardStrip(
                             else -> expanded = !expanded
                         }
                     },
-                    modifier = Modifier.size(width = ToggleWidth, height = PillHeight),
+                    modifier =
+                    Modifier
+                        .size(width = ToggleWidth, height = PillHeight)
+                        // 墨水屏 draws the raised tone as the page's own paper, and the outline is all
+                        // that shows a key there; the lit tick needs none.
+                        .then(
+                            LocalPlazaLayers.current.cardBorder
+                                ?.takeUnless { editing }
+                                ?.let { Modifier.border(1.dp, it, MaterialTheme.shapes.medium) }
+                                ?: Modifier,
+                        ),
                     shape = MaterialTheme.shapes.medium,
                     colors =
                     IconButtonDefaults.filledTonalIconButtonColors(
@@ -724,7 +736,9 @@ private fun BoardPill(
             selectedLabelColor = MaterialTheme.colorScheme.inverseOnSurface,
             selectedTrailingIconColor = MaterialTheme.colorScheme.inverseOnSurface,
         ),
-        border = null,
+        // Only the card outline, and only where there is one: on 墨水屏 the raised tone is the page's
+        // paper, so without it an unselected board was a word floating on the page.
+        border = LocalPlazaLayers.current.cardBorder?.takeUnless { selected }?.let { BorderStroke(1.dp, it) },
     )
 }
 

@@ -702,7 +702,11 @@ private fun <T : Any> LazyListScope.spaceListTab(
                         onOpenBrowser = { onOpenBrowser(NodeSeekSite.BASE_URL) },
                         onSignIn = onSignIn,
                         onVerify = { onVerify(NodeSeekSite.BASE_URL) },
-                        modifier = stateModifier,
+                        // A whole viewport, not the loading state's share of one: the error card
+                        // with its two buttons is taller than 55% of a phone, and cut off at the
+                        // item's edge its 重试 was only reachable by scrolling inside the card. At a
+                        // viewport's height it fits, and the page itself scrolls down to it.
+                        modifier = Modifier.fillParentMaxHeight().fillMaxWidth(),
                     )
 
                 is LoadState.NotLoading ->

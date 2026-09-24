@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,17 +14,24 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -54,7 +63,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,12 +75,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -145,6 +157,7 @@ import io.github.plaza.designsys.editor.insertText
 import io.github.plaza.designsys.editor.label
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
+import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.floatShadow
@@ -257,10 +270,18 @@ fun MessageThreadScreen(
         // underneath it and only the list's own content padding keeps the oldest message clear.
         // The bottom is taken as `paddingWithKeyboard` takes it, for the reason given there.
         val topClearance = padding.calculateTopPadding()
+        val direction = LocalLayoutDirection.current
         Column(
             Modifier
-                .padding(bottom = padding.calculateBottomPadding())
-                .consumeWindowInsets(padding)
+                // The sides as well as the bottom: `consumeWindowInsets` below takes all of
+                // [padding], so a side the body does not pad here is padded by nothing — and in
+                // landscape with three-button navigation that side is the navigation bar, over the
+                // send key.
+                .padding(
+                    start = padding.calculateStartPadding(direction),
+                    end = padding.calculateEndPadding(direction),
+                    bottom = padding.calculateBottomPadding(),
+                ).consumeWindowInsets(padding)
                 .imePadding()
                 .fillMaxSize(),
         ) {
@@ -341,10 +362,17 @@ private fun ThreadTopBar(
     onOpenBrowser: () -> Unit,
 ) {
     val layers = LocalPlazaLayers.current
+    val page = layers.page
+    val statusBars = WindowInsets.statusBars
     Box(
         Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
+            // The thread scrolls up under this card and on past it, and nothing else stands between
+            // the oldest messages and the status bar's clock and icons: the page's colour does.
+            .drawBehind { drawRect(page, size = Size(size.width, statusBars.getTop(this).toFloat())) }
+            // Top and sides, as a TopAppBar's own insets are: in landscape the navigation bar can be
+            // at the side, and the card's ⋮ would sit under it.
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .padding(horizontal = LayerPageGutter, vertical = 4.dp),
     ) {
         Surface(
@@ -719,16 +747,22 @@ private fun MessageStatusLine(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Text(text = "·", style = style, color = MaterialTheme.colorScheme.error)
-                Text(
-                    text = stringResource(Res.string.action_retry),
-                    style = style.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.error,
+                // The touch target runs on past the word rather than around it: centred in a 48dp
+                // box, 「重试」 stood well clear of the 「·」 it belongs to.
+                Box(
                     modifier =
                     Modifier
-                        .minimumInteractiveComponentSize()
                         .clickable(onClick = onRetrySend)
+                        .defaultMinSize(minWidth = Sizes.minTouchTarget, minHeight = Sizes.minTouchTarget)
                         .padding(horizontal = 2.dp),
-                )
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.action_retry),
+                        style = style.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
 
             SendStatus.SENT ->
@@ -1034,6 +1068,9 @@ private fun ToolGrid(
                 ),
                 selected = state.isMarkdown,
                 toggleLabel = stringResource(Res.string.message_markdown_toggle),
+                // A quote waiting to go out is a `>` block, which is only a quotation with MD on —
+                // see [MessageThreadViewModel.toggleMarkdown].
+                enabled = !(state.isMarkdown && state.quotes.isNotEmpty()),
                 onClick = onToggleMarkdown,
             )
         }
@@ -1086,18 +1123,39 @@ private fun ToolTile(
     onClick: () -> Unit,
     selected: Boolean? = null,
     toggleLabel: String? = null,
+    enabled: Boolean = true,
 ) {
     val layers = LocalPlazaLayers.current
     val on = selected == true
+    // The press shows on the rounded square, not on the whole cell's rectangle: the cell is the
+    // target, but a ripple over the caption and the gaps drew a box none of the tiles look like.
+    val interactionSource = remember { MutableInteractionSource() }
     val interaction =
         if (selected != null) {
-            Modifier.toggleable(value = selected, role = Role.Switch, onValueChange = { onClick() })
+            Modifier.toggleable(
+                value = selected,
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = { onClick() },
+            )
         } else {
-            Modifier.clickable(role = Role.Button, onClick = onClick)
+            Modifier.clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            )
         }
     // The whole cell is the target, not only the square, so the caption under it is one too.
     Column(
-        modifier = Modifier.fillMaxWidth().then(interaction),
+        modifier =
+        Modifier
+            .fillMaxWidth()
+            .then(interaction)
+            .alpha(if (enabled) 1f else DISABLED_TILE_ALPHA),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
@@ -1108,6 +1166,7 @@ private fun ToolTile(
                 .cardShadow(MaterialTheme.shapes.largeIncreased, layers.shadows)
                 .clip(MaterialTheme.shapes.largeIncreased)
                 .background(if (on) MaterialTheme.colorScheme.primary else layers.raised)
+                .indication(interactionSource, ripple())
                 .then(layers.cardBorder?.let { Modifier.border(1.dp, it, MaterialTheme.shapes.largeIncreased) } ?: Modifier),
             contentAlignment = Alignment.Center,
         ) {
@@ -1121,13 +1180,17 @@ private fun ToolTile(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            // Unbounded, so a caption a little wider than its quarter of the row spills into the gap
-            // between tiles instead of being cut: four 60dp tiles leave 20dp of air between them.
-            softWrap = false,
-            modifier = Modifier.wrapContentWidth(unbounded = true),
+            // Held to its quarter of the row and wrapped there. Let spill past it, a caption at a
+            // large text size or in English ran over the captions either side and off the screen.
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+/** Material's disabled-content opacity. */
+private const val DISABLED_TILE_ALPHA = 0.38f
 
 @Composable
 private fun ThreadMenu(onOpenBrowser: () -> Unit) {

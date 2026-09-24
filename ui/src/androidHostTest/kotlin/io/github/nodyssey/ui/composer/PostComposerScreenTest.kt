@@ -1,13 +1,19 @@
 package io.github.nodyssey.ui.composer
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.text.TextRange
 import io.github.nodyssey.data.composer.ImageAttachment
 import io.github.nodyssey.data.composer.PostDraft
 import io.github.nodyssey.data.composer.UploadStatus
@@ -31,12 +37,14 @@ class PostComposerScreenTest {
     private var viewMode = ComposerViewMode.CONTENT
     private var removed: ImageAttachment? = null
 
+    private lateinit var titleState: TextFieldState
+
     private fun setScreen(state: PostComposerUiState) {
         composeRule.setContent {
             PlazaTheme {
                 PostComposerScreen(
                     state = state,
-                    titleState = rememberTextFieldState(state.title),
+                    titleState = rememberTextFieldState(state.title).also { titleState = it },
                     bodyState = rememberTextFieldState(state.body),
                     snackbarHostState = SnackbarHostState(),
                     onClose = {},
@@ -76,6 +84,24 @@ class PostComposerScreenTest {
         composeRule.onNodeWithText("发到 技术").assertIsDisplayed()
         composeRule.onNodeWithText("公开").assertIsDisplayed()
         composeRule.onNodeWithText("29/60").assertIsDisplayed()
+    }
+
+    /**
+     * A line break typed into the middle of the title is dropped and the caret stays where it was.
+     *
+     * The title wraps, so its return key is live, and the filter that drops the break used to
+     * replace the whole title to do it — which put the caret at the end, so the next word landed there.
+     */
+    @Test
+    fun `a line break typed mid-title is dropped without moving the caret`() {
+        setScreen(draftState(title = "Debian 13 上的坑"))
+        val title = composeRule.onNode(hasSetTextAction() and hasText("Debian 13", substring = true))
+
+        title.performTextInputSelection(TextRange(6))
+        title.performTextInput("\n")
+
+        assertEquals("Debian 13 上的坑", titleState.text.toString())
+        assertEquals(TextRange(6), titleState.selection)
     }
 
     @Test

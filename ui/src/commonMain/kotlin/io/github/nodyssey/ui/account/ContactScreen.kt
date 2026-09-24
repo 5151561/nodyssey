@@ -79,6 +79,7 @@ import io.github.nodyssey.ui.resources.account_value_unknown
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
@@ -206,7 +207,7 @@ fun ContactScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                .padding(horizontal = LayerPageGutter, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             SectionLabel(stringResource(Res.string.account_email_section))

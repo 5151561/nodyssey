@@ -50,6 +50,7 @@ import io.github.plaza.designsys.theme.LocalOneHandMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.cardShadow
+import io.github.plaza.designsys.theme.readableWidth
 import kotlin.math.roundToInt
 
 /**
@@ -101,6 +102,9 @@ fun OneHandTopAppBar(
         } else {
             layers.page
         },
+        // The theme's effects spec, which is a snap under reduced motion and 墨水屏 — where every
+        // frame of a colour fade is a panel refresh.
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "oneHandAppBarContainer",
     )
     // The title exists twice and only one of them may be readable, or a screen reader announces the
@@ -172,13 +176,19 @@ fun OneHandTopAppBar(
                         layout(constraints.maxWidth, blank) {
                             placeable.place(0, blank - placeable.height)
                         }
-                    }
-                    .padding(horizontal = Spacing.xl),
+                    },
                 contentAlignment = Alignment.BottomStart,
             ) {
                 Column(
                     modifier =
                     Modifier
+                        // The same centred column the content under it is laid in, so on a tablet
+                        // the title heads that column rather than the window's edge hundreds of dp
+                        // to its left. On a phone the column is the window and nothing moves.
+                        .readableWidth()
+                        // Filling the column, not centred in it: `readableWidth` centres what it wraps.
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.xl)
                         // Same reason as the height: alpha read in the draw phase, not the
                         // composition one.
                         .padding(bottom = Spacing.lg)
@@ -258,6 +268,19 @@ class OneHandAppBarState internal constructor(initialHeightPx: Float, initialCon
         get() = contentOffset < -0.5f
 
     private var consumedByBar = 0f
+
+    /**
+     * Puts [isContentOverlapped] right after a change the scroll chain did not carry.
+     *
+     * The overlap is counted from nested scrolls, and some changes of what is under the bar send
+     * none: a pager moving to a list at a different depth, or `animateScrollToItem(0)`. Left alone the
+     * bar kept its lifted look over a list at its top. A screen whose content can change that way
+     * reports it here — from `LazyListState.canScrollBackward`, say — and the next scroll carries on
+     * counting from there.
+     */
+    fun syncContentOverlapped(overlapped: Boolean) {
+        contentOffset = if (overlapped) contentOffset.coerceAtMost(-1f) else 0f
+    }
 
     val nestedScrollConnection: NestedScrollConnection =
         object : NestedScrollConnection {

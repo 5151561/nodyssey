@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -24,7 +25,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -69,6 +72,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,6 +90,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -219,6 +225,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @Composable
 fun PostDetailRoute(
@@ -411,7 +418,12 @@ fun PostDetailScreen(
      * [ThreadBottomBarRoom] is the first frame's answer, before there is anything to measure.
      */
     var bottomActionsHeight by remember(density) { mutableStateOf(ThreadBottomBarRoom) }
-    val collapsedTitleThreshold = with(LocalDensity.current) { 72.dp.roundToPx() }
+    // How far into the opening post's card its title ends, which is how far that card has to scroll
+    // before the bar takes the title over. Measured, because the board tags above it and the title's
+    // own line count move it: the fixed 72dp that stood here dated from when the title was an item of
+    // its own, and against the card it put the title in the bar while its second line was still in
+    // plain view below. The constant is only the first frame's answer.
+    var collapsedTitleThreshold by remember { mutableIntStateOf(with(density) { 72.dp.roundToPx() }) }
     val showCollapsedTitle by remember {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 ||
@@ -714,6 +726,7 @@ fun PostDetailScreen(
                                 onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
                                 voteContent = voteContent,
                                 stardustContent = stardustContent,
+                                onTitleBottom = { collapsedTitleThreshold = it },
                                 modifier =
                                 Modifier.floatingToolbarVerticalNestedScroll(
                                     expanded = toolbarExpanded,
@@ -1075,6 +1088,8 @@ private fun ThreadList(
     onCollect: () -> Unit,
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
+    /** Where the title ends inside the opening post's card, in px — see its use in [PostDetailScreen]. */
+    onTitleBottom: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -1140,6 +1155,7 @@ private fun ThreadList(
                 onCollect = onCollect,
                 voteContent = voteContent,
                 stardustContent = stardustContent,
+                onTitleBottom = onTitleBottom,
             )
         }
 
@@ -1291,10 +1307,12 @@ private fun ThreadHeader(
     preview: ThreadPreview?,
     /** Fetches page 1 and scrolls to the opening post; null when it is already on screen. */
     onOpenOriginalPost: (() -> Unit)? = null,
+    onTitlePlaced: (LayoutCoordinates) -> Unit = {},
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier =
-        if (onOpenOriginalPost != null) Modifier.clickable(onClick = onOpenOriginalPost) else Modifier,
+        modifier.then(if (onOpenOriginalPost != null) Modifier.clickable(onClick = onOpenOriginalPost) else Modifier),
     ) {
         val category = body?.categoryTitle ?: preview?.categoryTitle
         if (category != null || isAwarded) {
@@ -1330,7 +1348,9 @@ private fun ThreadHeader(
             // Where the row's title lands. This header is also what the skeleton draws while the
             // thread loads, so the landing place exists from the first frame of the flight rather
             // than appearing once the network answers.
-            modifier = Modifier.sharedThreadTitle(postId),
+            modifier = Modifier
+                .sharedThreadTitle(postId)
+                .onPlaced(onTitlePlaced),
         )
         if (onOpenOriginalPost != null) {
             // The title alone carries no affordance on a phone — no hover, no underline, nothing to
@@ -1442,6 +1462,8 @@ private fun ThreadOpeningPost(
     onCollect: () -> Unit,
     voteContent: @Composable (Long) -> Unit,
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)?,
+    /** Where the title ends inside this card, in px, each time the two are laid out. */
+    onTitleBottom: (Int) -> Unit = {},
 ) {
     // [BlockAware]'s job, done here rather than around this composable: a wrapper that swapped the
     // whole opening post out would take the shared elements with it, which is the thing this
@@ -1450,11 +1472,15 @@ private fun ThreadOpeningPost(
     // thread's, not the author's.
     var revealedHere by rememberSaveable(body?.commentId) { mutableStateOf(false) }
     val blocked = body != null && body.isBlocked && !showBlockedContent && !revealedHere
+    val longPress = onMore.takeUnless { blocked }
+    // Read in the title's placement callback, never in composition; the card is placed first.
+    val card = remember { CardCoordinates() }
 
     LayerCard(
         modifier = Modifier
             .fillMaxWidth()
-            .floorLongPress(onMore.takeUnless { blocked }),
+            .onPlaced { card.coordinates = it }
+            .floorLongPressSemantics(longPress),
         contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, top = 18.dp, bottom = 10.dp),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
@@ -1465,6 +1491,13 @@ private fun ThreadOpeningPost(
             isAwarded = isAwarded,
             preview = preview,
             onOpenOriginalPost = onOpenOriginalPost,
+            onTitlePlaced = { title ->
+                card.coordinates?.takeIf { it.isAttached }?.let { cardCoordinates ->
+                    val bottom = cardCoordinates.localPositionOf(title, Offset(0f, title.size.height.toFloat())).y
+                    onTitleBottom(bottom.roundToInt())
+                }
+            },
+            modifier = Modifier.floorLongPress(longPress),
         )
         if (body != null && blocked) {
             BlockedFloorRow(floor = body.floor, onShow = { revealedHere = true })
@@ -1472,6 +1505,7 @@ private fun ThreadOpeningPost(
         }
 
         Row(
+            modifier = Modifier.floorLongPress(longPress),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
@@ -1531,8 +1565,14 @@ private fun ThreadOpeningPost(
             collectPending = collectPending,
             onCollect = onCollect,
             onMore = onMore,
+            modifier = Modifier.floorLongPress(longPress),
         )
     }
+}
+
+/** The opening post's card, as last placed — see `onTitleBottom` on [ThreadOpeningPost]. */
+private class CardCoordinates {
+    var coordinates: LayoutCoordinates? = null
 }
 
 @Composable
@@ -1585,13 +1625,15 @@ private fun CommentsHeader(count: Int) {
  * One reply, as its own card (1b).
  *
  * Real replies on this forum are anywhere between two characters and several screens, so the header
- * is one fixed line — avatar, name, badges, time, and the floor number at the far end — and the body
- * runs the card's full width.
+ * is one line wherever it fits — avatar, name, badges, time, and the floor number at the far end —
+ * and the body runs the card's full width.
  *
  * The foot carries only what a reader does on most floors — 点赞, 投喂, 回复 — and a ⋯ for the rest
- * of the site's set (点踩, 引用), which [FloorActionSheet] lays out with their prices. A long press
- * anywhere on the card outside the text opens the same panel; on the text it selects, as it always has.
+ * of the site's set (点踩, 引用), which [FloorActionSheet] lays out with their prices. A long press on
+ * the header or the foot opens the same panel; on the text it selects, as it always has — see
+ * [floorLongPress] for why the card as a whole does not listen.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CommentRow(
     comment: PostContent,
@@ -1611,12 +1653,14 @@ private fun CommentRow(
     LayerCard(
         modifier = Modifier
             .fillMaxWidth()
-            .floorLongPress(onMore),
+            .floorLongPressSemantics(onMore),
         contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.xs, top = 14.dp, bottom = Spacing.xs),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Row(
-            modifier = Modifier.padding(end = Spacing.md),
+            modifier = Modifier
+                .padding(end = Spacing.md)
+                .floorLongPress(onMore),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
@@ -1634,17 +1678,26 @@ private fun CommentRow(
                     name = comment.authorName,
                     size = Sizes.avatarComment,
                 )
-                Text(
-                    text = comment.authorName,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    // The name gives way first: the badges and the time are short and fixed, a
-                    // name is whatever its owner typed.
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                FloorBadges(comment)
-                FloorTimeLine(comment)
+                // Wrapping rather than squeezing. As one Row the badges and the time were measured
+                // first and the name got what was left, which on an edited 楼主 floor was a few
+                // letters and with one badge more was nothing, while the time folded into a column.
+                // Here whatever does not fit after the name moves to a second line, and a single
+                // line stays exactly as it was.
+                FlowRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = comment.authorName,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    FloorBadges(comment)
+                    FloorTimeLine(comment)
+                }
             }
             comment.floor?.let { FloorLabel(it) }
         }
@@ -1673,6 +1726,7 @@ private fun CommentRow(
             onReply = onReply,
             onEdit = onEdit,
             onMore = onMore,
+            modifier = Modifier.floorLongPress(onMore),
         )
     }
 }
@@ -1717,40 +1771,59 @@ private fun Modifier.authorClickable(uid: Long?, onAuthorClick: (Long) -> Unit):
     if (uid == null) this else clickable { onAuthorClick(uid) }
 
 /**
- * A long press on a floor's card opens its 1c panel.
+ * A long press on a floor's header or foot opens its 1c panel.
  *
- * Not [LayerCard]'s own `onLongClick`: that makes the card a `combinedClickable`, and a card whose
- * tap does nothing would still ripple on every tap a reader makes while reading. A gesture detector
- * that listens only for the long press leaves the tap alone. Screen readers get the same action
- * through the semantics, beside the ⋯ that is always there.
+ * Put on those two and not on the card: the body and the signature are selectable text, and a
+ * selection's long press does not consume the pointer, so a detector on the card timed out on the
+ * same press and the panel rose over the selection the reader had just started — both fired, every
+ * time. Nothing inside the header or the foot is selectable, so there the press means the panel.
+ *
+ * Not [LayerCard]'s own `onLongClick` either: that makes the card a `combinedClickable`, and a card
+ * whose tap does nothing would still ripple on every tap a reader makes while reading. A gesture
+ * detector that listens only for the long press leaves the tap alone. Screen readers get the action
+ * on the card as a whole, from [floorLongPressSemantics], beside the ⋯ that is always there.
  */
 @Composable
 private fun Modifier.floorLongPress(onLongPress: (() -> Unit)?): Modifier {
     if (onLongPress == null) return this
     val haptics = LocalHapticFeedback.current
     val current by rememberUpdatedState(onLongPress)
-    val label = stringResource(Res.string.post_floor_actions)
-    return this
-        .pointerInput(Unit) {
-            detectTapGestures(
-                onLongPress = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    current()
-                },
-            )
-        }.semantics {
-            onLongClick(label) {
+    return pointerInput(Unit) {
+        detectTapGestures(
+            onLongPress = {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 current()
-                true
-            }
+            },
+        )
+    }
+}
+
+/** The [floorLongPress] panel as a screen reader's long-click action, on the whole card. */
+@Composable
+private fun Modifier.floorLongPressSemantics(onLongPress: (() -> Unit)?): Modifier {
+    if (onLongPress == null) return this
+    val current by rememberUpdatedState(onLongPress)
+    val label = stringResource(Res.string.post_floor_actions)
+    return semantics {
+        onLongClick(label) {
+            current()
+            true
         }
+    }
 }
 
 /**
  * The opening post's action row (1b): 点赞 and 投喂 as tonal pills with their tallies, then 收藏 and
  * the ⋯ that opens the rest. 点踩 and 编辑 live in the panel; the pills are the two things readers
  * actually do to an opening post.
+ *
+ * A [FlowRow] rather than a Row. The four need about all of a 360dp phone's card at 100% text, and
+ * a Row hands any shortfall to the child it measures last — the ⋯, which is the only visible way to
+ * 点踩, 编辑 and 复制正文 here: a larger text size, a four-digit tally or the English labels squeezed
+ * it to a sliver or to nothing. Wrapped, 收藏 and ⋯ move to a line of their own instead, still
+ * against the end.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun OpeningPostActions(
     reactions: PostReactions?,
@@ -1765,11 +1838,13 @@ private fun OpeningPostActions(
     collectPending: Boolean,
     onCollect: () -> Unit,
     onMore: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         val feedLabel = stringResource(Res.string.post_reaction_feed)
         listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg).forEach { action ->
@@ -1789,18 +1864,26 @@ private fun OpeningPostActions(
                 onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
             )
         }
-        Spacer(Modifier.weight(1f))
-        if (collected != null) {
-            QuietReaction(
-                icon = if (collected) PlazaIcons.Bookmark else PlazaIcons.BookmarkBorder,
-                label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
-                count = collectionCount?.toString().orEmpty(),
-                selected = collected,
-                pending = collectPending,
-                onClick = onCollect.takeUnless { collectPending },
-            )
+        // One item, so 收藏 and ⋯ wrap together. Whether it fits on the pills' line is its intrinsic
+        // width; the weight then spends only what is left of whichever line it lands on, which is
+        // what keeps the pair against the end. The TextButton's own padding is the gap between them.
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (collected != null) {
+                QuietReaction(
+                    icon = if (collected) PlazaIcons.Bookmark else PlazaIcons.BookmarkBorder,
+                    label = if (collected) Res.string.post_collected_action else Res.string.post_collect_action,
+                    count = collectionCount?.toString().orEmpty(),
+                    selected = collected,
+                    pending = collectPending,
+                    onClick = onCollect.takeUnless { collectPending },
+                )
+            }
+            if (onMore != null) FloorMoreButton(onMore)
         }
-        if (onMore != null) FloorMoreButton(onMore)
     }
 }
 
@@ -1877,12 +1960,13 @@ private fun CommentFoot(
     onReply: (() -> Unit)?,
     onEdit: (() -> Unit)?,
     onMore: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         // Each mark is a TextButton, which keeps 12dp of content padding inside its own bounds. Laid
         // out honestly the first icon starts 12dp right of the margin the name and the body sit on;
         // shifting the row back by that much lines the ink up instead.
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .offset(x = -TEXT_BUTTON_CONTENT_INSET),
         verticalAlignment = Alignment.CenterVertically,
@@ -2133,7 +2217,12 @@ private fun FloorActionSheet(
         containerColor = layers.page,
     ) {
         Column(
-            modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
+            modifier = Modifier
+                // A landscape phone, a split screen or a large text size is shorter than the panel,
+                // and the sheet only clips what it cannot show — 复制正文 and the note under it
+                // were simply out of reach there. The sheet hands the scroll its drag first.
+                .verticalScroll(rememberScrollState())
+                .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             // The panel's head: whose floor this is, and the first line of it, so the reader knows
@@ -2143,7 +2232,8 @@ private fun FloorActionSheet(
                 excerpt = content.nodes.excerpt(),
                 leading = { UserAvatar(url = content.avatarUrl, name = content.authorName, size = Sizes.avatarComment) },
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // One height for the three, since a label or a price may take a second line.
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.height(IntrinsicSize.Min)) {
                 listOf(ReactionAction.Upvote, ReactionAction.ChickenLeg, ReactionAction.Dislike).forEach { action ->
                     val reactions = content.reactions
                     ReactionTile(
@@ -2154,7 +2244,9 @@ private fun FloorActionSheet(
                         pending = pending == action,
                         // Same rule as the row: tallies never read are marks we cannot say are unspent.
                         onClick = if (reactions != null && pending == null) ({ onReact(action) }) else null,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
                     )
                 }
             }
@@ -2167,11 +2259,17 @@ private fun FloorActionSheet(
                     actions.onQuote?.let {
                         add(Triple(PlazaIcons.FormatQuote, stringResource(Res.string.post_quote_floor), it))
                     }
-                    add(
-                        Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
-                            copy("post", content.nodes.excerpt(), copied)
-                        },
-                    )
+                    // The whole floor, code and lists and tables included — see [copyableText]. A floor
+                    // with no text at all (a picture, a poll) has nothing to offer here, and a row that
+                    // copied an empty string would still say it had copied the body.
+                    val bodyText = content.nodes.copyableText()
+                    if (bodyText.isNotEmpty()) {
+                        add(
+                            Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
+                                copy("post", bodyText, copied)
+                            },
+                        )
+                    }
                 }
             Column {
                 rows.forEachIndexed { index, (icon, label, action) ->
@@ -2203,6 +2301,7 @@ private fun FloorActionSheet(
  * 鸡腿 — or 已表态 once spent. The price is on the tile because the tile is where the choice is made;
  * the confirmation still says it again before anything is spent.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReactionTile(
     action: ReactionAction,
@@ -2236,15 +2335,20 @@ private fun ReactionTile(
         } else {
             Icon(action.icon(), contentDescription = null)
         }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
+        // Two lines for the label and the price rather than one: a third of a phone's width holds
+        // 点赞 and 扣 2 鸡腿, but not "Send a drumstick" or "Costs 2 drumsticks", and the price is the
+        // thing this tile is here to say. The tally moves under a label that needs the width.
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally),
+            itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 stringResource(action.labelRes()),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             count?.let {
                 Text(
@@ -2258,7 +2362,8 @@ private fun ReactionTile(
             text = if (spent) stringResource(Res.string.post_reaction_spent) else price,
             style = MaterialTheme.typography.labelSmall,
             color = if (action == ReactionAction.Dislike) scheme.onSurfaceVariant else ink,
-            maxLines = 1,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
     }
@@ -2298,16 +2403,22 @@ private fun FloorBadges(content: PostContent) {
     if (labels.isNotEmpty()) RoleBadgeRow(labels)
 }
 
-/** The floor's time, and after it the dashed-underline 已编辑 marker (b1 §8). */
+/**
+ * The floor's time, and after it the dashed-underline 已编辑 marker (b1 §8).
+ *
+ * A [FlowRow], so at a large text size the marker moves under the time whole instead of both being
+ * folded into columns a word wide.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FloorTimeLine(
     content: PostContent,
     modifier: Modifier = Modifier,
 ) {
     if (content.createdAtText == null && !content.isEdited) return
-    Row(
+    FlowRow(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
+        itemVerticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         content.createdAtText?.let { MetaText(it) }

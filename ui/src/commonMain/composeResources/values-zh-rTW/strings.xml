@@ -279,7 +279,7 @@
     <string name="profile_attendance_checking">正在檢查今日簽到…</string>
     <string name="profile_attendance_done">今日已簽到 · 檢視簽到榜</string>
     <string name="profile_attendance_title">簽到</string>
-    <string name="profile_attendance_modes">隨機或固定 5 個雞腿</string>
+    <string name="profile_attendance_modes">隨機或固定 5 支雞腿</string>
     <string name="profile_attendance_board">簽到榜</string>
     <string name="profile_account_settings">帳號設定</string>
 
@@ -859,7 +859,7 @@
     <string name="assets_sign_in_random_label">隨機</string>
     <string name="assets_sign_in_random_value">拼手氣</string>
     <string name="assets_sign_in_fixed_label">固定</string>
-    <string name="assets_sign_in_fixed_value">5 個</string>
+    <string name="assets_sign_in_fixed_value">5 支</string>
     <string name="assets_sign_in_choice_hint">與網頁端一致：隨機模式可能高於也可能低於 5 支。</string>
     <string name="assets_board">今日簽到榜</string>
     <string name="assets_board_subtitle">看看今天誰的手氣最好</string>

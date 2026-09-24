@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -59,6 +60,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -398,6 +401,9 @@ private fun ComposerTopBar(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
+                    // The slot is what the two view toggles and 发布 leave, which in English or at a
+                    // large text size is less than the sentence; cut, it should say so.
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         },
@@ -523,7 +529,13 @@ private fun EditorContent(
         ComposerOptions(state = state, onBoardSelect = onBoardSelect, onPermissionSelect = onPermissionSelect)
         // A reply has no title and no 阅读权限 of its own, so editing one shows neither — the same
         // fields the site's own editor hides for `edit-comment`.
-        if (state.isThreadLevelEdit) TitleField(titleState = titleState, length = state.title.length)
+        if (state.isThreadLevelEdit) {
+            TitleField(
+                titleState = titleState,
+                length = state.title.length,
+                onNext = { focusRequester.requestFocus() },
+            )
+        }
         BodyArea(
             state = state,
             bodyState = bodyState,
@@ -539,6 +551,9 @@ private fun EditorContent(
             actions = state.toolbar.enabled,
             bodyState = bodyState,
             editorState = editorState,
+            // The column the title and the body are in, so on a tablet the eight format keys are not
+            // stretched across the window into bars a few hundred dp wide each.
+            modifier = Modifier.readableWidth(),
             onPickImages = onPickImages,
             onCustomize = { customizing = true },
             // The bar takes focus when it is tapped, and a caret the user cannot see is a caret
@@ -620,7 +635,8 @@ private fun BodyArea(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .readableWidth()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                // The body field's margin, so each rendered line starts under the line it came from.
+                .padding(horizontal = PageMargin, vertical = Spacing.md),
         )
     }
 }
@@ -650,6 +666,8 @@ private fun BodyField(
 private fun TitleField(
     titleState: TextFieldState,
     length: Int,
+    /** The keyboard's action key: on to the body, as a single-line title's used to. */
+    onNext: () -> Unit,
 ) {
     // Borderless and large (1d): the title is the first line of the page rather than a form field,
     // and at 22sp it already reads as the heading the thread will show. It wraps instead of
@@ -666,6 +684,9 @@ private fun TitleField(
         // Wrapping is the only reason this is MultiLine; a title is still one line to the site, so a
         // pasted or typed line break is dropped rather than published.
         inputTransformation = NoLineBreaks.maxLength(PostComposerViewModel.MAX_TITLE_LENGTH),
+        // Multi-line fields get a return key by default, and here it would only ever be dropped.
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        onKeyboardAction = { onNext() },
         modifier = Modifier.readableWidth().padding(start = PageMargin, end = PageMargin, top = Spacing.lg),
         container = { content ->
             Row(verticalAlignment = Alignment.Bottom) {
@@ -689,11 +710,17 @@ private fun TitleField(
 private val TitleStyle = TextStyle(fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold)
 private const val TITLE_MAX_LINES = 3
 
-private object NoLineBreaks : InputTransformation {
+/**
+ * Drops line breaks from the title, one character at a time from the end, so the caret keeps its
+ * place. Replacing the whole text at once moved a caret anywhere inside it to the end: an Enter
+ * pressed mid-title left the title as it was and sent the next word typed to its end.
+ */
+internal object NoLineBreaks : InputTransformation {
     override fun TextFieldBuffer.transformInput() {
         val text = asCharSequence()
-        if (text.none { it == '\n' || it == '\r' }) return
-        replace(0, length, text.filterNot { it == '\n' || it == '\r' })
+        for (index in text.indices.reversed()) {
+            if (text[index] == '\n' || text[index] == '\r') replace(index, index + 1, "")
+        }
     }
 }
 

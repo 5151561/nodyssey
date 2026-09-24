@@ -41,6 +41,7 @@ import io.github.nodyssey.ui.resources.tools_ruling
 import io.github.nodyssey.ui.resources.tools_ruling_subtitle
 import io.github.nodyssey.ui.resources.tools_title
 import io.github.plaza.designsys.component.GroupedRow
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
@@ -96,7 +97,7 @@ fun CommunityToolsScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg),
+                .padding(horizontal = LayerPageGutter),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Column {

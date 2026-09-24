@@ -245,6 +245,13 @@ fun NotificationsScreen(
     // [OneHandTopAppBar] lifts itself; the tab row below it has to follow in step, or the shadow
     // would fall between the two halves of one header instead of under it.
     val layers = LocalPlazaLayers.current
+    // The lift follows the list on the page in view, not only the scrolls the bar heard: switching
+    // to the other group, or 回顶 from the tab bar, moves no nested scroll, and the header stayed
+    // lifted — its shadow and the fade under it — over a list back at its top.
+    val currentList = if (tabs.getOrNull(pagerState.currentPage) == NotificationTab.MESSAGES) conversationListState else notificationListState
+    LaunchedEffect(currentList) {
+        snapshotFlow { currentList.canScrollBackward }.collect { appBarState.syncContentOverlapped(it) }
+    }
     val lifted = appBarState.isContentOverlapped
     val headerColor by animateColorAsState(
         targetValue =
@@ -253,6 +260,8 @@ fun NotificationsScreen(
         } else {
             layers.page
         },
+        // A snap under reduced motion and 墨水屏, like the bar's own tint this has to keep pace with.
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "notificationsHeader",
     )
 
@@ -372,7 +381,9 @@ fun NotificationsScreen(
                     Modifier
                         .fillMaxWidth()
                         .height(TOP_FADE)
-                        .background(Brush.verticalGradient(listOf(layers.page, layers.page.copy(alpha = 0f)))),
+                        // From the header's own colour, which is a step lighter than the page once
+                        // lifted in dark: starting from the page drew a dark seam under the header.
+                        .background(Brush.verticalGradient(listOf(headerColor, headerColor.copy(alpha = 0f)))),
                 )
             }
         }

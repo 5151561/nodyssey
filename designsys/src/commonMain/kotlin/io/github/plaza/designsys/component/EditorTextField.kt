@@ -3,7 +3,9 @@ package io.github.plaza.designsys.component
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,8 @@ fun EditorTextField(
     hintMaxLines: Int = Int.MAX_VALUE,
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.MultiLine(),
     inputTransformation: InputTransformation? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onKeyboardAction: KeyboardActionHandler? = null,
     container: @Composable (content: @Composable () -> Unit) -> Unit = { content ->
         Box(Modifier.fillMaxWidth()) { content() }
     },
@@ -46,6 +50,8 @@ fun EditorTextField(
         state = state,
         lineLimits = lineLimits,
         inputTransformation = inputTransformation,
+        keyboardOptions = keyboardOptions,
+        onKeyboardAction = onKeyboardAction,
         textStyle = textStyle,
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         modifier = modifier,

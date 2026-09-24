@@ -55,11 +55,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -394,7 +396,9 @@ private fun ProviderCard(
                         containerColor = LocalPlazaLayers.current.card,
                         selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ),
-                    modifier = Modifier.height(36.dp),
+                    // A floor, not a height: at a large text size 「兰空图床 Lsky Pro · 自建」 takes two
+                    // lines, and a fixed 36dp cut both of them in half.
+                    modifier = Modifier.heightIn(min = 36.dp),
                 )
             }
         }
@@ -739,6 +743,9 @@ private fun ImagesSection(
  * One picture on the host: the thumbnail, opened by a tap, with its delete on a white disc in the
  * corner. The file name, upload time and size ride in the tile's description rather than under it —
  * three to a row there is no room to print them, and the delete dialog names the file anyway.
+ *
+ * Except where the thumbnail failed: there the picture is not there to say which file this is, and a
+ * row of identical broken-image marks leaves nothing to tell them apart, so the tile prints the name.
  */
 @Composable
 private fun ImageTile(
@@ -766,7 +773,22 @@ private fun ImageTile(
         var failed by remember(item.url) { mutableStateOf(false) }
         val open = Modifier.fillMaxSize().clickable(onClick = onOpen).semantics { contentDescription = details }
         if (failed) {
-            ImageFallback(modifier = open)
+            // Name and mark along the bottom-left, clear of the delete disc in the top corner.
+            Column(
+                modifier = open.padding(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.Bottom),
+            ) {
+                ImageFallback(modifier = Modifier.size(24.dp))
+                Text(
+                    text = item.fileName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    // Already the first thing the tile's description says.
+                    modifier = Modifier.clearAndSetSemantics {},
+                )
+            }
         } else {
             AsyncImage(
                 model = item.url,

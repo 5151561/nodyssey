@@ -200,6 +200,30 @@ class MessageThreadViewModelTest {
             assertEquals("> 在的\n\n> 那明天见\n\n看到了", repository.lastContent)
         }
 
+    /**
+     * The switch cannot be turned off under a waiting quote: the quote goes out as a `>` block, and
+     * with MD off the other side got the literal markup.
+     */
+    @Test
+    fun `MD stays on while a quote is waiting, and comes free once it is gone`() =
+        runTest(dispatcher) {
+            val repository = FakeMessageRepository()
+            val viewModel = viewModel(repository)
+            advanceUntilIdle()
+
+            viewModel.quote(bubble("在的", id = "a"))
+            viewModel.toggleMarkdown()
+            assertTrue(viewModel.uiState.value.isMarkdown)
+
+            viewModel.draftState.setTextAndPlaceCursorAtEnd("看到了")
+            viewModel.send()
+            advanceUntilIdle()
+            assertEquals(true, repository.lastMarkdown)
+
+            viewModel.toggleMarkdown()
+            assertEquals(false, viewModel.uiState.value.isMarkdown)
+        }
+
     @Test
     fun `the ✕ on a quote card drops only that quotation`() =
         runTest(dispatcher) {

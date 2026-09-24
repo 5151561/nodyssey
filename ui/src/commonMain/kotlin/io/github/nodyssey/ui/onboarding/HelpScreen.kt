@@ -63,6 +63,7 @@ import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
 import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.LayerDivider
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
@@ -139,7 +140,7 @@ fun HelpScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg),
+                .padding(horizontal = LayerPageGutter),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             SectionLabel(stringResource(Res.string.help_section_confusing))

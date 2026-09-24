@@ -143,7 +143,10 @@ fun ThemeSettingsScreen(
     onWallpaperSystemPaletteChange: (Boolean) -> Unit = {},
     onWallpaperAutoUpdateChange: (Boolean) -> Unit = {},
 ) {
-    var sheetOpen by remember { mutableStateOf(false) }
+    // Which way into the colour sheet: 新建 starts a theme from nothing, so it opens with no name —
+    // prefilled with the theme in use, saving under a new colour made a second theme of the same
+    // name. 编辑 edits the seed in use, and a saved theme edited there is saved over, not beside.
+    var sheet by remember { mutableStateOf<SeedSheetMode?>(null) }
     var renaming by remember { mutableStateOf<SavedTheme?>(null) }
     val appBarState = rememberOneHandAppBarState()
 
@@ -195,7 +198,7 @@ fun ThemeSettingsScreen(
                     ColorSource.CUSTOM ->
                         CustomSeedRow(
                             settings = settings,
-                            onEdit = { sheetOpen = true },
+                            onEdit = { sheet = SeedSheetMode.EDIT },
                         )
                 }
             }
@@ -207,7 +210,7 @@ fun ThemeSettingsScreen(
                     onSelect = onCustomSeedSelected,
                     onRename = { renaming = it },
                     onDelete = onDeleteTheme,
-                    onCreate = { sheetOpen = true },
+                    onCreate = { sheet = SeedSheetMode.NEW },
                 )
                 // 色彩风格 steers the generator, and a 角色预设 never reaches it. Greyed rather than
                 // hidden: it is still the answer for every other way of getting a colour, and a row
@@ -224,17 +227,22 @@ fun ThemeSettingsScreen(
         }
     }
 
-    if (sheetOpen) {
+    sheet?.let { mode ->
+        val edited = settings.savedThemes.firstOrNull { it.color == settings.seedColor }.takeIf { mode == SeedSheetMode.EDIT }
         SeedColorSheet(
             initial = Color(settings.seedColor),
             paletteStyle = settings.paletteStyle.toPlaza(),
-            initialName =
-            settings.savedThemes.firstOrNull { it.color == settings.seedColor }?.name.orEmpty(),
-            onDismiss = { sheetOpen = false },
+            initialName = edited?.name.orEmpty(),
+            onDismiss = { sheet = null },
             onApply = { color, name ->
                 onCustomSeedSelected(color.toArgb())
-                name?.let { onSaveTheme(it, color.toArgb()) }
-                sheetOpen = false
+                name?.let {
+                    // Saved themes are keyed by colour, so a recoloured one would otherwise stay
+                    // behind under its old colour as well.
+                    if (edited != null && edited.color != color.toArgb()) onDeleteTheme(edited.color)
+                    onSaveTheme(it, color.toArgb())
+                }
+                sheet = null
             },
         )
     }
@@ -250,6 +258,9 @@ fun ThemeSettingsScreen(
         )
     }
 }
+
+/** The two ways into [SeedColorSheet]: 我的主题's 新建, and 自定义's 编辑 of the seed in use. */
+private enum class SeedSheetMode { NEW, EDIT }
 
 /**
  * 配色来源 and the segmented 预设 / 动态取色 / 自定义 under it.

@@ -30,7 +30,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.translate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -342,7 +346,7 @@ private fun Modifier.groupSlice(
                         right = size.width + bleed,
                         bottom = if (last) size.height + bleed else size.height,
                     ) { this@drawWithContent.drawContent() }
-                }.cardShadow(shape, enabled = true)
+                }.cardShadow(SliceShadowShape(first, last), enabled = true)
         }
     return shadowed
         .clip(shape)
@@ -372,6 +376,35 @@ private fun Modifier.groupOutline(
 
 /** Comfortably past the widest layer of `cardShadow` — 18dp of blur pushed 6dp down. */
 private val SLICE_SHADOW_BLEED = 32.dp
+
+/**
+ * What one slice casts its shadow from: its own shape, run on past each seam by [SLICE_SHADOW_BLEED].
+ *
+ * Cast from the row's own shape, a middle row's side shadow faded out towards both of its seams, so
+ * the card's edges came out as a notch of light at every seam. Stretched, every slice casts a section
+ * of one long card, and [groupSlice]'s clip trims it back to the row.
+ */
+private class SliceShadowShape(
+    private val first: Boolean,
+    private val last: Boolean,
+) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val bleed = with(density) { SLICE_SHADOW_BLEED.toPx() }
+        val top = if (first) 0f else -bleed
+        val bottom = if (last) size.height else size.height + bleed
+        val outline = groupShape(first, last).createOutline(Size(size.width, bottom - top), layoutDirection, density)
+        val shift = Offset(0f, top)
+        return when (outline) {
+            is Outline.Rectangle -> Outline.Rectangle(outline.rect.translate(shift))
+            is Outline.Rounded -> Outline.Rounded(outline.roundRect.translate(shift))
+            is Outline.Generic -> Outline.Generic(Path().apply { addPath(outline.path, shift) })
+        }
+    }
+
+    override fun equals(other: Any?): Boolean = other is SliceShadowShape && other.first == first && other.last == last
+
+    override fun hashCode(): Int = 31 * first.hashCode() + last.hashCode()
+}
 
 /**
  * The switch a toggle row carries: Material's own, with the tick in its thumb while it is on.

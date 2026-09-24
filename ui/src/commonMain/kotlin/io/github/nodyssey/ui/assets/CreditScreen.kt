@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -302,7 +302,12 @@ private fun CreditRow(entry: CreditEntry) {
                 fontFeatureSettings = TABULAR_FIGURES,
             ),
             color = ledgerAmountColor(entry.change),
-            modifier = Modifier.width(56.dp),
+            // A floor rather than a width, and one line: the column lines up for the everyday one-
+            // and two-digit changes, and a 「−1000」 at a large text size widens its own row instead
+            // of breaking into 「−100」 over 「0」.
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.widthIn(min = 56.dp),
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(

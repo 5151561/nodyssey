@@ -431,7 +431,9 @@ private fun FieldBlock(
             if (markdown) {
                 TonalTag(
                     stringResource(Res.string.account_markdown_tag),
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    // The inset tone, which is below the card in every mode: `surfaceContainer` is the
+                    // card's own colour in dark, and the tag lost its pill there.
+                    containerColor = LocalPlazaLayers.current.inset,
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

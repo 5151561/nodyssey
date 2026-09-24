@@ -27,6 +27,8 @@ import kotlinx.coroutines.launch
 data class AssetsUiState(
     val isLoading: Boolean = true,
     val error: SiteError? = null,
+    /** The signed-in account, so the attendance board can mark its own row. */
+    val uid: Long? = null,
     val level: Int? = null,
     val chickenCount: Int? = null,
     val starCount: Int? = null,
@@ -86,6 +88,8 @@ data class AssetsUiState(
  */
 class AssetsViewModel(
     private val repository: AssetsRepository,
+    /** [io.github.nodyssey.data.ProfileRepository.selfUid]: the account this screen belongs to. */
+    selfUid: StateFlow<Long?>,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AssetsUiState())
     val uiState: StateFlow<AssetsUiState> = _uiState.asStateFlow()
@@ -94,6 +98,7 @@ class AssetsViewModel(
     private var signInJob: Job? = null
 
     init {
+        selfUid.onEach { uid -> _uiState.update { it.copy(uid = uid) } }.launchIn(viewModelScope)
         repository
             .observeAttendanceStatus()
             .filterNotNull()
@@ -201,7 +206,7 @@ class AssetsViewModel(
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
-                initializer { AssetsViewModel(container.assetsRepository) }
+                initializer { AssetsViewModel(container.assetsRepository, container.profileRepository.selfUid) }
             }
     }
 }

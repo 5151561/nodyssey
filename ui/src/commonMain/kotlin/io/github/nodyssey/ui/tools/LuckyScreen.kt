@@ -1,5 +1,6 @@
 package io.github.nodyssey.ui.tools
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -81,6 +82,7 @@ import io.github.nodyssey.ui.resources.lucky_result
 import io.github.nodyssey.ui.resources.lucky_result_hint
 import io.github.nodyssey.ui.resources.lucky_start_floor
 import io.github.nodyssey.ui.resources.lucky_title
+import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
@@ -174,11 +176,13 @@ fun LuckyScreen(
                 .fillMaxSize()
                 .readableWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                .padding(horizontal = LayerPageGutter, vertical = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             Surface(
                 color = LocalPlazaLayers.current.card,
+                // Paper on paper under 墨水屏, where the card tone is the page's: the outline is the box.
+                border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
                 shape = MaterialTheme.shapes.large,
             ) {
                 Text(
@@ -231,6 +235,7 @@ fun LuckyScreen(
 
             Surface(
                 color = LocalPlazaLayers.current.card,
+                border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
                 shape = MaterialTheme.shapes.medium,
             ) {
                 Row(
@@ -324,6 +329,7 @@ private fun DrawTimeRow(
 ) {
     Surface(
         color = LocalPlazaLayers.current.card,
+        border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
         shape = MaterialTheme.shapes.medium,
     ) {
         Column(
@@ -463,6 +469,7 @@ private fun GeneratedLinkCard(
         )
         Surface(
             color = LocalPlazaLayers.current.card,
+            border = LocalPlazaLayers.current.cardBorder?.let { BorderStroke(1.dp, it) },
             shape = MaterialTheme.shapes.large,
         ) {
             Column(

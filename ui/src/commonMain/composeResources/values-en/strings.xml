@@ -88,7 +88,7 @@
     <string name="composer_permission_public">Public</string>
     <string name="composer_permission_private">Private</string>
     <string name="composer_draft_saved">Draft %1$s</string>
-    <string name="composer_draft_saving">Draft saved as you type</string>
+    <string name="composer_draft_saving">Draft autosaves</string>
     <string name="composer_publishing">Publishing</string>
     <string name="composer_saving">Saving</string>
     <string name="composer_rule_title">Before you post</string>
@@ -280,13 +280,13 @@
     <string name="profile_chicken">Drumsticks</string>
     <string name="profile_stars">Stardust</string>
     <string name="profile_level">Level</string>
-    <string name="profile_level_remaining">%2$d chicken legs to Lv%1$d</string>
+    <string name="profile_level_remaining">%2$d drumsticks to Lv%1$d</string>
     <string name="profile_attendance">Check in today · claim drumsticks</string>
     <string name="profile_attendance_checking">Checking today’s check-in…</string>
     <string name="profile_attendance_done">Checked in today · see the leaderboard</string>
     <string name="profile_attendance_title">Check in</string>
-    <string name="profile_attendance_modes">Random, or a flat 5 chicken legs</string>
-    <string name="profile_attendance_board">Board</string>
+    <string name="profile_attendance_modes">Random, or a flat 5 drumsticks</string>
+    <string name="profile_attendance_board">Leaderboard</string>
     <string name="profile_account_settings">Account settings</string>
 
     <string name="settings_title">Settings</string>
@@ -865,7 +865,7 @@
     <string name="assets_sign_in_random_label">Random</string>
     <string name="assets_sign_in_random_value">Try your luck</string>
     <string name="assets_sign_in_fixed_label">Fixed</string>
-    <string name="assets_sign_in_fixed_value">5 legs</string>
+    <string name="assets_sign_in_fixed_value">5 drumsticks</string>
     <string name="assets_sign_in_choice_hint">The same as on the web: random can land above or below 5.</string>
     <string name="assets_board">Today’s check-in board</string>
     <string name="assets_board_subtitle">See who got lucky today</string>
@@ -881,7 +881,7 @@
     <string name="credit_balance">Drumsticks</string>
     <string name="credit_level_progress">Lv%1$d progress %2$d / %3$d</string>
     <string name="credit_entry_total">Total %1$d</string>
-    <string name="credit_unit_level">chicken legs · Lv%1$d</string>
+    <string name="credit_unit_level">drumsticks · Lv%1$d</string>
     <string name="credit_progress_remaining">%1$d / %2$d · %3$d more to Lv%4$d</string>
     <string name="credit_column_change">Change · reason</string>
     <string name="credit_column_total">Total</string>
@@ -988,9 +988,9 @@
     <string name="invite_caution">The drumsticks go the moment the code is generated and cannot be refunded; one code registers one account.</string>
     <string name="invite_confirm">Buy it</string>
     <string name="invite_shortfall">%1$d drumsticks short</string>
-    <string name="invite_short_title">Not enough chicken legs</string>
+    <string name="invite_short_title">Not enough drumsticks</string>
     <string name="invite_shortfall_label">Short by</string>
-    <string name="invite_short_hint">Replies, new posts and daily check-ins all earn chicken legs.</string>
+    <string name="invite_short_hint">Replies, new posts and daily check-ins all earn drumsticks.</string>
     <string name="invite_opened_web">The app has no code-buying API yet, so the invite page is open on the web.</string>
     <string name="invite_chicken_balance">Drumsticks %1$d</string>
 

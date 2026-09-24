@@ -1,18 +1,33 @@
 package io.github.nodyssey.ui.postdetail
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.width
 import io.github.nodyssey.ThreadPreview
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.model.PostContent
@@ -23,6 +38,7 @@ import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -858,6 +874,146 @@ class PostDetailScreenTest {
 
         composeRule.onAllNodesWithText("是否反对该楼层？这将消耗你两个鸡腿，且不能撤销。").assertCountEquals(0)
         assert(sent.isEmpty()) { "sent $sent" }
+    }
+
+    /**
+     * A long press on a floor's text selects it and nothing else; the panel answers the header.
+     *
+     * The card used to listen for the long press as a whole, and a selection's own long press does
+     * not consume the pointer — so a press on the text started a selection and raised the panel over
+     * it in the same gesture.
+     */
+    @Test
+    @Config(shadows = [NoopMagnifier::class])
+    fun `a long press on a floor's text does not open its panel`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("the opening post", author = "op", reactions = PostReactions()),
+                comments = listOf(content("a reply to hold", author = "nssk", floor = "#12", reactions = PostReactions())),
+                isSignedIn = true,
+            ),
+        )
+
+        composeRule.onNodeWithText("a reply to hold").performTouchInput { longClick() }
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithText("复制正文").assertCountEquals(0)
+
+        composeRule.onNodeWithText("#12").performTouchInput { longClick() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("回复 nssk").assertIsDisplayed()
+    }
+
+    /** The opening post at its widest: four-digit tallies and a collected thread. */
+    private fun setCrowdedOpeningPost(fontScale: Float) {
+        composeRule.setContent {
+            val density = Density(LocalDensity.current.density, fontScale = fontScale)
+            CompositionLocalProvider(LocalDensity provides density) {
+                PlazaTheme {
+                    PostDetailScreen(
+                        state =
+                        PostDetailUiState(
+                            title = "t",
+                            body = content("body", author = "op", reactions = PostReactions(upvoteCount = 1234, likeCount = 5678)),
+                            isSignedIn = true,
+                            collected = true,
+                            collectionCount = 1234,
+                        ),
+                        postUrl = "https://www.nodeseek.com/post-1-1",
+                        onBack = {},
+                        onOpenBrowser = {},
+                        onImageClick = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onVerify = {},
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * The ⋯ keeps its whole touch target and stays on screen however wide the pills get.
+     *
+     * It is the only visible way to 点踩, 编辑 and 复制正文 on the opening post, and as the last
+     * child of a Row it was the one the shortfall came out of: about 11dp wide at 1.3×, gone at 2×.
+     */
+    private fun assertOpeningPostActionsStayWhole(fontScale: Float) {
+        setCrowdedOpeningPost(fontScale)
+        val screen = composeRule.onRoot().getUnclippedBoundsInRoot()
+        listOf(
+            composeRule.onNodeWithContentDescription("楼层操作"),
+            composeRule.onNodeWithContentDescription("已收藏", useUnmergedTree = true),
+        ).forEach { node ->
+            val bounds = node.getUnclippedBoundsInRoot()
+            assertTrue("$bounds at ${fontScale}x", bounds.right <= screen.right)
+        }
+        val more = composeRule.onNodeWithContentDescription("楼层操作").getUnclippedBoundsInRoot()
+        // The button's own 40dp, inside the 48dp its minimum touch size lays out.
+        assertTrue("⋯ is ${more.width} wide at ${fontScale}x", more.width >= 40.dp)
+    }
+
+    @Test
+    fun `the opening post's more button stays whole at 1_3x text`() = assertOpeningPostActionsStayWhole(1.3f)
+
+    @Test
+    fun `the opening post's more button stays whole at 2x text`() = assertOpeningPostActionsStayWhole(2f)
+
+    /**
+     * An edited 楼主 floor with more badges keeps its author's name whole.
+     *
+     * The header was one Row, which measured the badges and the time first and gave the name what
+     * was left — a few letters here, and nothing at all with one badge more.
+     */
+    @Test
+    fun `a reply's name is not squeezed out by its badges and its edited time`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("the opening post"),
+                comments =
+                listOf(
+                    content("a reply", author = "homelander", floor = "#3").copy(
+                        isOriginalPoster = true,
+                        badges = listOf("管理(退休)", "骗子"),
+                        createdAtText = "1小时前",
+                        isEdited = true,
+                        editedAtText = "30分钟前",
+                    ),
+                ),
+            ),
+        )
+
+        val layouts = mutableListOf<TextLayoutResult>()
+        composeRule
+            .onNodeWithText("homelander", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        // The width the name was offered holds the whole name; its ellipsis is the proof it did not.
+        // Not hasVisualOverflow: Robolectric's text metrics report a fraction of overflow on any text.
+        val name = layouts.single()
+        assertTrue(name.multiParagraph.maxIntrinsicWidth <= name.layoutInput.constraints.maxWidth)
+        assertFalse(name.isLineEllipsized(0))
+    }
+
+    /** A landscape phone is shorter than the panel; its last row has to be reachable by scrolling. */
+    @Test
+    @Config(qualifiers = "w640dp-h360dp")
+    fun `the floor panel scrolls to its last row on a landscape phone`() {
+        setScreen(
+            PostDetailUiState(
+                title = "t",
+                body = content("the opening post", author = "op", reactions = PostReactions()),
+                comments = listOf(content("a reply", author = "nssk", floor = "#12", reactions = PostReactions())),
+                isSignedIn = true,
+            ),
+        )
+
+        // The reply is below the fold of a 360dp-tall window, and its ⋯ then sits under the floating
+        // page controls, which would take a touch — the click goes in as the semantics action.
+        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(2)
+        composeRule.onAllNodesWithContentDescription("楼层操作").onLast().performSemanticsAction(SemanticsActions.OnClick)
+
+        composeRule.onNodeWithText("复制正文").performScrollTo().assertIsDisplayed()
     }
 
     /** One page of a long thread, loaded on its own — what a jump or a notification produces. */

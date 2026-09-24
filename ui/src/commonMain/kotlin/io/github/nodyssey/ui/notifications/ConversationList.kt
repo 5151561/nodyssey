@@ -217,32 +217,34 @@ private fun ConversationRow(
         onClick = onClick,
         modifier = modifier,
         leadingContent = { ConversationAvatar(conversation) },
+        // The stamp rides the name's line and the count the snippet's, rather than stacking both in
+        // a trailing column: that column is centred on the row, so a row with no badge dropped its
+        // stamp to half-way between the two lines and the column of times stopped lining up.
         headlineContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = conversation.userName,
-                    fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (conversation.isSystem) {
-                    Icon(
-                        PlazaIcons.PushPin,
-                        contentDescription = stringResource(Res.string.messages_pinned),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
+                // The name and its pin share one weighted row, so the stamp is the only unweighted
+                // child and sits against the same edge in every row.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = conversation.userName,
+                        fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    if (conversation.isSystem) {
+                        Icon(
+                            PlazaIcons.PushPin,
+                            contentDescription = stringResource(Res.string.messages_pinned),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
                 }
-            }
-        },
-        supportingContent = {
-            Text(text = conversationSnippet(conversation), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
-        // The stamp over the count, as one column at the row's end, so every row's time lines up
-        // against the same edge whatever the name beside it.
-        trailingContent = {
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 conversationStamp(conversation, nowMillis)?.let { stamp ->
                     Text(
                         text = stamp,
@@ -252,6 +254,16 @@ private fun ConversationRow(
                         maxLines = 1,
                     )
                 }
+            }
+        },
+        supportingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = conversationSnippet(conversation),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 if (isUnread) {
                     // Badge's own error red, the same mark the group tabs and the tab bar carry.
                     Badge { Text(unreadLabel(conversation.unreadCount, MAX_UNREAD)) }
