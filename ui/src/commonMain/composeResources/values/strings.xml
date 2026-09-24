@@ -1580,7 +1580,6 @@
     <string name="help_imagehost_body">论坛不存图。「设置 › 图床」里选一家，六家可选，密钥只留在本机。</string>
     <!-- 我的 · 分区图标网格（board n1） -->
     <string name="profile_section_content">我的内容</string>
-    <string name="profile_section_assets">资产</string>
     <string name="profile_section_community">社区</string>
     <string name="profile_section_settings">设置与其他</string>
     <string name="profile_tile_topics">主题帖</string>
@@ -1589,9 +1588,6 @@
     <string name="profile_tile_history">浏览历史</string>
     <string name="profile_tile_following">我的关注</string>
     <string name="profile_tile_followers">我的粉丝</string>
-    <string name="profile_tile_credit">鸡腿流水</string>
-    <string name="profile_tile_stardust">星辰流水</string>
-    <string name="profile_tile_transfer">星辰转账</string>
     <string name="profile_tile_invite">邀请码</string>
     <string name="profile_tile_award">推荐阅读</string>
     <string name="profile_tile_lucky">幸运抽奖</string>

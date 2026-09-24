@@ -1345,7 +1345,6 @@
     <string name="help_imagehost_body">The forum stores no images. Pick one of six under Settings › 图床; the key stays on this device.</string>
     <!-- 我的, as the section grid on board n1 -->
     <string name="profile_section_content">My content</string>
-    <string name="profile_section_assets">Assets</string>
     <string name="profile_section_community">Community</string>
     <string name="profile_section_settings">Settings and more</string>
     <string name="profile_tile_topics">Topics</string>
@@ -1354,9 +1353,6 @@
     <string name="profile_tile_history">History</string>
     <string name="profile_tile_following">Following</string>
     <string name="profile_tile_followers">Followers</string>
-    <string name="profile_tile_credit">鸡腿 ledger</string>
-    <string name="profile_tile_stardust">星辰 ledger</string>
-    <string name="profile_tile_transfer">Transfer 星辰</string>
     <string name="profile_tile_invite">Invite code</string>
     <string name="profile_tile_award">Editors\' picks</string>
     <string name="profile_tile_lucky">Lucky draw</string>

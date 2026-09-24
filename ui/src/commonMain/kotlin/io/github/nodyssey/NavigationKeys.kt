@@ -273,15 +273,9 @@ data object AssetsKey : NavKey
 @Serializable
 data object CreditKey : NavKey
 
-/**
- * 星辰流水, and the 转账 form that lives on it as a floating action.
- *
- * [startTransfer] opens that form on arrival — what the 星辰转账 tile in 我的 means. Unlike the
- * `openAttendanceChooser` flag [AssetsKey] used to carry, it cannot loop: the form closes onto this
- * same screen instead of pushing anything, so returning here is only ever a fresh tap on the tile.
- */
+/** 星辰流水, and the 转账 form that lives on it as a floating action. */
 @Serializable
-data class StardustKey(val startTransfer: Boolean = false) : NavKey
+data object StardustKey : NavKey
 
 @Serializable
 data object CommunityToolsKey : NavKey

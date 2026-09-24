@@ -13,8 +13,12 @@ data class ProfileDestinations(
     val settings: () -> Unit = {},
     /** The avatar block: 个人主页, which is where the profile itself is read and edited. */
     val space: () -> Unit = {},
-    /** The three resource cards, all three of them: 账户与成长 is where a balance is explained. */
+    /** The 等级 card: 账户与成长 is where the level is explained. */
     val assets: () -> Unit = {},
+    /** The 鸡腿 card: 鸡腿流水. */
+    val credit: () -> Unit = {},
+    /** The 星辰 card: 星辰流水, which also carries 转账. */
+    val stardust: () -> Unit = {},
     // 我的内容
     val topics: () -> Unit = {},
     val comments: () -> Unit = {},
@@ -22,12 +26,8 @@ data class ProfileDestinations(
     val history: () -> Unit = {},
     val following: () -> Unit = {},
     val followers: () -> Unit = {},
-    // 资产
-    val credit: () -> Unit = {},
-    val stardust: () -> Unit = {},
-    val transfer: () -> Unit = {},
-    val invite: () -> Unit = {},
     // 社区
+    val invite: () -> Unit = {},
     val award: () -> Unit = {},
     val lucky: () -> Unit = {},
     val ruling: () -> Unit = {},

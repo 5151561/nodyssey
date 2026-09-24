@@ -154,7 +154,7 @@ private val EVERY_KEY: List<NavKey> =
         BookmarksKey,
         ReadHistoryKey,
         CreditKey,
-        StardustKey(startTransfer = true),
+        StardustKey,
         CommunityToolsKey,
         MyTopicsKey,
         MyCommentsKey,

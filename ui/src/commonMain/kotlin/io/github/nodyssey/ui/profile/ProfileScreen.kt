@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,6 +48,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -93,7 +93,6 @@ import io.github.nodyssey.ui.resources.profile_level
 import io.github.nodyssey.ui.resources.profile_level_unknown
 import io.github.nodyssey.ui.resources.profile_member_since
 import io.github.nodyssey.ui.resources.profile_member_uid
-import io.github.nodyssey.ui.resources.profile_section_assets
 import io.github.nodyssey.ui.resources.profile_section_community
 import io.github.nodyssey.ui.resources.profile_section_content
 import io.github.nodyssey.ui.resources.profile_section_settings
@@ -111,7 +110,6 @@ import io.github.nodyssey.ui.resources.profile_tile_award
 import io.github.nodyssey.ui.resources.profile_tile_block
 import io.github.nodyssey.ui.resources.profile_tile_collections
 import io.github.nodyssey.ui.resources.profile_tile_comments
-import io.github.nodyssey.ui.resources.profile_tile_credit
 import io.github.nodyssey.ui.resources.profile_tile_followers
 import io.github.nodyssey.ui.resources.profile_tile_following
 import io.github.nodyssey.ui.resources.profile_tile_friends
@@ -121,10 +119,8 @@ import io.github.nodyssey.ui.resources.profile_tile_lucky
 import io.github.nodyssey.ui.resources.profile_tile_notifications
 import io.github.nodyssey.ui.resources.profile_tile_providers
 import io.github.nodyssey.ui.resources.profile_tile_ruling
-import io.github.nodyssey.ui.resources.profile_tile_stardust
 import io.github.nodyssey.ui.resources.profile_tile_theme
 import io.github.nodyssey.ui.resources.profile_tile_topics
-import io.github.nodyssey.ui.resources.profile_tile_transfer
 import io.github.nodyssey.ui.resources.profile_tools
 import io.github.nodyssey.ui.resources.settings_title
 import io.github.plaza.designsys.component.LayerCard
@@ -318,7 +314,13 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         ) {
             item(key = "account") {
-                AccountCard(state, onOpenSpace = destinations.space, onAssets = destinations.assets)
+                AccountCard(
+                    state,
+                    onOpenSpace = destinations.space,
+                    onCredit = destinations.credit,
+                    onStardust = destinations.stardust,
+                    onAssets = destinations.assets,
+                )
             }
             item(key = "attendance") {
                 AttendanceBanner(state, onAttendance, onAttendanceBoard)
@@ -375,12 +377,16 @@ private fun SettingsAction(
 
 /**
  * The account, on one card: who, the three balances, and how far the chicken count is from the next
- * level. The identity row opens 个人主页; the three tiles open 账户与成长, where a balance is explained.
+ * level. The identity row opens 个人主页. Each balance opens its own ledger — 鸡腿 to 鸡腿流水, 星辰 to
+ * 星辰流水, where 转账 also lives — and 等级 opens 账户与成长, where the level is explained. The ledgers
+ * used to be tiles of a 资产 group further down as well, which made two ways to the same page.
  */
 @Composable
 private fun AccountCard(
     state: ProfileUiState,
     onOpenSpace: () -> Unit,
+    onCredit: () -> Unit,
+    onStardust: () -> Unit,
     onAssets: () -> Unit,
 ) {
     LayerCard(
@@ -392,16 +398,17 @@ private fun AccountCard(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             val scheme = MaterialTheme.colorScheme
             listOf(
-                Triple(Res.string.profile_chicken, state.chickenCount?.toString() ?: UNKNOWN, scheme.tertiaryContainer),
-                Triple(Res.string.profile_stars, state.starCount?.toString() ?: UNKNOWN, scheme.secondaryContainer),
-                Triple(
+                BalanceTile(Res.string.profile_chicken, state.chickenCount?.toString() ?: UNKNOWN, scheme.tertiaryContainer, onCredit),
+                BalanceTile(Res.string.profile_stars, state.starCount?.toString() ?: UNKNOWN, scheme.secondaryContainer, onStardust),
+                BalanceTile(
                     Res.string.profile_level,
                     state.level ?: stringResource(Res.string.profile_level_unknown),
                     scheme.primaryContainer,
+                    onAssets,
                 ),
-            ).forEach { (label, value, container) ->
+            ).forEach { (label, value, container, onClick) ->
                 TonalTile(
-                    onClick = onAssets,
+                    onClick = onClick,
                     containerColor = container,
                     shape = MaterialTheme.shapes.medium,
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = Spacing.sm),
@@ -430,6 +437,13 @@ private fun AccountCard(
         state.levelProgress?.let { LevelProgressLine(it) }
     }
 }
+
+private data class BalanceTile(
+    val label: StringResource,
+    val value: String,
+    val container: Color,
+    val onClick: () -> Unit,
+)
 
 /** How far a balance steps down before it gives up fitting — still larger than the label above it. */
 private val BALANCE_MIN_FONT_SIZE = 13.sp
@@ -589,7 +603,10 @@ private data class ProfileTile(
 )
 
 /**
- * The four groups, in the order 2b puts them: 内容, 资产, 社区, 设置 — 6 + 4 + 7 + 4 = 21 tiles.
+ * The three groups: 内容, 社区, 设置 — 6 + 8 + 4 = 18 tiles.
+ *
+ * There is no 资产 group. 鸡腿流水 and 星辰流水 are the balances on the account card above, 星辰转账 is
+ * the 转账 on 星辰流水, and 邀请码 — bought with chicken, but a way into the community — is in 社区.
  *
  * 社区 carries 友站, which the older boards did not draw. It was the sixth link on 社区工具, and that
  * page is not reached from here while signed in — dropping the tile would have quietly deleted the
@@ -610,16 +627,6 @@ private fun profileSections(destinations: ProfileDestinations): List<ProfileSect
             ),
         ),
         ProfileSection(
-            title = Res.string.profile_section_assets,
-            tiles =
-            listOf(
-                ProfileTile(Res.string.profile_tile_credit, PlazaIcons.Wallet, destinations.credit),
-                ProfileTile(Res.string.profile_tile_stardust, Icons.Default.Star, destinations.stardust),
-                ProfileTile(Res.string.profile_tile_transfer, PlazaIcons.SwapVert, destinations.transfer),
-                ProfileTile(Res.string.profile_tile_invite, PlazaIcons.ConfirmationNumber, destinations.invite),
-            ),
-        ),
-        ProfileSection(
             title = Res.string.profile_section_community,
             tiles =
             listOf(
@@ -629,6 +636,7 @@ private fun profileSections(destinations: ProfileDestinations): List<ProfileSect
                 ProfileTile(Res.string.profile_tile_providers, Icons.Default.ShoppingCart, destinations.providers),
                 ProfileTile(Res.string.profile_tile_friends, PlazaIcons.Link, destinations.friends),
                 ProfileTile(Res.string.profile_tile_block, PlazaIcons.Block, destinations.blockList),
+                ProfileTile(Res.string.profile_tile_invite, PlazaIcons.ConfirmationNumber, destinations.invite),
                 ProfileTile(Res.string.profile_tile_about_community, PlazaIcons.Forum, destinations.aboutCommunity),
             ),
         ),

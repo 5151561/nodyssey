@@ -146,7 +146,7 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
             onChickenLedger = { backStack.add(CreditKey) },
-            onStardust = { backStack.add(StardustKey()) },
+            onStardust = { backStack.add(StardustKey) },
             // In-app, not the system browser: a Cloudflare pass earned out there lands in
             // Chrome's cookie store, and the app's own retry keeps failing forever.
             onOpenBrowser = { url ->
@@ -178,12 +178,8 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
         )
     }
 
-    entry<StardustKey> { key ->
-        val viewModel: StardustViewModel =
-            viewModel(
-                key = "stardust-${key.startTransfer}",
-                factory = StardustViewModel.factory(container, key.startTransfer),
-            )
+    entry<StardustKey> {
+        val viewModel: StardustViewModel = viewModel(factory = StardustViewModel.factory(container))
         val state by viewModel.uiState.collectAsStateWithLifecycle()
         // The ledger URL is per-member, so it exists only once the profile call has said who
         // we are; before that "在网页打开" can only offer the site's front page.

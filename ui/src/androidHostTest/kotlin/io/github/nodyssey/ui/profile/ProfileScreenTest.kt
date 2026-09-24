@@ -180,9 +180,9 @@ class ProfileScreenTest {
     }
 
     @Test
-    fun `the grid lays the four sections out and each tile is one jump`() {
+    fun `the grid lays its sections out and each tile is one jump`() {
         var commentsOpened = false
-        var transferOpened = false
+        var inviteOpened = false
         var followersOpened = false
         composeRule.setContent {
             PlazaTheme {
@@ -191,7 +191,7 @@ class ProfileScreenTest {
                     destinations =
                     ProfileDestinations(
                         comments = { commentsOpened = true },
-                        transfer = { transferOpened = true },
+                        invite = { inviteOpened = true },
                         followers = { followersOpened = true },
                     ),
                     onSignIn = {},
@@ -209,14 +209,58 @@ class ProfileScreenTest {
         composeRule.onNodeWithText("我的评论").performClick()
         composeRule.onNodeWithText("我的粉丝").performClick()
         // Below the fold on a 360x800 screen, and inside a `LazyColumn`, so it is not composed at
-        // all until the list is scrolled to it: the grid is four sections long and only the first
-        // fits.
-        composeRule.onNode(hasScrollAction()).performScrollToNode(hasText("星辰转账"))
-        composeRule.onNodeWithText("星辰转账").performClick()
+        // all until the list is scrolled to it. 邀请码 is in 社区 now that there is no 资产 group.
+        composeRule.onNode(hasScrollAction()).performScrollToNode(hasText("邀请码"))
+        composeRule.onNodeWithText("邀请码").performClick()
 
         check(commentsOpened)
         check(followersOpened)
-        check(transferOpened)
+        check(inviteOpened)
+    }
+
+    /**
+     * The balances are the way to their ledgers: a 资产 group of 鸡腿流水 / 星辰流水 / 星辰转账 tiles
+     * used to sit under them as a second way to the same pages, and 转账 is on 星辰流水 itself.
+     */
+    @Test
+    fun `each balance opens its own ledger, and no 资产 tiles repeat them`() {
+        val opened = mutableListOf<String>()
+        composeRule.setContent {
+            PlazaTheme {
+                ProfileScreen(
+                    state =
+                    ProfileUiState(
+                        isSignedIn = true,
+                        uid = 88423,
+                        displayName = "nodyssey_dev",
+                        chickenCount = 344,
+                        starCount = 4,
+                        level = "Lv 1",
+                    ),
+                    destinations =
+                    ProfileDestinations(
+                        credit = { opened += "credit" },
+                        stardust = { opened += "stardust" },
+                        assets = { opened += "assets" },
+                    ),
+                    onSignIn = {},
+                    onRetry = {},
+                    onOpenWebsite = {},
+                    onVerify = {},
+                    onAttendance = {},
+                    onAttendanceBoard = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("344").performClick()
+        composeRule.onNodeWithText("4").performClick()
+        composeRule.onNodeWithText("Lv 1").performClick()
+        check(opened == listOf("credit", "stardust", "assets")) { "opened $opened" }
+
+        listOf("鸡腿流水", "星辰流水", "星辰转账").forEach { tile ->
+            check(composeRule.onAllNodesWithText(tile).fetchSemanticsNodes().isEmpty()) { "$tile is still a tile" }
+        }
     }
 
     /**

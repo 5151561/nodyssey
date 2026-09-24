@@ -1337,7 +1337,6 @@
     <string name="help_imagehost_body">論壇不存圖。「設定 › 圖床」裡選一家，六家可選，金鑰只留在本機。</string>
     <!-- 我的 · 分區圖示網格（board n1） -->
     <string name="profile_section_content">我的內容</string>
-    <string name="profile_section_assets">資產</string>
     <string name="profile_section_community">社群</string>
     <string name="profile_section_settings">設定與其他</string>
     <string name="profile_tile_topics">主題帖</string>
@@ -1346,9 +1345,6 @@
     <string name="profile_tile_history">瀏覽紀錄</string>
     <string name="profile_tile_following">我的關注</string>
     <string name="profile_tile_followers">我的粉絲</string>
-    <string name="profile_tile_credit">雞腿流水</string>
-    <string name="profile_tile_stardust">星辰流水</string>
-    <string name="profile_tile_transfer">星辰轉帳</string>
     <string name="profile_tile_invite">邀請碼</string>
     <string name="profile_tile_award">推薦閱讀</string>
     <string name="profile_tile_lucky">幸運抽獎</string>
