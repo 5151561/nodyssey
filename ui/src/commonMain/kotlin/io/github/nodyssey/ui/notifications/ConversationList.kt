@@ -170,7 +170,10 @@ internal fun ConversationList(
         ) {
             Icon(Icons.Default.Edit, contentDescription = null)
             Spacer(Modifier.width(10.dp))
-            Text(stringResource(Res.string.messages_new_conversation))
+            Text(
+                text = stringResource(Res.string.messages_new_conversation),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            )
         }
     }
 

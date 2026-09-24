@@ -344,6 +344,8 @@ private fun FrequencySheet(
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         ),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        // Wraps at a large text size, as this sheet's own rows did before ChoiceRow.
+                        maxLines = Int.MAX_VALUE,
                     )
                 }
             }

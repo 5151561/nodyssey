@@ -28,6 +28,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -138,6 +139,9 @@ internal fun BookmarkRow(
         // The text's inset whether or not a checkbox leads, so ticking into selection does not move the
         // hairlines.
         dividerInset = GroupDividerInset,
+        // Top-aligned like the ListItem this row used to be: on a title that wraps, the checkbox and
+        // the offline icon stay level with its first line instead of drifting to the middle.
+        verticalAlignment = ListItemDefaults.verticalAlignment(),
         leadingContent =
         selected?.let { checked ->
             {

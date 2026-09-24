@@ -28,6 +28,7 @@ fun ChoiceRow(
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = LocalTextStyle.current,
+    maxLines: Int = 1,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
 ) {
     Row(
@@ -44,7 +45,7 @@ fun ChoiceRow(
         Text(
             text = label,
             style = textStyle,
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
