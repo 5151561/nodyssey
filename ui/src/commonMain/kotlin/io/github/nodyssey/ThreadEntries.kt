@@ -105,7 +105,8 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
             showBackButton = !(isListDetailExpanded() && backStack.showsListPane()),
             onBack = { backStack.removeLastOrNull() },
             onOpenBrowser = openWebUrl,
-            onLinkClick = openContentUrl,
+            // A link to this same thread stays on this screen; see [PostDetailViewModel.openLinkInPlace].
+            onLinkClick = { url -> if (!viewModel.openLinkInPlace(url)) openContentUrl(url) },
             onAuthorClick = openSpace,
             onSignIn = { backStack.add(SignInKey) },
             onVerify = { backStack.add(WebKey(it, siteTitle, WebViewGoal.CHALLENGE)) },

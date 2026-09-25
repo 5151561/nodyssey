@@ -1,6 +1,7 @@
 package io.github.nodyssey.ui.postdetail
 
 import io.github.nodyssey.ThreadPreview
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FakePostRemoteDataSource
 import io.github.nodyssey.data.MutableClock
 import io.github.nodyssey.data.NoReadingPositions
@@ -644,6 +645,30 @@ class PostDetailViewModelTest {
             assertEquals(requestsBefore, remote.detailRequests.size)
             assertEquals(PendingScroll(page = 1), vm.uiState.value.pendingScroll)
             assertEquals(2, vm.uiState.value.lastLoadedPage)
+        }
+
+    /**
+     * Regression: a link back to the thread being read — typically the author's signature — pushed a
+     * second copy of the screen, so the tap looked inert and Back needed one extra press per tap.
+     */
+    @Test
+    fun `a link to this same thread jumps in place and any other thread is left to navigation`() =
+        runTest(dispatcher) {
+            remote.detailResult = { postId, page ->
+                FakePostRemoteDataSource.detail(postId, page, commentCount = 2, totalPages = 40)
+            }
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertFalse(vm.openLinkInPlace(NodeSeekSite.BASE_URL + "/post-43-1"))
+            assertFalse(vm.openLinkInPlace(NodeSeekSite.BASE_URL + "/space/42"))
+            assertNull(vm.uiState.value.pendingScroll)
+
+            assertTrue(vm.openLinkInPlace(NodeSeekSite.BASE_URL + "/post-42-30"))
+            advanceUntilIdle()
+
+            assertEquals(30, vm.uiState.value.firstLoadedPage)
+            assertEquals(PendingScroll(page = 30), vm.uiState.value.pendingScroll)
         }
 
     /**

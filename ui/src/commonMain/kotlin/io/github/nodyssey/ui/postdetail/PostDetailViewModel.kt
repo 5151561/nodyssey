@@ -297,6 +297,22 @@ class PostDetailViewModel(
     fun loadPage(page: Int) = bringIntoView(page, floor = null)
 
     /**
+     * Opens [url] on this screen when it links to this same thread, and says whether it did.
+     *
+     * A link back to the thread being read — most often the author's signature pointing at their own
+     * post — used to push a second copy of this destination onto the stack. The copy looked exactly
+     * like the screen under it, so the tap seemed to do nothing, and Back then took one press per
+     * tap before anything changed. Answered here instead as the jump the link asks for: the page it
+     * names, which for a bare `/post-<id>-1` is the top of the thread.
+     */
+    fun openLinkInPlace(url: String): Boolean {
+        val route = NodeSeekSite.parseInternalRoute(url) as? NodeSeekSite.InternalRoute.Post ?: return false
+        if (route.postId != postId) return false
+        loadPage(route.page)
+        return true
+    }
+
+    /**
      * Fetches a page next to the loaded ones and leaves the reader exactly where they are.
      *
      * The difference from [loadPage] is the landing, not the fetch: a page adjoining the window is the
