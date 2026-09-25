@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -396,22 +398,24 @@ private fun AccountCard(
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         IdentityRow(state, onOpenSpace)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
             val scheme = MaterialTheme.colorScheme
-            listOf(
-                BalanceTile(Res.string.profile_chicken, state.chickenCount?.toString() ?: UNKNOWN, scheme.tertiaryContainer, onCredit),
-                BalanceTile(Res.string.profile_stars, state.starCount?.toString() ?: UNKNOWN, scheme.secondaryContainer, onStardust),
-                BalanceTile(
-                    Res.string.profile_level,
-                    state.level ?: stringResource(Res.string.profile_level_unknown),
-                    scheme.primaryContainer,
-                    onAssets,
-                ),
-            ).forEach { (label, value, container, onClick) ->
+            val balances =
+                listOf(
+                    BalanceTile(Res.string.profile_chicken, state.chickenCount?.toString() ?: UNKNOWN, scheme.tertiaryContainer, onCredit),
+                    BalanceTile(Res.string.profile_stars, state.starCount?.toString() ?: UNKNOWN, scheme.secondaryContainer, onStardust),
+                    BalanceTile(
+                        Res.string.profile_level,
+                        state.level ?: stringResource(Res.string.profile_level_unknown),
+                        scheme.primaryContainer,
+                        onAssets,
+                    ),
+                )
+            balances.forEachIndexed { index, (label, value, container, onClick) ->
                 TonalTile(
                     onClick = onClick,
                     containerColor = container,
-                    shape = MaterialTheme.shapes.medium,
+                    shape = connectedBalanceShape(index, balances.lastIndex),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = Spacing.sm),
                     verticalArrangement = Arrangement.Top,
                     modifier = Modifier.weight(1f),
@@ -445,6 +449,28 @@ private data class BalanceTile(
     val container: Color,
     val onClick: () -> Unit,
 )
+
+/**
+ * The three balances drawn as one strip, the way the account card had them before the redesign and
+ * the way Material's connected button group joins its buttons: large corners on the outside of the
+ * strip, small ones where two tiles meet, the group's 2dp between them.
+ *
+ * The button group's own shapes are not borrowed whole. Their outer corners are fully round, sized
+ * for a 40dp button; on a tile two lines tall they bite into the label in its corner.
+ */
+@Composable
+private fun connectedBalanceShape(
+    index: Int,
+    lastIndex: Int,
+): Shape {
+    val outer = MaterialTheme.shapes.large
+    val inner = MaterialTheme.shapes.extraSmall
+    return when (index) {
+        0 -> outer.copy(topEnd = inner.topEnd, bottomEnd = inner.bottomEnd)
+        lastIndex -> outer.copy(topStart = inner.topStart, bottomStart = inner.bottomStart)
+        else -> inner
+    }
+}
 
 /** How far a balance steps down before it gives up fitting — still larger than the label above it. */
 private val BALANCE_MIN_FONT_SIZE = 13.sp
@@ -672,6 +698,7 @@ private const val PROFILE_GRID_COLUMNS = 4
  * right, on some phones and not others. [Grid] shares the `fr` tracks out so they sum to the width,
  * and a short last row stays on the columns of the rows above it without filler.
  */
+@OptIn(ExperimentalGridApi::class)
 @Composable
 private fun ProfileGridCard(tiles: List<ProfileTile>) {
     LayerCard(contentPadding = PaddingValues(Spacing.xs), verticalArrangement = Arrangement.Top) {
@@ -702,7 +729,6 @@ private fun ProfileGridTile(
             .padding(vertical = Spacing.sm, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
-@OptIn(ExperimentalGridApi::class)
     ) {
         Icon(tile.icon, contentDescription = null, modifier = Modifier.size(20.dp))
         Text(
