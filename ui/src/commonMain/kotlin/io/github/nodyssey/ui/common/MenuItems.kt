@@ -2,11 +2,10 @@ package io.github.nodyssey.ui.common
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.SelectableDropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,11 +21,10 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * One entry of a menu that has a current answer — a sort order, a site, a palette style, a language.
  *
- * Material's selectable [DropdownMenuItem]: the current entry sits on a tonal pill with a tick, takes
+ * Material's [SelectableDropdownMenuItem]: the current entry sits on a tonal pill with a tick, takes
  * the menu's first/middle/last corners from [index] and [count], and is announced as selected — the
  * tick is decoration, the `selected` state is what a screen reader says.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SelectableMenuItem(
     selected: Boolean,
@@ -37,20 +35,20 @@ internal fun SelectableMenuItem(
     modifier: Modifier = Modifier,
     leadingIcon: (@Composable () -> Unit)? = null,
 ) {
-    DropdownMenuItem(
+    SelectableDropdownMenuItem(
         selected = selected,
         onClick = onClick,
         text = text,
         shapes = MenuDefaults.itemShape(index, count),
         modifier = modifier,
         leadingIcon = leadingIcon,
-        trailingIcon = { if (selected) Icon(Icons.Default.Check, contentDescription = null) },
+        trailingContent = { if (selected) Icon(Icons.Default.Check, contentDescription = null) },
         colors =
         MenuDefaults.selectableItemColors(
             containerColor = Color.Transparent,
             selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
             selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            selectedTrailingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedTrailingContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
         ),
     )
 }

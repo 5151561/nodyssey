@@ -390,7 +390,7 @@ class QualityReportParserTest {
         val report = QualityReportParser.parse(truncated)
 
         assertNotNull(report)
-        assertEquals("硬件质量体检报告", report?.title)
-        assertTrue(report?.footnotes.isNullOrEmpty())
+        assertEquals("硬件质量体检报告", report.title)
+        assertTrue(report.footnotes.isNullOrEmpty())
     }
 }

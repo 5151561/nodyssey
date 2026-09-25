@@ -112,8 +112,7 @@ fun GroupedListItem(
      * Material's own unless a denser list says otherwise. Its 56dp one-line minimum goes with it only
      * when [modifier] sets a minimum height of its own — the row reads the incoming minimum in place
      * of its token when there is one — so a denser row is `heightIn(min = …)` plus a padding that
-     * fits in it. A clickable row still stops at Material's 48dp touch target. A row with no click
-     * (the plain `ListItem` branch) takes no padding.
+     * fits in it. A clickable row still stops at Material's 48dp touch target.
      */
     contentPadding: PaddingValues = ListItemDefaults.ContentPadding,
 ) {
@@ -203,16 +202,21 @@ fun GroupedListItem(
                 content = headline,
             )
 
-        // Material keeps its non-interactive segmented overload out of the common API; the classic
-        // `ListItem` draws the same row, and takes the group's shape as a clip instead of a parameter.
+        // Material keeps its non-interactive segmented overload out of the common API. The
+        // content-slot `ListItem` takes the same parameters, so a row with nothing to click is laid
+        // out by the same rules as its clickable neighbours.
         else ->
             ListItem(
-                headlineContent = headline,
+                shapes = shapes,
                 modifier = decorated,
-                supportingContent = supporting,
+                enabled = enabled,
                 leadingContent = leadingContent,
                 trailingContent = trailingContent,
+                supportingContent = supporting,
+                verticalAlignment = verticalAlignment,
                 colors = colors,
+                contentPadding = contentPadding,
+                content = headline,
             )
     }
 }

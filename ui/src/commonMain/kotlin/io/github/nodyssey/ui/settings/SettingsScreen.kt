@@ -3,7 +3,6 @@ package io.github.nodyssey.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +18,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -538,12 +536,17 @@ fun SettingsScreen(
 }
 
 /**
- * The expressive slider every size control on this screen uses: a 16dp track, the line thumb
- * standing off it by a gap, and no tick dots.
+ * The slider every size control on this screen uses: Material's [Slider] with its default track.
  *
- * Material's own [Slider] with its own [SliderDefaults.Track], told to draw neither the stop
- * indicator nor the ticks — at nine or thirteen stops the dots crowd the track into a dotted line
- * and say nothing the number beside the title does not.
+ * It used to hand [Slider] a `track` of its own — 16dp, with neither the stop indicator nor the
+ * ticks, since at nine or thirteen stops the dots crowd the track into a dotted line and say nothing
+ * the number beside the title does not. No overload can do that on both sides today: androidx
+ * material3 1.5.0-alpha28 removed the value-based `Slider(value, …, track)` outright — no hidden
+ * copy left for binary compatibility — while Compose Multiplatform's material3 1.13.0-alpha01 is
+ * alpha27 underneath and lacks the `Slider(state, onValueChange, …, track)` that replaced it. This
+ * module compiles against the second and `:app` ships the first, so a `track` here was a
+ * `NoSuchMethodError` on Android. Put the custom track back through the state-based overload once
+ * `composeMultiplatformMaterial3` is at least alpha28 underneath.
  */
 @Composable
 private fun SettingsSlider(
@@ -561,18 +564,8 @@ private fun SettingsSlider(
         valueRange = valueRange,
         steps = steps,
         modifier = modifier,
-        track = { sliderState ->
-            SliderDefaults.Track(
-                sliderState = sliderState,
-                modifier = Modifier.height(SliderTrackHeight),
-                drawStopIndicator = null,
-                drawTick = { _, _ -> },
-            )
-        },
     )
 }
-
-private val SliderTrackHeight = 16.dp
 
 /**
  * 语言, behind a dropdown.

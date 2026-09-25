@@ -16,7 +16,7 @@ import java.io.File
  *   source set was renamed, say — would pass forever while guarding nothing.
  */
 internal fun repositoryRoot(): File {
-    var dir = File(System.getProperty("user.dir")).absoluteFile
+    var dir = File("").absoluteFile
     while (!File(dir, "settings.gradle.kts").isFile) {
         dir = dir.parentFile
             ?: error("no settings.gradle.kts above ${System.getProperty("user.dir")} — cannot locate the repository")

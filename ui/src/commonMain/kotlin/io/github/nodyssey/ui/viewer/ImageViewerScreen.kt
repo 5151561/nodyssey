@@ -291,7 +291,7 @@ private fun ZoomableImage(
      * the reason the comment explaining it is now four lines instead of six.
      */
     val transform =
-        rememberTransformableState { zoomChange, panChange, _ ->
+        rememberTransformableState { _, zoomChange, panChange, _ ->
             scale = (scale * zoomChange).coerceIn(1f, MAX_SCALE)
             offset = if (scale > 1f) offset + panChange else Offset.Zero
             onZoomChange(scale > 1f)

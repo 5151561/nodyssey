@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalGridApi
 import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -698,7 +697,6 @@ private const val PROFILE_GRID_COLUMNS = 4
  * right, on some phones and not others. [Grid] shares the `fr` tracks out so they sum to the width,
  * and a short last row stays on the columns of the rows above it without filler.
  */
-@OptIn(ExperimentalGridApi::class)
 @Composable
 private fun ProfileGridCard(tiles: List<ProfileTile>) {
     LayerCard(contentPadding = PaddingValues(Spacing.xs), verticalArrangement = Arrangement.Top) {

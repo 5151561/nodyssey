@@ -30,6 +30,5 @@ actual fun rememberInstallPermissionRequest(onResult: () -> Unit): () -> Unit {
                 "package:${context.packageName}".toUri(),
             )
         runCatching { launcher.launch(intent) }
-        Unit
     }
 }

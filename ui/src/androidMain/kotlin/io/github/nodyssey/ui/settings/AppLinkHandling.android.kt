@@ -92,6 +92,5 @@ actual fun rememberAppLinkSettingsLauncher(): () -> Unit {
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
     return {
         runCatching { launcher.launch(appLinkSettingsIntent(context)) }
-        Unit
     }
 }

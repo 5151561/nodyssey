@@ -569,7 +569,7 @@ private fun VoteResultRow(
                         } else {
                             stringResource(Res.string.vote_voters_expand, item.count ?: 0)
                         },
-                        onClick = { onToggleVoters?.invoke() },
+                        onClick = onToggleVoters,
                     )
                 } else {
                     Modifier
@@ -649,7 +649,7 @@ private fun VoteResultRow(
                     .background(fill),
             )
         }
-        if (open && voters != null) VoterStrip(list = voters, onLoadMore = onLoadMore, onUserClick = onUserClick)
+        if (open) VoterStrip(list = voters, onLoadMore = onLoadMore, onUserClick = onUserClick)
     }
 }
 

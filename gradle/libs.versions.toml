@@ -1,11 +1,11 @@
 [versions]
-androidGradlePlugin = "9.3.1"
-androidxCore = "1.19.0"
+androidGradlePlugin = "9.4.1"
+androidxCore = "1.19.1"
 androidxLifecycle = "2.11.0"
 androidxActivity = "1.13.0"
 androidxBrowser = "1.10.0"
-androidxComposeBom = "2026.06.00"
-androidxMaterial3 = "1.5.0-alpha24"
+androidxComposeBom = "2026.09.00"
+androidxMaterial3 = "1.5.0-alpha29"
 # Where androidx's icons stopped; see `composeMultiplatformIcons` below for the freeze on both sides.
 # Stated as a version here only so the multiplatform pointer, which asks for 1.7.6, does not decide it
 # — the constraints at the end of `app/build.gradle.kts` are what use it.
@@ -15,37 +15,42 @@ androidxMaterialIcons = "1.7.8"
 # androidx classes it was on before. Every module that compiles Compose names these coordinates now,
 # `:app` included; the androidx aliases that remain below are the two test artifacts with no
 # multiplatform counterpart, plus three versions held forward by constraint.
-composeMultiplatform = "1.12.0-rc01"
-# Material 3 is versioned on its own line in Compose Multiplatform and moves slower than the rest of
-# it: this is the newest one published, and it is what `1.12.0-rc01` expects beside it. On Android it
-# asks for androidx material3 1.5.0-alpha22, which loses to the alpha24 above.
-composeMultiplatformMaterial3 = "1.12.0-alpha03"
+#
+# On an alpha because of `androidxMaterial3`: from 1.5.0-alpha28 on it depends on foundation
+# 1.13.0-alpha01, so a 1.12 line here would have put a 1.13 foundation and runtime under a 1.12 `ui`
+# on Android alone, while the other targets stayed on 1.12 throughout. This keeps every target on one
+# Compose, alpha as it is. Its Android pointers ask for androidx ui 1.13.0-alpha02.
+composeMultiplatform = "1.13.0-alpha01"
+# Material 3 is versioned on its own line in Compose Multiplatform and usually trails the rest of it;
+# at 1.13.0-alpha01 the two happen to meet. On Android it asks for androidx material3 1.5.0-alpha27,
+# which loses to the alpha29 above.
+composeMultiplatformMaterial3 = "1.13.0-alpha01"
 # And the adaptive libraries are a third version line, `org.jetbrains.compose.material3.adaptive`.
-# The newest published, and its Android pointer asks for androidx adaptive 1.3.0-beta02 — behind the
-# `material3Adaptive` rc01 above, which is why that one is held forward by constraint.
-composeMultiplatformAdaptive = "1.3.0-beta02"
+# The newest published. Its Android pointer asks for androidx adaptive 1.3.0, the same as
+# `material3Adaptive` below; the constraint that holds that one forward is idle until the two part.
+composeMultiplatformAdaptive = "1.3.0-rc01"
 # Frozen upstream, on both sides: androidx stopped at 1.7.8 (2025-02) and the multiplatform mirror at
 # 1.7.3. The five icons this repository takes from it are Material's oldest and have not changed; the
 # pin is only stated here because the version cannot come from the Compose Multiplatform line.
 composeMultiplatformIcons = "1.7.3"
 # The `org.jetbrains.androidx.navigation3` mirror, which is a fourth version line — see
 # `compose-navigation3-ui` below for why only one of navigation3's two artifacts needs one.
-composeMultiplatformNav3 = "1.1.0"
+composeMultiplatformNav3 = "1.2.0-beta01"
 androidxTest = "1.7.0"
 androidxTestExt = "1.3.0"
 androidxTestRunner = "1.7.0"
 androidxTestEspresso = "3.7.0"
-androidxTestUiautomator = "2.3.0"
+androidxTestUiautomator = "2.4.0"
 coroutines = "1.11.0"
-okio = "3.9.1"
+okio = "3.18.2"
 junit = "4.13.2"
-kotlin = "2.4.10"
-nav3Core = "1.1.4"
-material3Adaptive = "1.3.0-rc01"
-okhttp = "5.4.0"
-jsoup = "1.22.2"
+kotlin = "2.4.20"
+nav3Core = "1.2.0"
+material3Adaptive = "1.3.0"
+okhttp = "5.5.0"
+jsoup = "1.23.2"
 ksoup = "0.2.6"
-coil = "3.5.0"
+coil = "3.6.3"
 # libavif, AOMediaCodec's own Android build: the AV1 decoder compiled in, so a device that has
 # none can still be shown an AVIF. The version is libavif's release plus the commit it was cut
 # from, which is how that project publishes. See `AvifImageDecoder` in `:app`.
@@ -57,24 +62,24 @@ kotlinxSerialization = "1.11.0"
 kotlinxDatetime = "0.8.0"
 # Google's material-color-utilities, ported to multiplatform Kotlin (MIT). Only the algorithm half —
 # no Compose dependency of its own, so it adds a seed-to-scheme function and nothing else.
-materialColorUtilities = "5.0.0"
+materialColorUtilities = "5.0.1"
 androidxDatastore = "1.2.1"
-androidxWork = "2.11.2"
+androidxWork = "2.12.0"
 # KSP dropped the `<kotlin>-<ksp>` coordinate scheme. KSP2 is versioned independently from Kotlin,
 # so keep it on its own release line instead of coupling the two version numbers.
-ksp = "2.3.10"
-room = "2.8.4"
-# androidx.sqlite, which Room 2.8.4 resolves anyway. Named on its own line because the
+ksp = "2.3.12"
+room = "2.8.5"
+# androidx.sqlite, which Room 2.8.5 resolves anyway. Named on its own line because the
 # multiplatform half of Room reaches it directly: a `Migration` in `commonMain` is written against
 # `SQLiteConnection`, and the Apple targets need the bundled driver to have a SQLite at all.
 sqlite = "2.6.2"
-paging = "3.5.0"
-robolectric = "4.16.1"
+paging = "3.5.1"
+robolectric = "4.17"
 leakcanary = "2.14"
-roborazzi = "1.73.0"
-androidxBenchmark = "1.5.0-rc01"
+roborazzi = "1.75.0"
+androidxBenchmark = "1.5.0"
 androidxProfileinstaller = "1.4.1"
-spotless = "8.9.0"
+spotless = "8.10.2"
 ktlint = "1.8.0"
 
 [libraries]

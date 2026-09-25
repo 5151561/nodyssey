@@ -26,10 +26,6 @@ kotlin {
             // `:richtext` and not `:shared` since step D1: a component gallery used to resolve SQLite,
             // Paging and a network layer to draw a paragraph, which is what that lockfile said.
             implementation(project(":richtext"))
-
-            // Skiko and the AWT window for whichever machine this is running on. The only dependency
-            // in the repository that is chosen by the host rather than by the build.
-            implementation(compose.desktop.currentOs)
         }
 
         jvmTest.dependencies {
@@ -38,31 +34,8 @@ kotlin {
             // `runComposeUiTest`, which needs no window and no display — which is the only reason
             // this module can be a CI gate rather than something a person has to remember to open.
             implementation(libs.compose.ui.test)
-            implementation(compose.desktop.currentOs)
         }
     }
-}
-
-/*
- * The two artefacts `compose.desktop.currentOs` picks by host, left out of the lockfile.
- *
- * A lockfile records the graph so that the repository decides it rather than whichever machine ran
- * the build — and these are the one dependency in the repository where that is the wrong goal on
- * purpose (see `jvmMain` above). Locked, they pin the Skiko and Compose desktop natives of the
- * machine that last ran `--write-locks`; a Mac writes `macos-arm64`, CI resolves `linux-x64`, and
- * STRICT mode fails it both ways at once — "resolved something not in the lock state" and "did not
- * resolve something that is". Wildcards rather than the two exact coordinates because the host suffix
- * is the whole thing being ignored.
- *
- * Everything else in this module stays locked; nothing else here is chosen by the host.
- */
-dependencyLocking {
-    ignoredDependencies.addAll(
-        listOf(
-            "org.jetbrains.compose.desktop:desktop-jvm-*",
-            "org.jetbrains.skiko:skiko-awt-runtime-*",
-        ),
-    )
 }
 
 compose.desktop {

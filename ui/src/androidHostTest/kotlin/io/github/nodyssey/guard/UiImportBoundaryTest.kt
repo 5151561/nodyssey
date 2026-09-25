@@ -34,13 +34,14 @@ class UiImportBoundaryTest {
 
     @Test
     fun `ui production sources do not import storage, transport or parsing types`() {
-        val module = File(repositoryRoot(), "ui")
+        val root = repositoryRoot()
+        val module = File(root, "ui")
         val violations =
             productionSources(module).flatMap { file ->
                 file.readLines().mapIndexedNotNull { index, line ->
                     val imported = line.trim().removePrefix("import ").takeIf { it != line.trim() }
                     if (imported != null && bannedPrefixes.any { imported.startsWith(it) }) {
-                        "${file.relativeTo(module.parentFile)}:${index + 1}: import $imported"
+                        "${file.relativeTo(root)}:${index + 1}: import $imported"
                     } else {
                         null
                     }

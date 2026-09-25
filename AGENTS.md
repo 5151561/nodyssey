@@ -104,9 +104,9 @@ Before submitting, run the same gates as `.github/workflows/ci.yml`. After build
 ## Dependencies & Official APIs
 
 `gradle/libs.versions.toml` is the single source of truth for every version, and it is kept current
-on purpose: AGP 9.3.1 / Kotlin 2.4.10 / Compose BOM 2026.06.00 / Material 3 1.5.0-alpha24 /
-Compose Multiplatform 1.12.0-rc01 (Material 3 and the adaptive libraries are separate version lines,
-1.12.0-alpha03 and 1.3.0-beta02) / Navigation 3 / OkHttp 5 / Coil 3 / Room 2.8 / Paging 3.5 /
+on purpose: AGP 9.4.1 / Kotlin 2.4.20 / Compose BOM 2026.09.00 / Material 3 1.5.0-alpha29 /
+Compose Multiplatform 1.13.0-alpha01 (Material 3 and the adaptive libraries are separate version lines,
+1.13.0-alpha01 and 1.3.0-rc01) / Navigation 3 / OkHttp 5 / Coil 3 / Room 2.8 / Paging 3.5 /
 coroutines 1.11 / kotlinx-datetime 0.8 / Ksoup 0.2, on JDK 21, compileSdk 37, minSdk 26, targetSdk 36. Never inline a version in a build
 file, and run `./gradlew resolveAndLockAll --write-locks` after any dependency change. The SDK levels
 and the JDK now live in the `build-logic` convention plugins rather than in a module's build file.
@@ -141,9 +141,9 @@ it with a hand-rolled equivalent. In practice:
   say so in a comment at the site: which API was tried, what it could not do, and the condition
   under which the workaround should be removed.
 
-Material 3 stays on a 1.5 alpha because that is where these APIs are public, and the adaptive
-libraries are on rc. Treat every bump of those as behavioural: run the full UI, lint, and release
-gates before trusting it.
+Material 3 stays on a 1.5 alpha because that is where these APIs are public, and Compose
+Multiplatform is on an alpha with it — the `composeMultiplatform` comment in the catalog says why.
+Treat every bump of those as behavioural: run the full UI, lint, and release gates before trusting it.
 
 ## Coding Style & Naming Conventions
 

@@ -259,15 +259,16 @@ dependencies {
      * An `org.jetbrains.compose` artifact's Android variant is a 6KB aar whose `classes.jar` is 273
      * bytes of nothing and whose only content is a dependency on the androidx artifact of the same
      * name. So the swap above changes no class this app compiles against — but it does hand the
-     * choice of *which* androidx version to the pointer, and for three of them the pointer is behind
-     * where this repository runs: material3 asks for 1.5.0-alpha22 against the catalog's alpha24,
-     * adaptive for 1.3.0-beta02 against rc01, and the icons mirror for 1.7.6 against the 1.7.8
-     * androidx stopped at. Unstated, B4 would have been a silent downgrade of three libraries.
+     * choice of *which* androidx version to the pointer, and for three of them the pointer has been
+     * behind where this repository runs: material3 asks for 1.5.0-alpha27 against the catalog's
+     * alpha29, and the icons mirror for 1.7.6 against the 1.7.8 androidx stopped at. Adaptive asked
+     * for 1.3.0-beta02 against rc01 when B4 went in and has since caught up, so its line is idle for
+     * now. Unstated, B4 would have been a silent downgrade of three libraries.
      *
      * Constraints rather than dependencies, so what this module *names* is still the multiplatform
      * coordinate. One line per group is enough: androidx publishes constraints on its siblings inside
-     * every module, so material3 alpha24 brings `material3-adaptive-navigation-suite` with it and
-     * adaptive-navigation3 rc01 brings `adaptive`, `adaptive-layout` and `adaptive-navigation`.
+     * every module, so material3 brings `material3-adaptive-navigation-suite` with it and
+     * adaptive-navigation3 brings `adaptive`, `adaptive-layout` and `adaptive-navigation`.
      */
     constraints {
         implementation(libs.androidx.compose.material3)

@@ -87,7 +87,7 @@ kotlin {
 
             // `ComposeUIViewController`, the one thing this module needs that a screen does not: the
             // seam between UIKit's world and the composition.
-            implementation(compose.ui)
+            implementation(libs.compose.ui)
 
             // Coil, and the reason this module names it at all: on this platform the core library
             // ships no network fetcher, so an app that does not install one draws every remote image

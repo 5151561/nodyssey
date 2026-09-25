@@ -9,7 +9,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalGridApi
 import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -1004,7 +1003,6 @@ private fun MessageDraftField(
  * 3e also draws a 拍照 tile. The composers pick images through the platform photo picker and nothing
  * else, so there is no camera for a tile to open; it is left out rather than drawn as a dead key.
  */
-@OptIn(ExperimentalGridApi::class)
 @Composable
 private fun ToolGrid(
     state: MessageThreadUiState,
