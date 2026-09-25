@@ -9,7 +9,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalGridApi
+import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -1003,6 +1004,7 @@ private fun MessageDraftField(
  * 3e also draws a 拍照 tile. The composers pick images through the platform photo picker and nothing
  * else, so there is no camera for a tile to open; it is left out rather than drawn as a dead key.
  */
+@OptIn(ExperimentalGridApi::class)
 @Composable
 private fun ToolGrid(
     state: MessageThreadUiState,
@@ -1038,16 +1040,18 @@ private fun ToolGrid(
             modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            // A flow of quarters rather than a lazy grid: there are never more than a dozen tiles,
-            // and a lazy grid inside this column would need a fixed height to measure at all.
-            FlowRow(
+            // A plain grid rather than a lazy one: there are never more than a dozen tiles, and a
+            // lazy grid inside this column would need a fixed height to measure at all. Not a
+            // FlowRow of fillMaxWidth(1f / 4) cells either — each quarter rounds to a whole pixel on
+            // its own, and on some widths four of them overflow the row and the fourth wraps.
+            Grid(
+                config = {
+                    repeat(TOOL_COLUMNS) { column(1.fr) }
+                    rowGap(Spacing.lg)
+                },
                 modifier = Modifier.fillMaxWidth(),
-                maxItemsInEachRow = TOOL_COLUMNS,
-                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
-                tiles.forEach { tile ->
-                    Box(Modifier.fillMaxWidth(1f / TOOL_COLUMNS), contentAlignment = Alignment.TopCenter) { tile() }
-                }
+                tiles.forEach { tile -> tile() }
             }
         }
     }

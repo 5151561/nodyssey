@@ -4,7 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalGridApi
+import androidx.compose.foundation.layout.Grid
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -661,16 +662,25 @@ private const val PROFILE_GRID_COLUMNS = 4
 /**
  * One card of tiles, four to a row.
  *
- * A [FlowRow] rather than `LazyVerticalGrid`: this whole screen is one `LazyColumn`, and a lazy grid
+ * A [Grid] rather than `LazyVerticalGrid`: this whole screen is one `LazyColumn`, and a lazy grid
  * nested in it scrolls on the same axis — the combination throws. The counts here are fixed and small,
- * so there is nothing to be lazy about anyway. Each tile takes a quarter of the width rather than a
- * weight, so a short last row stays on the column grid of the rows above it.
+ * so there is nothing to be lazy about anyway.
+ *
+ * Not a `FlowRow` of `fillMaxWidth(1f / 4)` tiles, which is what this was: each quarter is rounded to
+ * the nearest pixel on its own, so on a card whose width in pixels leaves 2 or 3 over a multiple of
+ * four, four tiles come to more than the row and the fourth wraps — three to a row with a hole on the
+ * right, on some phones and not others. [Grid] shares the `fr` tracks out so they sum to the width,
+ * and a short last row stays on the columns of the rows above it without filler.
  */
 @Composable
 private fun ProfileGridCard(tiles: List<ProfileTile>) {
     LayerCard(contentPadding = PaddingValues(Spacing.xs), verticalArrangement = Arrangement.Top) {
-        FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = PROFILE_GRID_COLUMNS) {
-            tiles.forEach { tile -> ProfileGridTile(tile, Modifier.fillMaxWidth(1f / PROFILE_GRID_COLUMNS)) }
+        Grid(
+            config = { repeat(PROFILE_GRID_COLUMNS) { column(1.fr) } },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            // A cell hands its item loose constraints; the tile fills it so the whole quarter is the target.
+            tiles.forEach { tile -> ProfileGridTile(tile, Modifier.fillMaxWidth()) }
         }
     }
 }
@@ -692,6 +702,7 @@ private fun ProfileGridTile(
             .padding(vertical = Spacing.sm, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterVertically),
+@OptIn(ExperimentalGridApi::class)
     ) {
         Icon(tile.icon, contentDescription = null, modifier = Modifier.size(20.dp))
         Text(
