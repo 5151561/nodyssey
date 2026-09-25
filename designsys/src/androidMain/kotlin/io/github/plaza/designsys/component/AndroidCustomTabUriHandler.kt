@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -21,6 +22,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.plaza.designsys.theme.LocalPlazaDarkTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * A [UriHandler] that opens links in a Custom Tab, meant to be swapped in over the platform one at
@@ -92,11 +98,29 @@ class CustomTabUriHandler(
  * keeps alive is *another app's* process, and doing that while the reader is somewhere else entirely
  * is not ours to do. Launching a tab stops this activity, which unbinds — by then the browser is the
  * thing in the foreground and needs no help from us — and coming back binds and warms again.
+ *
+ * Nothing here talks to the browser from the main thread. Every method on `ICustomTabsService` is a
+ * synchronous binder transaction — none of the seventeen is `oneway`, and androidx.browser 1.10 has
+ * no asynchronous form of `warmup`, `newSession` or `mayLaunchUrl` — so the calling thread waits for
+ * as long as the browser's process takes to answer, and that process is not ours to vouch for.
+ * [mayLaunch] used to run straight from the press, and a browser that did not answer held the touch
+ * until the system declared the app not responding (issue #140). The calls run on [BrowserIpc]
+ * instead, so a browser that stops answering holds that one thread and nothing else: a session
+ * request queued behind it is cancelled along with its binding, and a hint is not queued at all.
+ * The state — [session] and the binding — is only touched on [scope]'s own thread, the main one,
+ * which is also where the service callbacks arrive.
  */
 class CustomTabsWarmer(
     private val context: Context,
+    private val scope: CoroutineScope,
 ) {
     private var connection: CustomTabsServiceConnection? = null
+
+    /** The warmup and session request for the current binding, cancelled with it. */
+    private var opening: Job? = null
+
+    /** The one [mayLaunch] hint the browser has not answered yet, if any. */
+    private var hint: Job? = null
 
     /** The current session, or null while nothing is bound. Read at launch time, never cached. */
     var session: CustomTabsSession? = null
@@ -113,13 +137,21 @@ class CustomTabsWarmer(
                     name: ComponentName,
                     client: CustomTabsClient,
                 ) {
-                    // Zero is the documented "no flags" argument; the parameter is reserved and has
-                    // never had a value to pass.
-                    runCatching { client.warmup(0L) }
-                    session = runCatching { client.newSession(null) }.getOrNull()
+                    opening?.cancel()
+                    opening =
+                        scope.launch {
+                            session =
+                                withContext(BrowserIpc) {
+                                    // Zero is the documented "no flags" argument; the parameter is
+                                    // reserved and has never had a value to pass.
+                                    runCatching { client.warmup(0L) }
+                                    runCatching { client.newSession(null) }.getOrNull()
+                                }
+                        }
                 }
 
                 override fun onServiceDisconnected(name: ComponentName?) {
+                    opening?.cancel()
                     session = null
                 }
             }
@@ -135,6 +167,9 @@ class CustomTabsWarmer(
     fun disconnect() {
         val binding = connection ?: return
         connection = null
+        // A session still on its way belongs to the binding being released; cancelling is what
+        // keeps it from being published once it arrives.
+        opening?.cancel()
         session = null
         runCatching { context.unbindService(binding) }
     }
@@ -145,13 +180,24 @@ class CustomTabsWarmer(
      *
      * Silently nothing when no browser is bound yet, which is the first fraction of a second after
      * the app comes back and is not worth an error path: the link still opens, merely at the speed
-     * it opened at before any of this existed.
+     * it opened at before any of this existed. Also nothing while the previous hint is unanswered: a
+     * browser that has not replied to one in the time it took to press another link will not turn a
+     * second into a head start, and queueing them would hand it a burst of stale ones when it wakes.
      */
     fun mayLaunch(url: String) {
         val current = session ?: return
-        runCatching { current.mayLaunchUrl(url.toUri(), null, null) }
+        if (hint?.isActive == true) return
+        hint = scope.launch(BrowserIpc) { runCatching { current.mayLaunchUrl(url.toUri(), null, null) } }
     }
 }
+
+/**
+ * The one thread the browser's binder calls are made on — see [CustomTabsWarmer] for why they are
+ * not made on the main one. A single lane rather than `Dispatchers.IO` itself, because a browser that
+ * stops answering would otherwise take a pool thread per call, out of the pool the network and the
+ * database run on.
+ */
+private val BrowserIpc = Dispatchers.IO.limitedParallelism(1)
 
 /**
  * Builds the handler above against the theme that is actually on screen, and the warm connection it
@@ -173,7 +219,8 @@ actual fun rememberBrowserLinks(shouldUseCustomTab: (String) -> Boolean): Browse
     val darkTheme = LocalPlazaDarkTheme.current
     val colorScheme = MaterialTheme.colorScheme
 
-    val warmer = remember(context) { CustomTabsWarmer(context.applicationContext) }
+    val scope = rememberCoroutineScope()
+    val warmer = remember(context, scope) { CustomTabsWarmer(context.applicationContext, scope) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, warmer) {
         val observer =
