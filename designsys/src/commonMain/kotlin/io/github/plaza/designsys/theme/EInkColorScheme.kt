@@ -140,4 +140,5 @@ internal val EInkExtraColors =
         onSuccessContainer = Ink,
         success = Ink,
         warning = Ink,
+        onWarning = Paper,
     )

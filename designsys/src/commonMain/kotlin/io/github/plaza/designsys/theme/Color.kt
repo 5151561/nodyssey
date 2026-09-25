@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.Color
  * colours rather than the `on…Container` ones: a container's ink is chosen to sit on that container,
  * and the report cards write a green 低风险 straight onto the card surface, where the near-black
  * `onSuccessContainer` would read as ordinary text. `error` already plays this role for the third.
+ *
+ * [onWarning] is the one ink for a [warning] *fill*: the selected 曝光 pill on the home strip, where
+ * each board family's selected pill is its strong tone, the way `primary` is under `onPrimary`.
  */
 @Immutable
 data class PlazaExtraColors(
@@ -40,6 +43,7 @@ data class PlazaExtraColors(
     val onSuccessContainer: Color,
     val success: Color,
     val warning: Color,
+    val onWarning: Color,
 )
 
 internal val LightExtraColors =
@@ -50,6 +54,7 @@ internal val LightExtraColors =
         onSuccessContainer = Color(0xFF0A2E15),
         success = Color(0xFF1B6B3A),
         warning = Color(0xFF7A5A00),
+        onWarning = Color(0xFFFFFFFF),
     )
 
 internal val DarkExtraColors =
@@ -60,6 +65,7 @@ internal val DarkExtraColors =
         onSuccessContainer = Color(0xFFBFE9C8),
         success = Color(0xFF7FD79B),
         warning = Color(0xFFE5C07B),
+        onWarning = Color(0xFF3F2E00),
     )
 
 val LocalPlazaExtraColors = staticCompositionLocalOf { LightExtraColors }

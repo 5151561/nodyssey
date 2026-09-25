@@ -21,9 +21,19 @@ import org.jetbrains.compose.resources.StringResource
  * the list into a rainbow, which destroys the thing the colour was for — being able to tell at a
  * glance whether a row is a trade post or a technical one. Grouping by *kind* keeps that signal and
  * costs nothing in scanability.
+ *
+ * Each family comes in two strengths, the tonal and the filled one Material pairs under every brand
+ * role. The tags, and every pill on the home strip, wear the tonal [container]; the strip's selected
+ * pill wears the filled [accent], so picking a board deepens its colour rather than trading it for
+ * the inverse fill the app's other chips select with.
  */
 @Immutable
-internal data class BoardFamilyColors(val container: Color, val content: Color)
+internal data class BoardFamilyColors(
+    val container: Color,
+    val content: Color,
+    val accent: Color,
+    val onAccent: Color,
+)
 
 /**
  * Declaration order is the order the families are *shown* in, not an accident.
@@ -96,10 +106,17 @@ internal fun boardFamilyColors(family: BoardFamily): BoardFamilyColors {
     val scheme = MaterialTheme.colorScheme
     val extra = LocalPlazaExtraColors.current
     return when (family) {
-        BoardFamily.Technical -> BoardFamilyColors(scheme.primaryContainer, scheme.onPrimaryContainer)
-        BoardFamily.Trade -> BoardFamilyColors(scheme.tertiaryContainer, scheme.onTertiaryContainer)
-        BoardFamily.Everyday -> BoardFamilyColors(scheme.secondaryContainer, scheme.onSecondaryContainer)
-        BoardFamily.Flagged -> BoardFamilyColors(extra.warningContainer, extra.onWarningContainer)
+        BoardFamily.Technical ->
+            BoardFamilyColors(scheme.primaryContainer, scheme.onPrimaryContainer, scheme.primary, scheme.onPrimary)
+
+        BoardFamily.Trade ->
+            BoardFamilyColors(scheme.tertiaryContainer, scheme.onTertiaryContainer, scheme.tertiary, scheme.onTertiary)
+
+        BoardFamily.Everyday ->
+            BoardFamilyColors(scheme.secondaryContainer, scheme.onSecondaryContainer, scheme.secondary, scheme.onSecondary)
+
+        BoardFamily.Flagged ->
+            BoardFamilyColors(extra.warningContainer, extra.onWarningContainer, extra.warning, extra.onWarning)
     }
 }
 

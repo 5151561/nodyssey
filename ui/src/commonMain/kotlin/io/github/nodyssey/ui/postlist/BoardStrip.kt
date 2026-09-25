@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateBounds
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -119,10 +118,10 @@ import org.jetbrains.compose.resources.stringResource
  * underneath stays visible — which a sheet cannot claim.
  *
  * Expanded, a long press turns the same pills into 1j's editor: a 首页版块 header with 完成, the
- * strip's pills in their board colours with a × to take one off, and 未加入首页 underneath holding
- * the ones taken off, each a tap from coming back. Drag to reorder. Parked boards are only drawn while
- * editing — out of the way is the whole point of parking one — so the editor is also the only place
- * they can be recovered, which is why the long press is on the strip rather than buried in 设置.
+ * strip's pills with a × to take one off, and 未加入首页 underneath holding the ones taken off, each
+ * a tap from coming back. Drag to reorder. Parked boards are only drawn while editing — out of the
+ * way is the whole point of parking one — so the editor is also the only place they can be
+ * recovered, which is why the long press is on the strip rather than buried in 设置.
  *
  * [parkedBoards] is deliberately a second list rather than a flag inside [boards]: outside edit mode
  * a parked board is not selectable, and [boards] is exactly the list the feed may page through.
@@ -585,8 +584,7 @@ private fun ExpandedBoards(
                                 BoardPill(
                                     board = slot.board,
                                     selected = slot.board.slug == selectedSlug,
-                                    // 综合 is not a board and cannot be taken off, so it keeps its
-                                    // everyday look and no ×.
+                                    // 综合 is not a board and cannot be taken off, so it gets no ×.
                                     editing = editing && !slot.locked,
                                     onClick = {
                                         when {
@@ -687,11 +685,13 @@ private fun BoardFlow(
 }
 
 /**
- * One board on the strip.
+ * One board on the strip, in its board family's colours — the same four the tags on every row use:
+ * tonal at rest, filled once picked. 综合 is the front page rather than a board, belongs to no family,
+ * and keeps the neutral chip and the inverse fill the app's other chips select with.
  *
- * While [editing] it wears its board family's colours — the same four the board tags on every row
- * use — and a × at its end, and a tap takes it off the strip rather than opening it: 1j's editor, where
- * picking a board is not what the pills are for.
+ * While [editing] it gains a × at its end, and a tap takes it off the strip rather than opening it:
+ * 1j's editor, where picking a board is not what the pills are for. The colours stay as they are, so
+ * the editor opens on the same strip rather than a recoloured one.
  */
 @Composable
 private fun BoardPill(
@@ -700,18 +700,20 @@ private fun BoardPill(
     onClick: () -> Unit,
     editing: Boolean = false,
 ) {
-    val family = boardFamilyColors(boardFamilyOf(board.slug, board.title))
-    val colorSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
-    val container by animateColorAsState(
-        targetValue = if (editing) family.container else PlazaChipDefaults.containerColor(),
-        animationSpec = colorSpec,
-        label = "board-pill-container",
-    )
-    val label by animateColorAsState(
-        targetValue = if (editing) family.content else MaterialTheme.colorScheme.onSurface,
-        animationSpec = colorSpec,
-        label = "board-pill-label",
-    )
+    val colors =
+        if (board.slug == null) {
+            PlazaChipDefaults.filterChipColors()
+        } else {
+            val family = boardFamilyColors(boardFamilyOf(board.slug, board.title))
+            PlazaChipDefaults
+                .filterChipColors(containerColor = family.container, labelColor = family.content, iconColor = family.content)
+                .copy(
+                    selectedContainerColor = family.accent,
+                    selectedLabelColor = family.onAccent,
+                    selectedLeadingIconColor = family.onAccent,
+                    selectedTrailingIconColor = family.onAccent,
+                )
+        }
     val parkLabel = stringResource(Res.string.board_park)
     FilterChip(
         selected = selected,
@@ -753,7 +755,7 @@ private fun BoardPill(
             else -> null
         },
         shape = PillShape,
-        colors = PlazaChipDefaults.filterChipColors(containerColor = container, labelColor = label, iconColor = label),
+        colors = colors,
         border = PlazaChipDefaults.border(selected),
     )
 }
