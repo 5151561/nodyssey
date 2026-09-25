@@ -286,7 +286,7 @@ private class FakeImageHostRepository : ImageHostRepository {
     var images: List<HostedImage> = emptyList()
     var failure: ImageHostException? = null
 
-    /** A device whose Keystore or Keychain turns every write down. See [save]. */
+    /** A device whose Keystore turns every write down. See [save]. */
     var keyStoreRefuses = false
     val deleted = mutableListOf<String>()
     val saved = mutableListOf<ImageHostConfig>()

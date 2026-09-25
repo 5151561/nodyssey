@@ -100,10 +100,11 @@ interface ProxySettings {
  * The stored half of 代理设置.
  *
  * Everything but the password is stored as typed: an address and a port are configuration, and
- * hiding them would only make the file harder to inspect. The password goes through [cipher], so what
- * lands on disk — and in the cloud backup this file is part of — is ciphertext whose key never leaves
- * the device. A value that comes back unreadable is read as no password at all, which is the same
- * thing that happens when the user has not typed one.
+ * hiding them would only make the file harder to inspect. The password goes through [cipher], so on
+ * Android what lands on disk — and in the cloud backup this file is part of — is ciphertext whose key
+ * never leaves the device; iOS keeps this file out of backup instead. A value that comes back
+ * unreadable is read as no password at all, which is the same thing that happens when the user has
+ * not typed one.
  */
 class DataStoreProxySettings(
     private val dataStore: DataStore<Preferences>,

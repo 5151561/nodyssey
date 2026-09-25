@@ -141,9 +141,10 @@ interface ImageHostSettings {
  * That is the whole reason the configs are kept per provider rather than as a single current record.
  *
  * Nothing here leaves the device — except that a DataStore file is part of the cloud backup, which
- * `data_extraction_rules.xml` only holds the Room database and the WebView cookies out of. So the
- * credentials go in encrypted: see [ImageHostSecretKeys] for which values those are and
- * [io.github.nodyssey.data.security.SecretCipher] for what encrypted means here. These are the user's
+ * `data_extraction_rules.xml` only holds the Room database and the WebView cookies out of. So on
+ * Android the credentials go in encrypted — see [ImageHostSecretKeys] for which values those are and
+ * [io.github.nodyssey.data.security.SecretCipher] for what encrypted means here — while iOS keeps the
+ * whole file out of backup and the credentials in it as typed. These are the user's
  * own credentials on services this app does not run, and the only place they are ever sent is the
  * host they belong to.
  */

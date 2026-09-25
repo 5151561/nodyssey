@@ -8,6 +8,9 @@ package io.github.nodyssey.data.security
  * they are also inside the cloud backup, which `data_extraction_rules.xml` only excludes the Room
  * database and the WebView cookie store from. A proxy password left in the clear would therefore be
  * copied off the device the moment the user's phone backs itself up.
+ *
+ * That is Android's answer. iOS keeps the store itself out of the backup and the secret in it as
+ * typed — see [PlaintextSecretCipher] for why it does not encrypt.
  */
 interface SecretCipher {
     /** Empty for empty input; `null` when this device could not encrypt, which callers store as nothing. */

@@ -77,6 +77,8 @@ import io.github.nodyssey.data.proxy.ProxyConnectionTester
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.proxy.ProxyType
 import io.github.nodyssey.data.proxy.routes
+import io.github.nodyssey.data.security.LegacySecretMigration
+import io.github.nodyssey.data.security.PlaintextSecretCipher
 import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.data.session.DefaultAccountSignOut
 import io.github.nodyssey.data.session.NodeSeekSignInRepository
@@ -273,10 +275,23 @@ class IosAppContainer(
 
     private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
 
-    private val secretCipher by lazy { KeychainSecretCipher() }
+    /*
+     * The two stores that hold a credential — the proxy password and each image host's token. The
+     * credential goes in as typed and the store goes where backups leave it out, which is what the
+     * Keychain used to give; see `KeychainLegacySecrets` for why it no longer does. The migration
+     * carries across whatever a build that still used it saved.
+     */
+    private val secretCipher by lazy { PlaintextSecretCipher(KeychainLegacySecrets::read) }
+
+    private fun secretStore(name: String) =
+        createPreferenceDataStore(
+            name,
+            keepOutOfBackup = true,
+            migrations = listOf(LegacySecretMigration(KeychainLegacySecrets::read)),
+        )
 
     override val proxySettings: ProxySettings by lazy {
-        DataStoreProxySettings(createPreferenceDataStore("proxy"), secretCipher)
+        DataStoreProxySettings(secretStore("proxy"), secretCipher)
     }
 
     override val proxyConnectionTester: ProxyConnectionTester by lazy { IosProxyConnectionTester(jsonClient) }
@@ -472,7 +487,7 @@ class IosAppContainer(
 
     override val imageHostRepository: ImageHostRepository by lazy {
         DefaultImageHostRepository(
-            settings = DataStoreImageHostSettings(createPreferenceDataStore("imagehost"), secretCipher),
+            settings = DataStoreImageHostSettings(secretStore("imagehost"), secretCipher),
             http = NSUrlSessionTransport { imageHostSession.current },
             dispatchers = dispatchers,
         )

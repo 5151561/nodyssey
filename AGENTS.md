@@ -7,7 +7,7 @@ Two application shells over four libraries, plus two modules that exist only to 
 | Module | What it is | Kotlin targets |
 | --- | --- | --- |
 | `:app` | The Android shell: `MainActivity`, the dependency graph (`DefaultAppContainer`), WorkManager workers, notifications, image pickers, Coil setup — the parts that name a platform rather than a screen | Android |
-| `:iosapp` | The iOS shell — what `:app` is for Android, on the other platform: entry point, `IosAppContainer`, `BGTaskScheduler`, Keychain, plus the Xcode project that links it | iOS |
+| `:iosapp` | The iOS shell — what `:app` is for Android, on the other platform: entry point, `IosAppContainer`, `BGTaskScheduler`, plus the Xcode project that links it | iOS |
 | `:ui` | Every screen, ViewModel and the navigation graph (`io.github.nodyssey.ui`, plus `Navigation.kt` and the entry files beside it), and the app's ~1,150 strings as Compose resources | Android, JVM, iOS |
 | `:shared` | The business core below the screens: domain model, site parsers, network layer, Room schema, repositories — see below | Android, JVM, iOS, macOS |
 | `:designsys` | The Compose theme and components that carry no NodeSeek knowledge (`io.github.plaza.designsys`) | Android, JVM, iOS |

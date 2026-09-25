@@ -97,7 +97,7 @@ class ImageHostViewModel(
         viewModelScope.launch {
             repository.save(config)
             // Read the credential back rather than assume the write took. A secret goes to disk
-            // through the platform's key store — Keystore on Android, the Keychain on iOS — and a
+            // through the Android Keystore (iOS stores it as typed, out of backup), and a
             // device that refuses to encrypt stores *nothing* rather than the credential in the
             // clear (see `DataStoreImageHostSettings.putSecret`, and the test that pins it). That
             // refusal has no other way of being noticed: without this check the screen answers 已保存,
