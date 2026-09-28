@@ -159,10 +159,11 @@ object NodysseyApp {
         }
         val controller: UIViewController =
             if (systemTabBarAvailable()) {
-                // The system's bar, with the composition hosted underneath it — see
-                // `NodysseyTabBar.kt`, whose shape is not the obvious one and whose three failure
-                // modes each look like something else.
-                NodysseyTabBarHost { bridge -> ComposeUIViewController { rootContent(bridge) } }
+                // The system's bar, laid over the composition — see `NodysseyTabBar.kt`. The
+                // composition runs full-bleed beneath it, which is what gives the material
+                // something to refract.
+                val tabBar = NodysseyTabBarHost()
+                tabBar.attach(ComposeUIViewController { rootContent(tabBar.bridge) })
             } else {
                 ComposeUIViewController { rootContent(null) }
             }
