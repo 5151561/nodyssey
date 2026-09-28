@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.ui.common.siteName
+import io.github.nodyssey.ui.navigation.LocalBottomBarHeight
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.onboarding_app_links_action
 import io.github.nodyssey.ui.resources.onboarding_app_links_body
@@ -176,7 +177,13 @@ fun OnboardingScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+                    // On top of `safeDrawingPadding` above, which knows about the home indicator but
+                    // not about a bar that belongs to neither this composition nor the system: on
+                    // iOS 26 the tab bar floats over the app, and 跳过 and 下一步 would be under it.
+                    // Zero everywhere else, so this line costs nothing on the platform it was not
+                    // written for.
+                    .padding(bottom = LocalBottomBarHeight.current),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // 跳过 stays on the last screen too, where it does what 开始使用 does. Taking it away

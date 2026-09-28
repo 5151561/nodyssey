@@ -18,6 +18,7 @@ import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneSt
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -30,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -60,6 +62,7 @@ import io.github.nodyssey.ui.common.contentSwipeBack
 import io.github.nodyssey.ui.common.contentSwipeBackSupported
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.navigation.NativeTabBar
 import io.github.nodyssey.ui.navigation.NodysseyNavigationItems
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.notifications.NotificationsViewModel
@@ -89,6 +92,8 @@ fun MainNavigation(
     initialTab: TopLevelDestination = TopLevelDestination.HOME,
     launchRequest: LaunchRequest? = null,
     onLaunchRequestHandled: () -> Unit = {},
+    /** iOS 26+ only, and null means Compose draws the bar itself. See [NativeTabBar]. */
+    nativeTabBar: NativeTabBar? = null,
 ) {
     val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
 
@@ -223,6 +228,32 @@ fun MainNavigation(
     val navigationSuiteState = rememberNavigationSuiteScaffoldState()
     LaunchedEffect(showNavigationSuite) {
         if (showNavigationSuite) navigationSuiteState.show() else navigationSuiteState.hide()
+    }
+
+    /*
+     * The native bar, kept in step. Compose stays the source of truth and the bar is told what
+     * happened, for the reason [NativeTabBar] gives — `currentTab` is written from six places and the
+     * bar is only one of them.
+     *
+     * Neither effect can drive the other round: the first writes only when the two disagree, and the
+     * second only fires when `currentTab` actually changes.
+     */
+    LaunchedEffect(nativeTabBar) {
+        val bar = nativeTabBar ?: return@LaunchedEffect
+        snapshotFlow { bar.selected.value }.collect { tab ->
+            if (tab != currentTab) currentTab = tab
+        }
+    }
+    LaunchedEffect(nativeTabBar, currentTab) {
+        nativeTabBar?.onTabChanged?.invoke(currentTab)
+    }
+    // The bar belongs to the top-level destinations only, and [atTabRoot] is exactly that question —
+    // asked out loud this time, because the bar is no longer part of this process's layout.
+    LaunchedEffect(nativeTabBar, atTabRoot) {
+        nativeTabBar?.onTabRootVisible?.invoke(atTabRoot)
+    }
+    LaunchedEffect(nativeTabBar, notificationsState.counts.all) {
+        nativeTabBar?.onBadgeChanged?.invoke(notificationsState.counts.all)
     }
 
     val scope = rememberCoroutineScope()
@@ -549,8 +580,15 @@ fun MainNavigation(
             )
         },
         modifier = modifier,
+        // `None` is "make no room for navigation", not "draw an empty bar" — which is what the
+        // native bar needs, since it floats over the content rather than taking a slice of it, and
+        // the material has nothing to sample if the content stops above it.
         navigationSuiteType =
-        NavigationSuiteScaffoldDefaults.navigationSuiteType(windowAdaptiveInfo),
+        if (nativeTabBar != null) {
+            NavigationSuiteType.None
+        } else {
+            NavigationSuiteScaffoldDefaults.navigationSuiteType(windowAdaptiveInfo)
+        },
         // The bar is a card like any other — white on the grey page — and the rail beside a wide
         // layout sits flush with the page, since it has no content under it to lift off.
         navigationSuiteColors =

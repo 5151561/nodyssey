@@ -114,6 +114,7 @@ import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.common.webViewUrl
+import io.github.nodyssey.ui.navigation.LocalBottomBarHeight
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
 import io.github.nodyssey.ui.resources.action_sort
@@ -593,6 +594,14 @@ fun PostListScreen(
                     text = stringResource(Res.string.action_create_post),
                     icon = Icons.Default.Edit,
                     onClick = onCreatePost,
+                    // The system's bar floats over this screen rather than taking a slice of it,
+                    // and its bottom-end corner is where 发帖 sits. Its height is the distance from
+                    // the screen bottom to its top edge — measured at 83dp, both — so padding by
+                    // exactly that would leave the button flush against it. The extra gap is the
+                    // point: flush reads as attached rather than floating.
+                    //
+                    // Zero wherever Compose draws the bar, so this costs nothing there.
+                    modifier = Modifier.padding(bottom = LocalBottomBarHeight.current + Spacing.md),
                     expanded = !navigationBarHidden,
                 )
             }
@@ -637,7 +646,14 @@ fun PostListScreen(
                     onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
                     onPageClick = { showPageSheet = true },
                     onCreatePost = onCreatePost,
-                    modifier = Modifier.align(Alignment.BottomEnd),
+                    // 翻页栏 keeps 发帖 in its own slot rather than the scaffold's, so it needs the
+                    // same lift — and this is the copy that is on screen whenever the feed has
+                    // loaded, which is most of the time. Missing it looked exactly like the fix
+                    // having done nothing.
+                    modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = LocalBottomBarHeight.current + Spacing.md),
                 )
             }
         }
@@ -764,6 +780,10 @@ private fun BoardFeed(
                             start = LayerPageGutter,
                             end = LayerPageGutter,
                             top = Spacing.xs,
+                            // Deliberately *not* the tab bar's height on top of this. The feed is
+                            // meant to run under the bar: the glass takes its colour from what is
+                            // behind it, and a list that stops above it leaves a flat grey slab.
+                            // This clearance is for 发帖, and it is already taller than the bar.
                             bottom = FeedBottomClearance,
                         ),
                         verticalArrangement = Arrangement.spacedBy(LayerCardGap),

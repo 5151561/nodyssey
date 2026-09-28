@@ -1,11 +1,13 @@
 package io.github.nodyssey.ios
 
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.ComposeUIViewController
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import io.github.nodyssey.NodysseyRoot
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.navigation.NativeTabBar
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.settings.IosActiveSite
 import io.github.plaza.core.net.resolveWebKitUserAgent
@@ -138,19 +140,31 @@ object NodysseyApp {
         // their defaults with it. This is already a suspending function called while the launch
         // screen is up, so awaiting the answer costs nothing on screen and blocks nothing.
         val storedSettings = graph.settingsRepository.settings.first()
-        val controller =
-            ComposeUIViewController {
-                NodysseyRoot(
-                    container = graph,
-                    initialSettings = storedSettings,
-                    // No notification extra and no deep link to read yet: both arrive through
-                    // `UIApplicationDelegate`, and neither has an iOS half — the poll worker has no
-                    // iOS counterpart and Universal Links have no association file. See
-                    // `AppLinkHandling.ios.kt`.
-                    initialTab = TopLevelDestination.HOME,
-                    launchRequest = null,
-                    onLaunchRequestHandled = {},
-                )
+        // The app's root, and the one place the two iOS paths differ. iOS 26 is where the system's
+        // tab bar became Liquid Glass, and the deployment target is 16 — so the older path is not a
+        // fallback but the app exactly as it was: one composition, and a bar Compose draws itself.
+        //
+        // No notification extra and no deep link to read yet: both arrive through
+        // `UIApplicationDelegate`, and neither has an iOS half — the poll worker has no iOS
+        // counterpart and Universal Links have no association file. See `AppLinkHandling.ios.kt`.
+        val rootContent: @Composable (NativeTabBar?) -> Unit = { nativeTabBar ->
+            NodysseyRoot(
+                container = graph,
+                initialSettings = storedSettings,
+                initialTab = TopLevelDestination.HOME,
+                launchRequest = null,
+                onLaunchRequestHandled = {},
+                nativeTabBar = nativeTabBar,
+            )
+        }
+        val controller: UIViewController =
+            if (systemTabBarAvailable()) {
+                // The system's bar, with the composition hosted underneath it — see
+                // `NodysseyTabBar.kt`, whose shape is not the obvious one and whose three failure
+                // modes each look like something else.
+                NodysseyTabBarHost { bridge -> ComposeUIViewController { rootContent(bridge) } }
+            } else {
+                ComposeUIViewController { rootContent(null) }
             }
         root = controller
         // Nothing left to await; the fast path above answers from here on.

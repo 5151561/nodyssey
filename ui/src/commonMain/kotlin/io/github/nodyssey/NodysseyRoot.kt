@@ -2,7 +2,12 @@ package io.github.nodyssey
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -14,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.settings.ColorSource
@@ -24,6 +30,8 @@ import io.github.nodyssey.ui.common.LocalAppName
 import io.github.nodyssey.ui.common.SystemBarsMatchTheme
 import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.common.rememberReducedMotionEnabled
+import io.github.nodyssey.ui.navigation.LocalBottomBarHeight
+import io.github.nodyssey.ui.navigation.NativeTabBar
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.onboarding.OnboardingScreen
 import io.github.nodyssey.ui.richtext.LocalReportFormat
@@ -62,6 +70,12 @@ fun NodysseyRoot(
     launchRequest: LaunchRequest?,
     onLaunchRequestHandled: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * The native bar to drive instead of drawing one, on iOS 26 and later. Null — the default, and
+     * the only value any other platform or any earlier iOS passes — leaves the bar to Compose. See
+     * [NativeTabBar].
+     */
+    nativeTabBar: NativeTabBar? = null,
 ) {
     // Theme reads the settings SSOT directly. No copy is kept anywhere, so changing the setting can
     // never leave part of the app on the old value.
@@ -165,6 +179,9 @@ fun NodysseyRoot(
             // The handler and the prefetcher are one object because on Android they are one connection
             // to the browser: what gets warmed on press is what the tab is then launched through.
             val browserLinks = rememberBrowserLinks()
+            // The system bar's height, in points — which are dp here, since a point is what
+            // Compose calls a density-independent pixel on this platform.
+            val bottomBarHeight = nativeTabBar?.height?.value?.dp ?: 0.dp
             CompositionLocalProvider(
                 LocalUriHandler provides browserLinks.uriHandler,
                 LocalLinkPrefetcher provides browserLinks.prefetcher,
@@ -174,17 +191,38 @@ fun NodysseyRoot(
                 // build is called, so that a debug build's screens say "Nodyssey·D" like its launcher
                 // icon does. See `LocalAppName`.
                 LocalAppName provides container.appVersion.label,
+                LocalBottomBarHeight provides bottomBarHeight,
             ) {
                 Surface(
                     modifier = modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    Box {
+                    Box(
+                        // When the system's bar is floating over the app, the bottom of the screen
+                        // belongs to the app and not to the system. Without this every screen's
+                        // `Scaffold` keeps its default `contentWindowInsets = systemBars` and stops
+                        // its content at the home indicator — which leaves a band of bare page
+                        // colour under the glass, in the one place the material has nothing to
+                        // sample. Consuming the inset at the root is one line for every screen
+                        // instead of an argument at forty of them.
+                        //
+                        // Nothing here when the bar is Compose's own: there the scaffold already
+                        // reserves the space, and the system's bottom inset is still the system's.
+                        modifier =
+                        if (nativeTabBar != null) {
+                            Modifier.consumeWindowInsets(
+                                WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
+                            )
+                        } else {
+                            Modifier
+                        },
+                    ) {
                         MainNavigation(
                             container = container,
                             initialTab = initialTab,
                             launchRequest = launchRequest,
                             onLaunchRequestHandled = onLaunchRequestHandled,
+                            nativeTabBar = nativeTabBar,
                         )
                         /*
                          * 新手引导, over the app rather than instead of it.
