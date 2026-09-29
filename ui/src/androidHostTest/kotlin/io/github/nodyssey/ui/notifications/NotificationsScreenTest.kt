@@ -181,6 +181,27 @@ class NotificationsScreenTest {
         assertEquals(expanded, rowTop(), 1f)
     }
 
+    /**
+     * Signed out, the page is a status card rather than the pager, and the bar's scroll connection
+     * sat only on the pager's pages — so nothing on the page reached it and the one-hand title could
+     * not be folded away at all.
+     */
+    @Test
+    fun `swiping up while signed out folds the one-hand title`() {
+        setContent(state().copy(isSignedIn = false))
+        // The group tabs sit under the toolbar, so how far down they are is how far the title is open.
+        // Not the card: that scrolls in its own right on a short screen, title or no title.
+        val tabsTop = {
+            composeRule.onNodeWithText("私信", substring = true).fetchSemanticsNode().positionInRoot.y
+        }
+        val expanded = tabsTop()
+
+        composeRule.onRoot().performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
+
+        assertTrue("the title should fold away on the way up", tabsTop() < expanded)
+    }
+
     private fun sentence(threadTitle: String) = "nssk 在帖子 $threadTitle 中@了我"
 
     private fun setContent(

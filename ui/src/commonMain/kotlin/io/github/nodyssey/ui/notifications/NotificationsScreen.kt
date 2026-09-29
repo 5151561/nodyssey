@@ -317,7 +317,13 @@ fun NotificationsScreen(
             when {
                 // Signing in is not one of the groups: with no session there is nothing to swipe
                 // between, and a pager over two empty lists would say so twice.
-                !state.isSignedIn -> SignedOutState(onSignIn = onSignIn)
+                // The bar's connection goes on this branch too, not only on the pager's pages: without
+                // it the one-hand title had nothing to collapse it while signed out.
+                !state.isSignedIn ->
+                    SignedOutState(
+                        onSignIn = onSignIn,
+                        modifier = Modifier.nestedScroll(appBarState.nestedScrollConnection),
+                    )
 
                 else ->
                     HorizontalPager(
