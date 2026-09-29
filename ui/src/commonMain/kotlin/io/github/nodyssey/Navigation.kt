@@ -56,6 +56,8 @@ import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.LocalOpenNetworkCheck
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.appName
+import io.github.nodyssey.ui.common.contentSwipeBack
+import io.github.nodyssey.ui.common.contentSwipeBackSupported
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.navigation.NodysseyNavigationItems
@@ -559,7 +561,14 @@ fun MainNavigation(
         ),
         state = navigationSuiteState,
     ) {
-        SharedTransitionLayout(Modifier.fillMaxSize()) {
+        SharedTransitionLayout(
+            Modifier
+                .fillMaxSize()
+                // iOS 26's swipe-anywhere back, within a tab's own stack only: a tab's root has no
+                // content swipe on iOS, and here it would mean "jump to 首页" — which stays on the
+                // edge swipe, as it always was.
+                .contentSwipeBack(enabled = contentSwipeBackSupported && backStack.size > 1),
+        ) {
             /*
              * Withheld on a two-pane window, where a row and the thread it opens are on screen at
              * once and a single shared-element key would have two live claims on it. Provided as a
