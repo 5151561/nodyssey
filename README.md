@@ -18,9 +18,10 @@
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-26A5E4?logo=telegram&logoColor=white)](https://t.me/nodyssey_official)
 [![Telegram Group](https://img.shields.io/badge/Telegram-Group-26A5E4?logo=telegram&logoColor=white)](https://t.me/+97ANIwVaCYk1MjQ1)
 
-<img src="docs/screenshots/post-list-light.png" width="280" alt="帖子列表" />
-&nbsp;
-<img src="docs/screenshots/post-detail-dark.png" width="280" alt="帖子详情" />
+<img src="docs/screenshots/post-list-light.png" width="200" alt="帖子列表" />
+<img src="docs/screenshots/post-detail-dark.png" width="200" alt="帖子详情" />
+<img src="docs/screenshots/notifications-light.png" width="200" alt="消息通知" />
+<img src="docs/screenshots/profile-light.png" width="200" alt="我的" />
 
 </div>
 
