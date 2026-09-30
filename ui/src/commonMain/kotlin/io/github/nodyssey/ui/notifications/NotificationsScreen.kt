@@ -73,6 +73,10 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_retry
+import io.github.nodyssey.ui.resources.history_section_earlier
+import io.github.nodyssey.ui.resources.history_section_today
+import io.github.nodyssey.ui.resources.history_section_week
+import io.github.nodyssey.ui.resources.history_section_yesterday
 import io.github.nodyssey.ui.resources.notification_sentence_mention
 import io.github.nodyssey.ui.resources.notification_sentence_reply
 import io.github.nodyssey.ui.resources.notification_sentence_reply_mention
@@ -82,8 +86,6 @@ import io.github.nodyssey.ui.resources.notifications_empty
 import io.github.nodyssey.ui.resources.notifications_interactions
 import io.github.nodyssey.ui.resources.notifications_mark_all_read
 import io.github.nodyssey.ui.resources.notifications_messages
-import io.github.nodyssey.ui.resources.notifications_section_earlier
-import io.github.nodyssey.ui.resources.notifications_section_today
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.GroupedListItem
@@ -518,13 +520,15 @@ private fun BoxScope.NotificationGroup(
     }
 }
 
-/** 今天 or 更早 — the two headings 5a splits the interactions into. */
-internal enum class NotificationDay { TODAY, EARLIER }
+/** The day headings, newest first — the same four 阅读历史 uses. */
+internal enum class NotificationDay { TODAY, YESTERDAY, WEEK, EARLIER }
 
 private fun NotificationDay.label(): StringResource =
     when (this) {
-        NotificationDay.TODAY -> Res.string.notifications_section_today
-        NotificationDay.EARLIER -> Res.string.notifications_section_earlier
+        NotificationDay.TODAY -> Res.string.history_section_today
+        NotificationDay.YESTERDAY -> Res.string.history_section_yesterday
+        NotificationDay.WEEK -> Res.string.history_section_week
+        NotificationDay.EARLIER -> Res.string.history_section_earlier
     }
 
 internal sealed interface NotificationListRow {
@@ -548,10 +552,10 @@ internal sealed interface NotificationListRow {
  * The interactions under their day headings, one card per day.
  *
  * Calendar days, as 阅读历史 counts them: a reply at 00:30 is 今天's even though it is "22 小时前" by
- * the clock. Two buckets rather than history's four because 5a asks for two, and because the row's own
- * time line already says 昨天 or 3 天前 — a heading for each would only repeat it. The server's order is
- * kept inside a bucket; a row with no parsable time has no day to be put in, so it goes to 更早 rather
- * than claiming to be new.
+ * the clock. 5a drew only 今天 and 更早, but with two headings a reply from yesterday and one from last
+ * month shared a card, and the list gave no sense of how far back it went. The server's order is kept
+ * inside a bucket; a row with no parsable time has no day to be put in, so it goes to 更早 rather than
+ * claiming to be new, and one dated in the future (a clock that moved) goes to 今天.
  */
 internal fun notificationRows(
     items: List<ForumNotification>,
@@ -562,7 +566,13 @@ internal fun notificationRows(
     return items
         .groupBy { item ->
             val day = item.createdAtMillis?.let { Instant.fromEpochMilliseconds(it).toLocalDateTime(zone).date }
-            if (day != null && day.daysUntil(today) <= 0) NotificationDay.TODAY else NotificationDay.EARLIER
+            when (day?.daysUntil(today)) {
+                null -> NotificationDay.EARLIER
+                1 -> NotificationDay.YESTERDAY
+                in 2..6 -> NotificationDay.WEEK
+                in 7..Int.MAX_VALUE -> NotificationDay.EARLIER
+                else -> NotificationDay.TODAY
+            }
         }.entries
         .sortedBy { it.key.ordinal }
         .flatMap { (bucket, rows) ->

@@ -32,10 +32,16 @@ class NotificationRowsTest {
     )
 
     @Test
-    fun `today and earlier each get a heading and one card`() {
+    fun `each day range gets a heading and one card`() {
         val rows =
             notificationRows(
-                listOf(item("1", now - 60_000L), item("2", now - 2 * HOUR), item("3", now - 30 * HOUR)),
+                listOf(
+                    item("1", now - 60_000L),
+                    item("2", now - 2 * HOUR),
+                    item("3", now - 30 * HOUR),
+                    item("4", now - 3 * DAY),
+                    item("5", now - 8 * DAY),
+                ),
                 now,
                 zone,
             )
@@ -45,8 +51,12 @@ class NotificationRowsTest {
                 NotificationListRow.Day(NotificationDay.TODAY),
                 NotificationListRow.Item(item("1", now - 60_000L), first = true, last = false),
                 NotificationListRow.Item(item("2", now - 2 * HOUR), first = false, last = true),
-                NotificationListRow.Day(NotificationDay.EARLIER),
+                NotificationListRow.Day(NotificationDay.YESTERDAY),
                 NotificationListRow.Item(item("3", now - 30 * HOUR), first = true, last = true),
+                NotificationListRow.Day(NotificationDay.WEEK),
+                NotificationListRow.Item(item("4", now - 3 * DAY), first = true, last = true),
+                NotificationListRow.Day(NotificationDay.EARLIER),
+                NotificationListRow.Item(item("5", now - 8 * DAY), first = true, last = true),
             ),
             rows,
         )
@@ -70,5 +80,6 @@ class NotificationRowsTest {
 
     private companion object {
         const val HOUR = 60 * 60_000L
+        const val DAY = 24 * HOUR
     }
 }
