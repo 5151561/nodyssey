@@ -48,7 +48,8 @@ internal fun clipboardPostToOffer(text: String?, lastOffered: String?): Clipboar
 /** A link pasted mid-sentence still counts; a clipboard holding a whole article is not scanned to its end. */
 private const val MAX_CLIPBOARD_SCAN_LENGTH = 2_000
 
-private val WEB_URL = Regex("""https?://[^\s<>"'，。）】]+""", RegexOption.IGNORE_CASE)
+/** Ends at whitespace, at markup, or at the full-width comma, full stop or closing brackets of a Chinese sentence. */
+private val WEB_URL = Regex("https?://[^\\s<>\"'\uFF0C\u3002\uFF09\u3011]+", RegexOption.IGNORE_CASE)
 
 /** What a sentence leaves stuck to the end of a link it quotes. */
 private val TRAILING_PUNCTUATION = charArrayOf('.', ',', ')', ']', '!', '?', ';', ':')
