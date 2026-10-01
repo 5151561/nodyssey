@@ -48,6 +48,9 @@ class SettingsRepository(
 ) : UpdateCheckStore {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** 测评对比's basket, kept in this same store; see [ReportCompareStore]. */
+    val reportCompare: ReportCompareStore = ReportCompareStore(dataStore)
+
     val settings: Flow<UserSettings> = dataStore.data
         // A corrupt or unreadable store must not take the app down; fall back to defaults.
         .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
