@@ -37,12 +37,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingToolbarDefaults.floatingToolbarVerticalNestedScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
@@ -52,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
@@ -71,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -2675,9 +2679,29 @@ private fun PostDetailUiState.startsNewReplies(index: Int): Boolean {
     return previous < first
 }
 
-/** A rule with 以下是新回复 across it — where this visit's unseen floors begin. */
+/**
+ * A wavy rule with 以下是新回复 across it — where this visit's unseen floors begin.
+ *
+ * Material has no wavy divider; the wave is Expressive's [LinearWavyProgressIndicator], pinned full
+ * with no track. [WavyProgressIndicatorDefaults.indicatorAmplitude] flattens the wave at 100%, so
+ * the amplitude is held at full, and the speed is zero so a reading list has nothing crawling in it.
+ * Swap this for a real divider component if Material ever ships one.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun NewRepliesDivider() {
+    val color = MaterialTheme.colorScheme.primary
+    val wave: @Composable RowScope.() -> Unit = {
+        LinearWavyProgressIndicator(
+            progress = { 1f },
+            modifier = Modifier.weight(1f),
+            color = color,
+            trackColor = Color.Transparent,
+            stopSize = 0.dp,
+            amplitude = { 1f },
+            waveSpeed = 0.dp,
+        )
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2685,13 +2709,13 @@ private fun NewRepliesDivider() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
+        wave()
         Text(
             text = stringResource(Res.string.post_new_replies_divider),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
+            color = color,
         )
-        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
+        wave()
     }
 }
 
