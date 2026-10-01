@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -156,7 +157,7 @@ class ReadMarkTest {
             repository.markThreadRead(7)
             givenPost(postId = 7, commentCount = 14)
 
-            assertTrue(repository.hasUnreadReplies(7))
+            assertEquals(10, repository.seenRepliesIfUnread(7))
         }
 
     @Test
@@ -165,7 +166,7 @@ class ReadMarkTest {
             givenPost(postId = 7, commentCount = 10)
             repository.markThreadRead(7)
 
-            assertFalse(repository.hasUnreadReplies(7))
+            assertNull(repository.seenRepliesIfUnread(7))
         }
 
     @Test
@@ -173,6 +174,6 @@ class ReadMarkTest {
         runTest {
             repository.markThreadRead(999)
 
-            assertFalse(repository.hasUnreadReplies(999))
+            assertNull(repository.seenRepliesIfUnread(999))
         }
 }

@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.ThreadPreview
+import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FreeChickenLegs
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.model.PostContent
@@ -159,6 +160,7 @@ import io.github.nodyssey.ui.resources.post_edited
 import io.github.nodyssey.ui.resources.post_edited_at
 import io.github.nodyssey.ui.resources.post_floor_actions
 import io.github.nodyssey.ui.resources.post_link_copied
+import io.github.nodyssey.ui.resources.post_new_replies_divider
 import io.github.nodyssey.ui.resources.post_open_original
 import io.github.nodyssey.ui.resources.post_page_progress
 import io.github.nodyssey.ui.resources.post_quote_floor
@@ -1171,6 +1173,9 @@ private fun ThreadList(
             // 回复 gives way to 编辑 on this account's own floor, which is what the site does.
             val onReply = { onReplyToFloor(comment.toFloorReference()) }.takeIf { onEdit == null }
             val onQuote = { comment.toFloorReference()?.let(onQuoteFloor) ?: Unit }
+            // Inside this floor's own item rather than an item of its own, so every index helper
+            // below that mirrors the list's order stays one comment, one row.
+            if (state.startsNewReplies(index)) NewRepliesDivider()
             BlockAware(content = comment, revealed = state.showBlockedContent) {
                 CommentRow(
                     comment = comment,
@@ -2634,6 +2639,42 @@ private fun PostDetailUiState.pendingReactionFor(content: PostContent): Reaction
 /** The last row of the list — the newest floor when the last page is loaded. */
 private val PostDetailUiState.lastItemIndex: Int
     get() = (headerItemCount + comments.size - 1).coerceAtLeast(0)
+
+/**
+ * Whether 以下是新回复 belongs above the comment at [index]: the first loaded floor at or past
+ * [PostDetailUiState.firstNewFloor]. "At or past" because the floor it names may have been deleted,
+ * and the line still belongs above whatever came after it.
+ */
+private fun PostDetailUiState.startsNewReplies(index: Int): Boolean {
+    val first = firstNewFloor ?: return false
+    val number = NodeSeekSite.parseFloorNumber(comments[index].floor) ?: return false
+    if (number < first) return false
+    val previous = comments.getOrNull(index - 1)?.let { NodeSeekSite.parseFloorNumber(it.floor) }
+    // The top of a window that starts mid-thread: only where the new floors begin, not wherever a
+    // jump happened to land among them.
+    if (previous == null) return index == 0 && NodeSeekSite.pageOfFloor(first) == NodeSeekSite.pageOfFloor(number)
+    return previous < first
+}
+
+/** A rule with 以下是新回复 across it — where this visit's unseen floors begin. */
+@Composable
+private fun NewRepliesDivider() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = FloorInset, vertical = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
+        Text(
+            text = stringResource(Res.string.post_new_replies_divider),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.primary)
+    }
+}
 
 /** Mirrors [ThreadList]'s item order so a quote reference can scroll to the floor it points at. */
 private fun PostDetailUiState.indexOfFloor(floor: String): Int? {

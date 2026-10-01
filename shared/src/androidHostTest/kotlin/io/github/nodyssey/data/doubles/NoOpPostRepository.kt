@@ -53,7 +53,7 @@ internal open class NoOpPostRepository : PostRepository {
 
     override suspend fun isThreadFresh(postId: Long): Boolean = false
 
-    override suspend fun hasUnreadReplies(postId: Long): Boolean = false
+    override suspend fun seenRepliesIfUnread(postId: Long): Int? = null
 
     override suspend fun cachedPages(postId: Long): IntRange? = null
 

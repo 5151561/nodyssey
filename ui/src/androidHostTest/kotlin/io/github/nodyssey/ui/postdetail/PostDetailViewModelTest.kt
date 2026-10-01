@@ -79,7 +79,7 @@ class PostDetailViewModelTest {
 
     /**
      * Puts one post in the `posts` table with [commentCount] replies — what a feed refresh leaves
-     * behind, and the baseline both the badge and [PostRepository.hasUnreadReplies] compare against.
+     * behind, and the baseline both the badge and [PostRepository.seenRepliesIfUnread] compare against.
      */
     private suspend fun givenListedPost(
         postId: Long,
@@ -334,7 +334,7 @@ class PostDetailViewModelTest {
 
     /**
      * The badge on the row the reader tapped said replies had arrived; the cache window said the
-     * thread was fresh. The badge is the one with evidence — see [PostRepository.hasUnreadReplies].
+     * thread was fresh. The badge is the one with evidence — see [PostRepository.seenRepliesIfUnread].
      */
     @Test
     fun `a fresh cached thread is refetched when the list says replies arrived`() =
@@ -355,6 +355,54 @@ class PostDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals(4, vm.uiState.value.comments.size)
+        }
+
+    /**
+     * The reader saw 12 replies; the list now has 15. The thread opens on page 2, where #13 is, and
+     * marks #13 as where the new ones begin — read before this visit moves the baseline to 15.
+     */
+    @Test
+    fun `a thread with new replies opens at the first one it has not seen`() =
+        runTest(dispatcher) {
+            givenListedPost(postId = 42, commentCount = 12)
+            repository.markThreadRead(42)
+            givenListedPost(postId = 42, commentCount = 15)
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertEquals(13, vm.uiState.value.firstNewFloor)
+            assertEquals(PendingScroll(page = 2, floor = "#13"), vm.uiState.value.pendingScroll)
+        }
+
+    /** A notification names its own floor, and that is where the reader asked to go. */
+    @Test
+    fun `a named floor wins over the first new reply`() =
+        runTest(dispatcher) {
+            givenListedPost(postId = 42, commentCount = 12)
+            repository.markThreadRead(42)
+            givenListedPost(postId = 42, commentCount = 15)
+
+            val vm = viewModel(initialFloor = "#3")
+            advanceUntilIdle()
+
+            assertEquals(13, vm.uiState.value.firstNewFloor)
+            assertEquals(PendingScroll(page = 1, floor = "#3"), vm.uiState.value.pendingScroll)
+        }
+
+    /** Read before anyone replied: every floor is new, so there is no line to draw and no jump. */
+    @Test
+    fun `a thread read before its first reply opens at the top`() =
+        runTest(dispatcher) {
+            givenListedPost(postId = 42, commentCount = 0)
+            repository.markThreadRead(42)
+            givenListedPost(postId = 42, commentCount = 3)
+
+            val vm = viewModel()
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.firstNewFloor)
+            assertNull(vm.uiState.value.pendingScroll)
         }
 
     /** The window is still what suppresses the request when the list has nothing new to report. */

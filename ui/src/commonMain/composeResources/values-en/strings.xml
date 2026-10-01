@@ -135,6 +135,7 @@
     <string name="post_link_copied">Link copied</string>
     <string name="post_code_copied">Code copied</string>
     <string name="post_auto_paging">Keep loading pages</string>
+    <string name="post_new_replies_divider">New replies</string>
     <string name="post_reply_action">Reply</string>
     <string name="post_edit_action">Edit</string>
     <string name="post_floor_actions">Floor actions</string>

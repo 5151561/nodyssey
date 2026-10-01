@@ -100,7 +100,7 @@ class PostDetailViewModel(
             // Asked here, and before the collection below, because that collection marks the thread
             // read and moves the very baseline this compares against. Read afterwards it would
             // answer "no new replies" for the thread whose badge the reader had just tapped.
-            openThread(hasUnreadReplies = repository.hasUnreadReplies(postId))
+            openThread(seenReplies = repository.seenRepliesIfUnread(postId))
             repository.thread(postId).collect { thread ->
                 if (thread == null) {
                     // Logout deletes the Room row while this Navigation 3 entry can remain alive in a
@@ -206,16 +206,25 @@ class PostDetailViewModel(
     /**
      * Decides where this read starts and whether it begins with a request.
      *
-     * @param hasUnreadReplies what the feed says has happened here since the last read — see
-     *   [PostRepository.hasUnreadReplies]. It overrides the cache window: the badge the reader
-     *   tapped names content the cached copy provably does not have.
+     * @param seenReplies how many replies the last read accounted for, when the feed says more have
+     *   arrived since — see [PostRepository.seenRepliesIfUnread]. It overrides the cache window: the
+     *   badge the reader tapped names content the cached copy provably does not have.
      */
-    private suspend fun openThread(hasUnreadReplies: Boolean) {
+    private suspend fun openThread(seenReplies: Int?) {
+        val hasUnreadReplies = seenReplies != null
+        // Zero seen is a thread opened before any reply existed: every floor is new, so there is no
+        // line to draw between old and new, and the top is already where they start.
+        val firstNewFloor = seenReplies?.takeIf { it > 0 }?.plus(1)
+        _uiState.update { it.copy(firstNewFloor = firstNewFloor) }
         // Opening on a notification's floor, or on the page a `/post-703863-4` link named, starts
-        // the thread there. Page 1 is only the default, not where every read begins.
-        val start = startPage()
-        if (initialFloor != null || start > 1) {
-            _uiState.update { it.copy(pendingScroll = PendingScroll(start, initialFloor)) }
+        // the thread there. Page 1 is only the default, not where every read begins — and a thread
+        // the reader has been through before opens where they have not, unless something named a
+        // place of its own.
+        val named = initialFloor != null || initialPage != null
+        val floor = initialFloor ?: firstNewFloor?.takeIf { !named }?.let { "#$it" }
+        val start = startPage(floor)
+        if (floor != null || start > 1) {
+            _uiState.update { it.copy(pendingScroll = PendingScroll(start, floor)) }
         }
         // A thread read moments ago needs no request — but only if the page being asked for is
         // one of the pages it cached; freshness says nothing about a page nobody has fetched.
@@ -226,9 +235,9 @@ class PostDetailViewModel(
     }
 
     /** Where this thread opens: the floor's page, the link's page, or the top. */
-    private fun startPage(): Int =
+    private fun startPage(floor: String? = initialFloor): Int =
         NodeSeekSite
-            .parseFloorNumber(initialFloor)
+            .parseFloorNumber(floor)
             ?.let(NodeSeekSite::pageOfFloor)
             ?: initialPage?.coerceAtLeast(1)
             ?: 1
@@ -643,6 +652,11 @@ data class PostDetailUiState(
     val showBlockedContent: Boolean = false,
     /** Where the screen should scroll once the content it names has arrived in [comments]. */
     val pendingScroll: PendingScroll? = null,
+    /**
+     * The first floor this visit has not seen before — 以下是新回复 is drawn above it — or null when
+     * nothing here is new. Taken once, before this read moves the baseline, and held for the visit.
+     */
+    val firstNewFloor: Int? = null,
     /**
      * Where this thread was left off on a previous visit, or null when it was never read.
      *

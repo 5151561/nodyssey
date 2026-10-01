@@ -129,6 +129,7 @@
     <string name="post_link_copied">連結已複製</string>
     <string name="post_code_copied">程式碼已複製</string>
     <string name="post_auto_paging">自動續頁</string>
+    <string name="post_new_replies_divider">以下是新回覆</string>
     <string name="post_reply_action">回覆</string>
     <string name="post_edit_action">編輯</string>
     <string name="post_floor_actions">樓層操作</string>
