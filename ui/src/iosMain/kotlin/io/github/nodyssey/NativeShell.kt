@@ -31,6 +31,7 @@ import io.github.nodyssey.ui.resources.about_site
 import io.github.nodyssey.ui.resources.app_name
 import io.github.nodyssey.ui.settings.rememberAppLinkHandlingEnabled
 import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -40,6 +41,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
+import platform.Foundation.NSSelectorFromString
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
@@ -205,9 +207,16 @@ private class NativeShell(
         TopLevelDestination.entries.forEach { destination ->
             val navigationController = navigationControllers.getValue(destination)
             navigationController.delegate = navigationDelegates.getValue(destination)
-            // With the bar hidden UIKit switches the edge swipe off, on the theory that a screen
-            // without a back button has nothing to go back to. These screens draw their own.
-            navigationController.interactivePopGestureRecognizer?.delegate = popGestureDelegates.getValue(destination)
+            // With the bar hidden UIKit switches both swipes off — the edge one and iOS 26's
+            // swipe-anywhere one — on the theory that a screen without a back button has nothing to go
+            // back to. These screens draw their own. The swipe-anywhere recognizer is iOS 26 API on a
+            // target that starts at 16, hence the check; Compose Multiplatform already knows to stop
+            // it when a drag belongs to something scrolling sideways inside the page.
+            val popDelegate = popGestureDelegates.getValue(destination)
+            navigationController.interactivePopGestureRecognizer?.delegate = popDelegate
+            if (navigationController.hasContentPopGesture()) {
+                navigationController.interactiveContentPopGestureRecognizer?.delegate = popDelegate
+            }
             sync(destination)
             scope.launch {
                 snapshotFlow { stacks.getValue(destination).toList() }.collect { sync(destination) }
@@ -416,6 +425,11 @@ private class NativeShell(
             navigationControllers.getValue(destination).viewControllers.size > 1
     }
 }
+
+/** Whether this system has iOS 26's swipe-anywhere back, which a target starting at 16 cannot assume. */
+@OptIn(ExperimentalForeignApi::class)
+private fun UINavigationController.hasContentPopGesture(): Boolean =
+    respondsToSelector(NSSelectorFromString("interactiveContentPopGestureRecognizer"))
 
 /** The SF Symbol for a tab; its selected state is the `.fill` variant, as Material's is the filled icon. */
 private val TopLevelDestination.symbol: String
