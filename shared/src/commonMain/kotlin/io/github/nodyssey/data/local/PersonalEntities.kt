@@ -47,4 +47,8 @@ data class TrackedThreadEntity(
     val title: String,
     val lastKnownCount: Int,
     val addedAtMillis: Long,
+    /** Enough of the thread for 追踪的帖子 to draw a row like 收藏's; null where the page never said. */
+    val authorName: String? = null,
+    val categoryTitle: String? = null,
+    val categorySlug: String? = null,
 )

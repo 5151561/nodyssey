@@ -96,6 +96,8 @@ class BackgroundAlertChecker(
         val following = tracked.all()
         if (following.isEmpty()) return emptyList()
         val listed = (1..TRACKED_PAGES).flatMap { page -> loadList(FeedSort.LAST_REPLY, page) }
+        val followedIds = following.mapTo(HashSet()) { it.postId }
+        listed.filter { it.postId in followedIds }.forEach { tracked.fillSnapshot(it) }
         return trackedThreadUpdates(following, listed).mapNotNull { (thread, count) ->
             tracked.advance(thread.postId, count)
             // First sighting: recorded, not announced.

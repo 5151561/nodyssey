@@ -157,4 +157,18 @@ class BackgroundAlertsTest {
 
             assertEquals(emptyList<TrackedThreadUpdate>(), checker().checkTrackedThreads())
         }
+
+    /** A thread followed before rows carried an author learns it from the next list it turns up on. */
+    @Test
+    fun `a followed thread fills in its author and board from the list`() =
+        runTest {
+            tracked.track(42, "thread 42", commentCount = 3)
+            lists = mapOf((FeedSort.LAST_REPLY to 1) to listOf(post(42, commentCount = 3).copy(categoryTitle = "日常")))
+
+            checker().checkTrackedThreads()
+
+            val row = tracked.all().single()
+            assertEquals("tester", row.authorName)
+            assertEquals("日常", row.categoryTitle)
+        }
 }

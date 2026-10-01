@@ -59,6 +59,23 @@ interface TrackedThreadDao {
     @Query("DELETE FROM tracked_threads WHERE postId = :postId")
     suspend fun delete(postId: Long)
 
+    /** Fills in what the row does not know yet; never overwrites what it does. */
+    @Query(
+        """
+        UPDATE tracked_threads SET
+            authorName = COALESCE(authorName, :authorName),
+            categoryTitle = COALESCE(categoryTitle, :categoryTitle),
+            categorySlug = COALESCE(categorySlug, :categorySlug)
+        WHERE postId = :postId
+        """,
+    )
+    suspend fun fillSnapshot(
+        postId: Long,
+        authorName: String?,
+        categoryTitle: String?,
+        categorySlug: String?,
+    )
+
     /** Only ever forwards: a stale count arriving late must not re-arm a notification already sent. */
     @Query("UPDATE tracked_threads SET lastKnownCount = :count WHERE postId = :postId AND lastKnownCount < :count")
     suspend fun advance(

@@ -541,7 +541,15 @@ class PostDetailViewModel(
             }
             val complete = state.hasContent && !state.hasNextPage && state.lastLoadedPage >= state.totalPages
             val known = if (complete) lastFloorNumber(state.comments) else null
-            val added = store.track(postId, state.title, known)
+            val added =
+                store.track(
+                    postId = postId,
+                    title = state.title,
+                    commentCount = known,
+                    authorName = state.body?.authorName ?: state.preview?.authorName,
+                    categoryTitle = state.body?.categoryTitle ?: state.preview?.categoryTitle,
+                    categorySlug = state.preview?.categorySlug,
+                )
             _uiState.update { it.copy(trackMessage = if (added) TrackMessage.TRACKED else TrackMessage.FULL) }
         }
     }
