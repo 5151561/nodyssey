@@ -5,7 +5,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.data.local.TitleKeywordKind
+import io.github.nodyssey.model.TitleKeywordKind
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.onboarding.HelpRoute
 import io.github.nodyssey.ui.settings.AboutAppRoute

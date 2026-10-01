@@ -2,10 +2,10 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
-import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
+import io.github.nodyssey.model.TitleKeywordKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After

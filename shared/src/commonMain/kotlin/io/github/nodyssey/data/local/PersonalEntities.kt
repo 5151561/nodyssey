@@ -2,6 +2,7 @@ package io.github.nodyssey.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import io.github.nodyssey.model.TitleKeywordKind
 
 // ---------------------------------------------------------------------------------------------
 // What the person holding this phone has decided, as opposed to what the site said
@@ -19,15 +20,6 @@ data class UserNoteEntity(
     val note: String,
     val updatedAtMillis: Long,
 )
-
-/** What a [TitleKeywordEntity] is for. Stored by name, so renaming a constant is a migration. */
-enum class TitleKeywordKind {
-    /** Hide matching threads from the feeds. */
-    BLOCK,
-
-    /** Notify when a new thread matches. */
-    ALERT,
-}
 
 /**
  * One word the reader watches thread titles for.

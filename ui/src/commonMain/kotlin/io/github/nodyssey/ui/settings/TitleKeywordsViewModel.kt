@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.TitleKeywordStore
-import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.model.TitleKeywordKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

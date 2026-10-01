@@ -2,9 +2,9 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.RichContentJson
-import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.local.toSnapshot
+import io.github.nodyssey.model.TitleKeywordKind
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import kotlinx.coroutines.flow.first

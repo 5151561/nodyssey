@@ -13,7 +13,6 @@ import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.dns.resolvesOverHttps
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.imagehost.ImageHostRepository
-import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.proxy.ProxyType
@@ -26,6 +25,7 @@ import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.model.TitleKeywordKind
 import io.github.plaza.core.AppVersion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

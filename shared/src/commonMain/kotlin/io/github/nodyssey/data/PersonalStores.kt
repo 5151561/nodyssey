@@ -2,11 +2,11 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.TitleKeywordDao
 import io.github.nodyssey.data.local.TitleKeywordEntity
-import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.local.TrackedThreadDao
 import io.github.nodyssey.data.local.TrackedThreadEntity
 import io.github.nodyssey.data.local.UserNoteDao
 import io.github.nodyssey.data.local.UserNoteEntity
+import io.github.nodyssey.model.TitleKeywordKind
 import io.github.plaza.core.AppClock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

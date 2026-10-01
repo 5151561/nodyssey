@@ -95,6 +95,7 @@ class HardcodedChineseLiteralTest {
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/settings/ChangelogScreen.kt" to 2,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/settings/PrivacyScreen.kt" to 6,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/settings/SettingsScreen.kt" to 1,
+            "ui/src/commonMain/kotlin/io/github/nodyssey/ui/settings/TitleKeywordsScreen.kt" to 1,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/settings/UpdateReminderDialog.kt" to 3,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/settings/theme/ThemeSettingsScreen.kt" to 2,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/space/FollowScreen.kt" to 5,
