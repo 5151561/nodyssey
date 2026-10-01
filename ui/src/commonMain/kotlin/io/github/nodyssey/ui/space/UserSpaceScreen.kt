@@ -236,6 +236,17 @@ fun UserSpaceScreen(
                                 modifier = Modifier.size(20.dp),
                             )
                         }
+                    } else if (state.hasProfile) {
+                        // 备注 up here rather than as a third button on the card: beside 关注 and
+                        // 私信 it squeezed all three into wrapping their labels a character a line.
+                        val notes = LocalUserNotes.current
+                        IconButton(onClick = { notes.edit(state.uid, state.name) }) {
+                            Icon(
+                                PlazaIcons.Badge,
+                                contentDescription = stringResource(Res.string.user_note_action),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                     SpaceOverflowMenu(onOpenBrowser = { onOpenBrowser(spaceUrl) })
                 },
@@ -437,15 +448,6 @@ private fun SpaceHeader(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(Res.string.space_message))
-                }
-                val notes = LocalUserNotes.current
-                MediumButton(
-                    onClick = { notes.edit(state.uid, state.name) },
-                    style = MediumButtonStyle.Tonal,
-                    icon = Icons.Default.Edit,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(Res.string.user_note_action))
                 }
             }
         }
