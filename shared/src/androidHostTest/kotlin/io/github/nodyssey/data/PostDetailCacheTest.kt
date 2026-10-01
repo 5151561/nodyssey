@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.RichContentJson
+import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.local.toSnapshot
 import io.github.plaza.core.richtext.InlineNode
@@ -189,6 +190,24 @@ class PostDetailCacheTest {
             // 上次阅读 pointing at where the previous one stopped.
             assertNull(positions.readingPosition(42))
             assertEquals(1, database.boardDao().count())
+        }
+
+    /**
+     * 备注, keywords and followed threads are the phone owner's, not the account's: signing out or in
+     * as someone else must leave them where they were.
+     */
+    @Test
+    fun `clearing session data keeps the reader's own notes keywords and tracked threads`() =
+        runTest {
+            UserNoteStore(database.userNoteDao(), clock).setNote(7, "靠谱")
+            TitleKeywordStore(database.titleKeywordDao(), clock).add(TitleKeywordKind.BLOCK, "出")
+            TrackedThreadStore(database.trackedThreadDao(), clock).track(42, "thread 42", commentCount = 3)
+
+            repository.clearSessionData()
+
+            assertEquals(mapOf(7L to "靠谱"), UserNoteStore(database.userNoteDao(), clock).notes.first())
+            assertEquals(listOf("出"), database.titleKeywordDao().list(TitleKeywordKind.BLOCK).map { it.keyword })
+            assertEquals(listOf(42L), database.trackedThreadDao().all().map { it.postId })
         }
 
     @Test

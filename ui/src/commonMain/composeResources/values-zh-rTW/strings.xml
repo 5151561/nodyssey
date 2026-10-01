@@ -1383,4 +1383,18 @@
     <string name="my_content_empty_action">去看看今日新帖</string>
     <string name="my_topics_empty_body">發過的主題帖會按時間排在這裡，點一行直接進帖。</string>
     <string name="my_comments_empty_body">在帖子裡回覆之後，這裡會按時間自動歸檔你的每一則評論，可以直接跳回原樓層。</string>
+    <string name="user_note_dialog_title">給 %1$s 寫備註</string>
+    <string name="user_note_dialog_hint">只存在這台手機上，清空即刪除</string>
+    <string name="user_note_save">儲存</string>
+    <string name="user_note_action">備註</string>
+    <string name="keywords_block_title">屏蔽關鍵詞</string>
+    <string name="keywords_alert_title">提醒關鍵詞</string>
+    <string name="keywords_summary_none">未設定</string>
+    <string name="keywords_summary_count">%1$d 個</string>
+    <string name="keywords_add_placeholder">輸入一個詞，標題裡出現就算</string>
+    <string name="keywords_add_action">新增</string>
+    <string name="keywords_empty">還沒有關鍵詞。</string>
+    <string name="keywords_remove">刪除 %1$s</string>
+    <string name="keywords_block_footer">標題含這些詞的帖子不出現在首頁、版塊和搜尋裡。只存在這台手機上，不隨帳號走；「臨時顯示被屏蔽內容」打開時也會一併顯示。</string>
+    <string name="keywords_alert_footer">背景檢查通知時順便看一眼最新發佈的帖子，標題含這些詞就推送一條通知。只存在這台手機上。</string>
 </resources>

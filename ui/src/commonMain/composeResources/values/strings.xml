@@ -1633,4 +1633,22 @@
     <string name="my_content_empty_action">去看看今日新帖</string>
     <string name="my_topics_empty_body">发过的主题帖会按时间排在这里，点一行直接进帖。</string>
     <string name="my_comments_empty_body">在帖子里回复之后，这里会按时间自动归档你的每一条评论，可以直接跳回原楼层。</string>
+    <!-- 备注：给某个用户写一句只有自己看得见的话，显示在名字旁边。%1$s 是对方的名字 -->
+    <string name="user_note_dialog_title">给 %1$s 写备注</string>
+    <string name="user_note_dialog_hint">只存在这台手机上，清空即删除</string>
+    <string name="user_note_save">保存</string>
+    <!-- 楼层操作面板和个人主页上打开备注编辑的入口 -->
+    <string name="user_note_action">备注</string>
+    <!-- 标题关键词：屏蔽（列表里不显示）和提醒（后台发现新帖就通知）共用一个管理页 -->
+    <string name="keywords_block_title">屏蔽关键词</string>
+    <string name="keywords_alert_title">提醒关键词</string>
+    <string name="keywords_summary_none">未设置</string>
+    <string name="keywords_summary_count">%1$d 个</string>
+    <string name="keywords_add_placeholder">输入一个词，标题里出现就算</string>
+    <string name="keywords_add_action">添加</string>
+    <string name="keywords_empty">还没有关键词。</string>
+    <!-- %1$s 是要删掉的关键词，读屏用 -->
+    <string name="keywords_remove">删除 %1$s</string>
+    <string name="keywords_block_footer">标题含这些词的帖子不出现在首页、版块和搜索里。只存在这台手机上，不随账号走；「临时显示被屏蔽内容」打开时也会一并显示。</string>
+    <string name="keywords_alert_footer">后台检查通知时顺便看一眼最新发布的帖子，标题含这些词就推送一条通知。只存在这台手机上。</string>
 </resources>

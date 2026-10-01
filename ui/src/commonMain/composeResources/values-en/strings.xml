@@ -1391,4 +1391,18 @@
     <string name="my_content_empty_action">Browse today\'s threads</string>
     <string name="my_topics_empty_body">Threads you post land here in order; tap a row to open one.</string>
     <string name="my_comments_empty_body">Reply in a thread and it is archived here by time, ready to jump back to the floor you wrote it on.</string>
+    <string name="user_note_dialog_title">Note on %1$s</string>
+    <string name="user_note_dialog_hint">Kept on this device only. Clear to delete.</string>
+    <string name="user_note_save">Save</string>
+    <string name="user_note_action">Note</string>
+    <string name="keywords_block_title">Muted keywords</string>
+    <string name="keywords_alert_title">Keyword alerts</string>
+    <string name="keywords_summary_none">None</string>
+    <string name="keywords_summary_count">%1$d set</string>
+    <string name="keywords_add_placeholder">A word to look for in titles</string>
+    <string name="keywords_add_action">Add</string>
+    <string name="keywords_empty">No keywords yet.</string>
+    <string name="keywords_remove">Remove %1$s</string>
+    <string name="keywords_block_footer">Threads whose titles contain these words are hidden from the home feed, boards and search. Kept on this device only, not on your account. Show blocked content reveals them too.</string>
+    <string name="keywords_alert_footer">Each background check also looks at the newest threads and notifies you when a title contains one of these words. Kept on this device only.</string>
 </resources>

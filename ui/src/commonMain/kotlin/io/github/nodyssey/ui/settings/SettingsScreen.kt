@@ -50,6 +50,9 @@ import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.imagehost_connected
 import io.github.nodyssey.ui.resources.imagehost_not_connected
 import io.github.nodyssey.ui.resources.imagehost_title
+import io.github.nodyssey.ui.resources.keywords_block_title
+import io.github.nodyssey.ui.resources.keywords_summary_count
+import io.github.nodyssey.ui.resources.keywords_summary_none
 import io.github.nodyssey.ui.resources.notify_master_title
 import io.github.nodyssey.ui.resources.notify_settings_title
 import io.github.nodyssey.ui.resources.proxy_type_http
@@ -142,6 +145,7 @@ fun SettingsRoute(
     onOpenImageHost: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
+    onOpenBlockKeywords: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -175,6 +179,7 @@ fun SettingsRoute(
         onOpenImageHost = onOpenImageHost,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
+        onOpenBlockKeywords = onOpenBlockKeywords,
         modifier = modifier,
     )
 }
@@ -206,6 +211,7 @@ fun SettingsScreen(
     onOpenImageHost: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
+    onOpenBlockKeywords: () -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
     onEinkModeChange: (Boolean) -> Unit = {},
 ) {
@@ -404,6 +410,17 @@ fun SettingsScreen(
                     checked = state.settings.homePageBar,
                     onCheckedChange = onHomePageBarChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.homePageBar) },
+                )
+                GroupedRow(
+                    icon = PlazaIcons.VisibilityOff,
+                    title = stringResource(Res.string.keywords_block_title),
+                    subtitle =
+                    if (state.blockKeywordCount == 0) {
+                        stringResource(Res.string.keywords_summary_none)
+                    } else {
+                        stringResource(Res.string.keywords_summary_count, state.blockKeywordCount)
+                    },
+                    onClick = onOpenBlockKeywords,
                 )
                 GroupedRow(
                     icon = PlazaIcons.Wifi,

@@ -143,6 +143,7 @@ private val EVERY_KEY: List<NavKey> =
         ChangelogKey,
         HelpKey,
         OpenSourceLicensesKey,
+        TitleKeywordsKey(alerts = true),
         AccountSettingsKey,
         AccountProfileFieldsKey,
         AccountSecurityKey,

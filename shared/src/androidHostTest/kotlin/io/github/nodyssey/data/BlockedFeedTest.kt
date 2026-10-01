@@ -4,11 +4,15 @@ import androidx.paging.testing.asSnapshot
 import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.FeedRemoteKeyEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -107,5 +111,43 @@ class BlockedFeedTest {
                 listOf(1L, 2L),
                 repository.search("post").first().map { it.summary.postId }.sorted(),
             )
+        }
+
+    /**
+     * A muted keyword hides a matching title the way the site's block mark hides a row: in the feed
+     * and in local search, and back again with 临时显示被屏蔽内容. Adding the word re-queries the open
+     * search on its own — Room watches `title_keywords` like any other table in the query.
+     */
+    @Test
+    fun `a muted keyword hides matching titles until revealed`() =
+        runTest {
+            givenFeed()
+            val keywords = TitleKeywordStore(database.titleKeywordDao(), clock)
+            val searched = mutableListOf<List<Long>>()
+            val collecting =
+                backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                    repository.search("post").collect { rows -> searched += rows.map { it.summary.postId } }
+                }
+
+            keywords.add(TitleKeywordKind.BLOCK, "Post 2")
+            advanceUntilIdle()
+
+            assertEquals(emptyList<Long>(), feedIds())
+            assertEquals(emptyList<Long>(), searched.last())
+
+            showBlocked.value = true
+
+            assertEquals(listOf(1L, 2L), feedIds())
+            collecting.cancel()
+        }
+
+    /** A word only hides what contains it; `post 22` is not `post 2`'s business the other way round. */
+    @Test
+    fun `a muted keyword leaves titles that do not contain it`() =
+        runTest {
+            givenFeed()
+            TitleKeywordStore(database.titleKeywordDao(), clock).add(TitleKeywordKind.BLOCK, "post 22")
+
+            assertEquals(listOf(2L), feedIds())
         }
 }

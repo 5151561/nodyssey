@@ -43,6 +43,9 @@ import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
+import io.github.nodyssey.data.TitleKeywordStore
+import io.github.nodyssey.data.TrackedThreadStore
+import io.github.nodyssey.data.UserNoteStore
 import io.github.nodyssey.data.UserSpaceRepository
 import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
@@ -372,6 +375,10 @@ class IosAppContainer(
     override val collectedPostMetaStore: CollectedPostMetaStore by lazy {
         RoomCollectedPostMetaStore(database.collectedPostMetaDao(), clock)
     }
+
+    override val userNoteStore: UserNoteStore by lazy { UserNoteStore(database.userNoteDao(), clock) }
+    override val titleKeywordStore: TitleKeywordStore by lazy { TitleKeywordStore(database.titleKeywordDao(), clock) }
+    override val trackedThreadStore: TrackedThreadStore by lazy { TrackedThreadStore(database.trackedThreadDao(), clock) }
 
     override val readingPositionStore: ReadingPositionStore by lazy {
         RoomReadingPositionStore(database.readingPositionDao(), clock)

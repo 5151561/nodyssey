@@ -26,6 +26,16 @@ data class FeedPostRow(
     val feedPage: Int? = null,
 )
 
+/**
+ * The one visibility rule every feed query shares: the site's block mark, then the reader's own
+ * title keywords, both waived by 临时显示被屏蔽内容. One constant because the queries that count rows
+ * for 首页翻页栏 must hide exactly what the list hides, or every index they return is off by the
+ * difference.
+ */
+private const val VISIBLE_UNLESS_REVEALED =
+    "(:includeBlocked OR (p.isBlocked = 0 AND NOT EXISTS (" +
+        "SELECT 1 FROM title_keywords k WHERE k.kind = 'BLOCK' AND instr(lower(p.title), k.keyword) > 0)))"
+
 @Dao
 interface FeedDao {
     /**
@@ -38,7 +48,9 @@ interface FeedDao {
      * Blocked rows are dropped here rather than by the UI so that they never take up a slot in the
      * paging window: a page of fifty that is half blocked would otherwise draw twenty-five rows and
      * leave the reader looking at a short list with no scroll left to trigger the next load.
-     * [includeBlocked] is 临时显示被屏蔽内容 — the same rows, unhidden, no re-fetch.
+     * [includeBlocked] is 临时显示被屏蔽内容 — the same rows, unhidden, no re-fetch. Titles matching
+     * one of the reader's own 屏蔽关键词 are hidden the same way and revealed by the same switch;
+     * Room watches `title_keywords` too, so adding a word re-queries the list on the spot.
      */
     @Query(
         """
@@ -47,7 +59,7 @@ interface FeedDao {
         FROM posts p
         INNER JOIN feed_positions f ON f.postId = p.postId
         LEFT JOIN post_read_marks r ON r.postId = p.postId
-        WHERE f.feedKey = :feedKey AND (:includeBlocked OR p.isBlocked = 0)
+        WHERE f.feedKey = :feedKey AND $VISIBLE_UNLESS_REVEALED
         ORDER BY f.sortIndex ASC
         """,
     )
@@ -69,7 +81,7 @@ interface FeedDao {
                NULL AS feedPage
         FROM posts p
         LEFT JOIN post_read_marks r ON r.postId = p.postId
-        WHERE (:includeBlocked OR p.isBlocked = 0)
+        WHERE $VISIBLE_UNLESS_REVEALED
           AND (
                 p.title LIKE '%' || :query || '%' ESCAPE '\'
              OR p.authorName LIKE '%' || :query || '%' ESCAPE '\'
@@ -127,7 +139,7 @@ interface FeedDao {
         SELECT MIN(f.sortIndex)
         FROM feed_positions f
         INNER JOIN posts p ON p.postId = f.postId
-        WHERE f.feedKey = :feedKey AND f.page = :page AND (:includeBlocked OR p.isBlocked = 0)
+        WHERE f.feedKey = :feedKey AND f.page = :page AND $VISIBLE_UNLESS_REVEALED
         """,
     )
     suspend fun firstSortIndexOnPage(
@@ -145,7 +157,7 @@ interface FeedDao {
         SELECT COUNT(*)
         FROM feed_positions f
         INNER JOIN posts p ON p.postId = f.postId
-        WHERE f.feedKey = :feedKey AND f.sortIndex < :sortIndex AND (:includeBlocked OR p.isBlocked = 0)
+        WHERE f.feedKey = :feedKey AND f.sortIndex < :sortIndex AND $VISIBLE_UNLESS_REVEALED
         """,
     )
     suspend fun countRowsBefore(

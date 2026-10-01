@@ -106,6 +106,7 @@ import io.github.nodyssey.model.hasSpent
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.BottomPullToRefreshBox
 import io.github.nodyssey.ui.common.JumpDestination
+import io.github.nodyssey.ui.common.LocalUserNotes
 import io.github.nodyssey.ui.common.NodeSeekIcons
 import io.github.nodyssey.ui.common.NumberEntry
 import io.github.nodyssey.ui.common.PageJumpRail
@@ -114,6 +115,7 @@ import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.common.RoleBadgeRow
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.UserNoteTag
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberShareText
 import io.github.nodyssey.ui.common.sharedThreadAuthor
@@ -175,6 +177,7 @@ import io.github.nodyssey.ui.resources.post_reaction_like
 import io.github.nodyssey.ui.resources.post_reaction_spent
 import io.github.nodyssey.ui.resources.post_reply_action
 import io.github.nodyssey.ui.resources.post_reply_to
+import io.github.nodyssey.ui.resources.user_note_action
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
@@ -1502,7 +1505,12 @@ private fun ThreadOpeningPost(
                 modifier = Modifier
                     .weight(1f)
                     .authorClickable(body?.authorUid, onAuthorClick),
-                badges = { if (body != null) FloorBadges(body) },
+                badges = {
+                    if (body != null) {
+                        FloorBadges(body)
+                        UserNoteTag(body.authorUid, Modifier.weight(1f, fill = false))
+                    }
+                },
                 // A bar the height of the line, until there is a time to put in it. The list knows
                 // when the thread was last active, which is not when it was posted.
                 subtitle = { if (body != null) FloorTimeLine(body) else MetaLinePlaceholder() },
@@ -1696,6 +1704,7 @@ private fun CommentRow(
                             overflow = TextOverflow.Ellipsis,
                         )
                         FloorBadges(comment)
+                        UserNoteTag(comment.authorUid)
                     }
                     comment.floor?.let { FloorLabel(it) }
                 }
@@ -2288,6 +2297,7 @@ private fun FloorActionSheet(
 ) {
     val copy = rememberClipboardCopy()
     val copied = stringResource(Res.string.post_body_copied)
+    val notes = LocalUserNotes.current
     PlazaSheet(
         onDismiss = onDismiss,
         sheetState =
@@ -2348,6 +2358,15 @@ private fun FloorActionSheet(
                         add(
                             Triple(PlazaIcons.ContentCopy, stringResource(Res.string.post_copy_body)) {
                                 copy("post", bodyText, copied)
+                            },
+                        )
+                    }
+                    // 备注 is about other people; a note on yourself has nobody to remind.
+                    val uid = content.authorUid
+                    if (uid != null && !content.isMine) {
+                        add(
+                            Triple(PlazaIcons.Badge, stringResource(Res.string.user_note_action)) {
+                                notes.edit(uid, content.authorName)
                             },
                         )
                     }

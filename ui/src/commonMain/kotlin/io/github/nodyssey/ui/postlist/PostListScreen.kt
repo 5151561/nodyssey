@@ -104,6 +104,7 @@ import io.github.nodyssey.ui.common.PostReplyStat
 import io.github.nodyssey.ui.common.SelectableMenuItem
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SortMenuItem
+import io.github.nodyssey.ui.common.UserNoteTag
 import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.common.sharedThreadAuthor
@@ -1267,6 +1268,7 @@ internal fun PostRow(
                         .weight(1f, fill = false)
                         .thenIf(sharedWithThread) { Modifier.sharedThreadAuthor(summary.postId) },
                 )
+                UserNoteTag(summary.authorUid, Modifier.weight(1f, fill = false))
                 BoardTag(
                     title = summary.categoryTitle,
                     slug = summary.categorySlug,

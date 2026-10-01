@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.model.FeedSort
 import io.github.nodyssey.model.PostSummary
@@ -31,6 +32,7 @@ class FeedPageRowIndexTest {
     private val clock = MutableClock()
     private val showBlocked = MutableStateFlow(false)
     private lateinit var repository: OfflineFirstPostRepository
+    private val keywords by lazy { TitleKeywordStore(database.titleKeywordDao(), clock) }
 
     @Before
     fun setUp() {
@@ -143,5 +145,19 @@ class FeedPageRowIndexTest {
             givenPages(blockedIds = setOf(5L, 6L, 7L, 8L))
 
             assertNull(indexOf(2))
+        }
+
+    /**
+     * A row hidden by the reader's own 屏蔽关键词 is as absent as a blocked one, so it leaves the count
+     * too. The titles here are `post 2` and `post 3`; `POST 2` checks the match ignores ASCII case.
+     */
+    @Test
+    fun `rows hidden by a muted keyword do not count towards where a page starts`() =
+        runTest {
+            givenPages()
+            keywords.add(TitleKeywordKind.BLOCK, "POST 2")
+            keywords.add(TitleKeywordKind.BLOCK, "post 3")
+
+            assertEquals(2, indexOf(2))
         }
 }

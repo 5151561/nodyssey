@@ -18,6 +18,9 @@ import io.github.nodyssey.data.RulingRepository
 import io.github.nodyssey.data.SearchRepository
 import io.github.nodyssey.data.StardustRepository
 import io.github.nodyssey.data.TermsRepository
+import io.github.nodyssey.data.TitleKeywordStore
+import io.github.nodyssey.data.TrackedThreadStore
+import io.github.nodyssey.data.UserNoteStore
 import io.github.nodyssey.data.UserSpaceRepository
 import io.github.nodyssey.data.VoteRepository
 import io.github.nodyssey.data.account.AccountSettingsRepository
@@ -66,6 +69,11 @@ interface AppContainer {
 
     /** Where each thread was left off — its own store, not part of a screen's settings. */
     val readingPositionStore: ReadingPositionStore
+
+    /** 备注, 屏蔽/提醒关键词 and 追踪新回复 — this device's owner's, so none is cleared on sign-out. */
+    val userNoteStore: UserNoteStore
+    val titleKeywordStore: TitleKeywordStore
+    val trackedThreadStore: TrackedThreadStore
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
     val notificationRepository: NotificationRepository

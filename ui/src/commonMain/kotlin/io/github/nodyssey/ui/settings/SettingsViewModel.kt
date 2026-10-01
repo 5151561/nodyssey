@@ -7,11 +7,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.PostRepository
+import io.github.nodyssey.data.TitleKeywordStore
 import io.github.nodyssey.data.dns.DohServer
 import io.github.nodyssey.data.dns.DohSupport
 import io.github.nodyssey.data.dns.resolvesOverHttps
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.imagehost.ImageHostRepository
+import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.data.proxy.ProxyClientKind
 import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.proxy.ProxyType
@@ -41,6 +43,7 @@ class SettingsViewModel(
     private val updates: AppUpdateRepository,
     imageHost: ImageHostRepository,
     proxy: ProxySettings,
+    titleKeywords: TitleKeywordStore,
     appVersion: AppVersion,
     /** Null where the platform cannot apply one, which is how the 加密 DNS row knows to stay away. */
     doh: DohSupport?,
@@ -58,7 +61,7 @@ class SettingsViewModel(
      * The rows on this screen that report on a screen behind them, folded into one flow.
      *
      * Folded rather than combined alongside the rest because `combine` has a typed overload for five
-     * flows and this would have been the sixth; three subtitles are a smaller thing than an array of
+     * flows and this would have been the sixth; four subtitles are a smaller thing than an array of
      * `Any?` to unpack.
      */
     private val entries =
@@ -66,7 +69,8 @@ class SettingsViewModel(
             imageHost.current,
             proxy.config,
             doh?.settings?.config ?: flowOf(null),
-        ) { host, proxy, doh ->
+            titleKeywords.keywords(TitleKeywordKind.BLOCK),
+        ) { host, proxy, doh, blockKeywords ->
             SettingsEntries(
                 imageHostProvider = host.provider,
                 imageHostConnected = host.isConfigured,
@@ -75,6 +79,7 @@ class SettingsViewModel(
                 // routes nothing, and reads as off.
                 proxy = proxy.takeIf { it.routes(ProxyClientKind.FORUM) }?.let { ProxyEndpoint(it.type, it.host, it.port) },
                 dohChain = doh?.let { if (it.resolvesOverHttps()) it.chain else emptyList() },
+                blockKeywordCount = blockKeywords.size,
             )
         }
 
@@ -95,6 +100,7 @@ class SettingsViewModel(
                 imageHostConnected = entries.imageHostConnected,
                 proxy = entries.proxy,
                 dohChain = entries.dohChain,
+                blockKeywordCount = entries.blockKeywordCount,
                 hasNetworkCheck = hasNetworkCheck,
                 // Read off the shared updater rather than checked here: the answer is already in
                 // memory by the time this screen opens, and 我的 shows the same dot from the same
@@ -211,6 +217,7 @@ class SettingsViewModel(
                         updates = container.appUpdateRepository,
                         imageHost = container.imageHostRepository,
                         proxy = container.proxySettings,
+                        titleKeywords = container.titleKeywordStore,
                         appVersion = container.appVersion,
                         doh = container.doh,
                         hasNetworkCheck = container.networkDiagnostics != null,
@@ -246,6 +253,8 @@ data class SettingsUiState(
      * somewhere or is not drawn.
      */
     val hasNetworkCheck: Boolean = false,
+    /** How many 屏蔽关键词 are set — the row's subtitle. */
+    val blockKeywordCount: Int = 0,
 )
 
 /** The part of a proxy the settings list shows — the credentials stay behind on 代理's own screen. */
@@ -256,4 +265,5 @@ private data class SettingsEntries(
     val imageHostConnected: Boolean,
     val proxy: ProxyEndpoint?,
     val dohChain: List<DohServer>?,
+    val blockKeywordCount: Int,
 )

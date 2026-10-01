@@ -35,6 +35,7 @@ import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.BoardTag
 import io.github.nodyssey.ui.common.PostBadges
 import io.github.nodyssey.ui.common.PostReplyStat
+import io.github.nodyssey.ui.common.UserNoteTag
 import io.github.nodyssey.ui.common.postCardTitleStyle
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.credit_level
@@ -102,6 +103,7 @@ internal fun SearchPostCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 MetaText(summary.authorName, Modifier.weight(1f, fill = false), singleLine = true)
+                UserNoteTag(summary.authorUid, Modifier.weight(1f, fill = false))
                 summary.lastActiveText?.let {
                     MetaText("·", singleLine = true)
                     MetaText(it, singleLine = true)

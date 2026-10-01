@@ -63,11 +63,13 @@ import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
 import io.github.nodyssey.data.composer.PostPermission
 import io.github.nodyssey.ui.common.BoardTag
+import io.github.nodyssey.ui.common.LocalUserNotes
 import io.github.nodyssey.ui.common.LockBadge
 import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.common.MediumButtonStyle
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.UserNoteTag
 import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.lockBadgeDescription
@@ -106,6 +108,7 @@ import io.github.nodyssey.ui.resources.space_tab_comments
 import io.github.nodyssey.ui.resources.space_tab_general
 import io.github.nodyssey.ui.resources.space_tab_topics
 import io.github.nodyssey.ui.resources.space_uid
+import io.github.nodyssey.ui.resources.user_note_action
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.collapseMarkdown
 import io.github.plaza.core.richtext.parseMarkdown
@@ -404,6 +407,7 @@ private fun SpaceHeader(
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }
+                    UserNoteTag(state.uid, Modifier.padding(start = 8.dp).weight(1f, fill = false))
                 }
                 Text(
                     text = stringResource(Res.string.space_uid, state.uid),
@@ -433,6 +437,15 @@ private fun SpaceHeader(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(Res.string.space_message))
+                }
+                val notes = LocalUserNotes.current
+                MediumButton(
+                    onClick = { notes.edit(state.uid, state.name) },
+                    style = MediumButtonStyle.Tonal,
+                    icon = Icons.Default.Edit,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(Res.string.user_note_action))
                 }
             }
         }

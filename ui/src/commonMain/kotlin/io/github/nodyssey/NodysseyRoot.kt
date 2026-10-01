@@ -21,6 +21,7 @@ import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.LocalAppName
+import io.github.nodyssey.ui.common.ProvideUserNotes
 import io.github.nodyssey.ui.common.SystemBarsMatchTheme
 import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.common.rememberReducedMotionEnabled
@@ -175,17 +176,19 @@ fun NodysseyRoot(
                 // icon does. See `LocalAppName`.
                 LocalAppName provides container.appVersion.label,
             ) {
-                Surface(
-                    modifier = modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    Box {
-                        MainNavigation(
-                            container = container,
-                            initialTab = initialTab,
-                            launchRequest = launchRequest,
-                            onLaunchRequestHandled = onLaunchRequestHandled,
-                        )
+                // 备注 rides here for the reason 测评报告 does: a name is drawn on five screens.
+                ProvideUserNotes(container.userNoteStore) {
+                    Surface(
+                        modifier = modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        Box {
+                            MainNavigation(
+                                container = container,
+                                initialTab = initialTab,
+                                launchRequest = launchRequest,
+                                onLaunchRequestHandled = onLaunchRequestHandled,
+                            )
                         /*
                          * 新手引导, over the app rather than instead of it.
                          *
@@ -201,16 +204,17 @@ fun NodysseyRoot(
                          * false before the store has been read as well as after, and drawing the
                          * guide over that frame would show it to everyone, once, on every launch.
                          */
-                        if (storedSettings?.onboardingSeen == false) {
-                            OnboardingScreen(
-                                onFinish = {
-                                    scope.launch {
-                                        container.settingsRepository.setOnboardingSeen(true)
-                                    }
-                                },
-                                appLinksEnabled = appLinksEnabled,
-                                onOpenAppLinkSettings = openAppLinkSettings,
-                            )
+                            if (storedSettings?.onboardingSeen == false) {
+                                OnboardingScreen(
+                                    onFinish = {
+                                        scope.launch {
+                                            container.settingsRepository.setOnboardingSeen(true)
+                                        }
+                                    },
+                                    appLinksEnabled = appLinksEnabled,
+                                    onOpenAppLinkSettings = openAppLinkSettings,
+                                )
+                            }
                         }
                     }
                 }

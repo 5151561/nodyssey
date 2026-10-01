@@ -32,8 +32,11 @@ import androidx.sqlite.execSQL
         OfflineCommentEntity::class,
         OfflineImageEntity::class,
         CollectedPostMetaEntity::class,
+        UserNoteEntity::class,
+        TitleKeywordEntity::class,
+        TrackedThreadEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -56,6 +59,12 @@ abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun offlineDao(): OfflineDao
 
     abstract fun collectedPostMetaDao(): CollectedPostMetaDao
+
+    abstract fun userNoteDao(): UserNoteDao
+
+    abstract fun titleKeywordDao(): TitleKeywordDao
+
+    abstract fun trackedThreadDao(): TrackedThreadDao
 }
 
 /**
@@ -353,6 +362,51 @@ val MIGRATION_14_15 =
     }
 
 /**
+ * Gives the reader's own decisions somewhere to live: 备注, title keywords to hide or be told about,
+ * and threads to follow.
+ *
+ * Three new tables and nothing else. They ship together because they are one kind of thing — state
+ * the site has never heard of — and an upgrading device has decided none of it yet, which is exactly
+ * what three empty tables say.
+ */
+val MIGRATION_15_16 =
+    object : Migration(15, 16) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `user_notes` (
+                    `uid` INTEGER NOT NULL,
+                    `note` TEXT NOT NULL,
+                    `updatedAtMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`uid`)
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `title_keywords` (
+                    `kind` TEXT NOT NULL,
+                    `keyword` TEXT NOT NULL,
+                    `addedAtMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`kind`, `keyword`)
+                )
+                """.trimIndent(),
+            )
+            connection.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `tracked_threads` (
+                    `postId` INTEGER NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `lastKnownCount` INTEGER NOT NULL,
+                    `addedAtMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`postId`)
+                )
+                """.trimIndent(),
+            )
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -377,4 +431,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_12_13,
     MIGRATION_13_14,
     MIGRATION_14_15,
+    MIGRATION_15_16,
 )

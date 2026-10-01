@@ -5,6 +5,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.local.TitleKeywordKind
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.onboarding.HelpRoute
 import io.github.nodyssey.ui.settings.AboutAppRoute
@@ -27,6 +28,8 @@ import io.github.nodyssey.ui.settings.ProxySettingsRoute
 import io.github.nodyssey.ui.settings.ProxySettingsViewModel
 import io.github.nodyssey.ui.settings.SettingsRoute
 import io.github.nodyssey.ui.settings.SettingsViewModel
+import io.github.nodyssey.ui.settings.TitleKeywordsRoute
+import io.github.nodyssey.ui.settings.TitleKeywordsViewModel
 import io.github.nodyssey.ui.settings.theme.DynamicColorRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsViewModel
@@ -54,6 +57,17 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(nav: StackEntryScope) = 
             onOpenImageHost = { backStack.add(ImageHostKey) },
             onOpenAbout = { backStack.add(AboutAppKey) },
             onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
+            onOpenBlockKeywords = { backStack.add(TitleKeywordsKey()) },
+        )
+    }
+
+    entry<TitleKeywordsKey> { key ->
+        val kind = if (key.alerts) TitleKeywordKind.ALERT else TitleKeywordKind.BLOCK
+        val viewModel: TitleKeywordsViewModel =
+            viewModel(key = "title-keywords-$kind", factory = TitleKeywordsViewModel.factory(container, kind))
+        TitleKeywordsRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
         )
     }
 

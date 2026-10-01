@@ -102,6 +102,10 @@ data object HelpKey : NavKey
 @Serializable
 data object OpenSourceLicensesKey : NavKey
 
+/** 屏蔽关键词, or 提醒关键词 when [alerts] — one screen over the two uses of a title keyword. */
+@Serializable
+data class TitleKeywordsKey(val alerts: Boolean = false) : NavKey
+
 /**
  * 账号设置 (8g) and its five sub-pages (d6 1–5/5).
  *
