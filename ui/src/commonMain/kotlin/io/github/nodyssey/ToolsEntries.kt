@@ -4,6 +4,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.compare.ReportCompareRoute
+import io.github.nodyssey.ui.compare.ReportCompareViewModel
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.tools.AwardRoute
 import io.github.nodyssey.ui.tools.AwardViewModel
@@ -16,7 +18,7 @@ import io.github.nodyssey.ui.tools.RulingRoute
 import io.github.nodyssey.ui.tools.RulingViewModel
 
 /**
- * 社区工具 and the boards behind it: 加精, 抽奖, 邀请, 仲裁, and 关于社区.
+ * 社区工具 and the boards behind it: 加精, 抽奖, 邀请, 仲裁, 测评对比, and 关于社区.
  *
  * One of the region files `Navigation.kt`'s `destinationProvider` assembles; see [StackEntryScope]
  * for the capture rules they all share.
@@ -31,7 +33,18 @@ internal fun EntryProviderScope<NavKey>.toolsEntries(nav: StackEntryScope) = wit
             onLucky = { backStack.add(LuckyKey) },
             onInvite = { backStack.add(InviteKey) },
             onRuling = { backStack.add(RulingKey) },
+            onReportCompare = { backStack.add(ReportCompareKey) },
             onAboutCommunity = { backStack.add(AboutCommunityKey) },
+        )
+    }
+
+    entry<ReportCompareKey> {
+        val viewModel: ReportCompareViewModel =
+            viewModel(factory = ReportCompareViewModel.factory(container))
+        ReportCompareRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
+            onOpenPost = { postId, floor -> backStack.add(PostDetailKey(postId, floor = floor)) },
         )
     }
 

@@ -163,6 +163,7 @@ private val EVERY_KEY: List<NavKey> =
         LuckyKey,
         InviteKey,
         RulingKey,
+        ReportCompareKey,
         PostComposerKey(
             edit = PostEditTarget(postId = 703863, commentId = 127, page = 4, isOpeningPost = false),
         ),

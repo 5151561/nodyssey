@@ -80,6 +80,7 @@ class HardcodedChineseLiteralTest {
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/common/RoleBadge.kt" to 6,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/common/SpendConfirmDialog.kt" to 15,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/common/StatusStates.kt" to 1,
+            "ui/src/commonMain/kotlin/io/github/nodyssey/ui/compare/ReportCompareScreen.kt" to 2,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/composer/ReplyComposerViewModel.kt" to 1,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/history/ReadHistoryScreen.kt" to 4,
             "ui/src/commonMain/kotlin/io/github/nodyssey/ui/login/SignInScreen.kt" to 1,

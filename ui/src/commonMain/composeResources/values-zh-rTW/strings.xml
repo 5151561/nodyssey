@@ -21,6 +21,9 @@
     <string name="action_collapse">收合</string>
     <string name="report_show_source">檢視原始報告</string>
     <string name="report_open_fullscreen">全螢幕檢視</string>
+    <string name="report_compare_add">加入比較</string>
+    <string name="report_compare_remove">移出比較</string>
+    <string name="report_compare_open">比較 (%1$d)</string>
     <string name="action_retry">重試</string>
     <string name="action_refresh">重新整理</string>
     <string name="search_load_more_failed">載入更多失敗</string>
@@ -932,6 +935,15 @@
     <string name="tools_invite_subtitle">花費 1000 雞腿購買一個邀請碼</string>
     <string name="tools_ruling">管理紀錄</string>
     <string name="tools_ruling_subtitle">處罰與獎勵公告表格</string>
+    <string name="report_compare_title">測評比較</string>
+    <string name="report_compare_subtitle">將加入比較的測評報告並排比較</string>
+    <string name="report_compare_empty">還沒有加入比較的報告。在帖子裡的測評報告下方點「加入比較」，最多保留 6 份。</string>
+    <string name="report_compare_basket">比較欄 · %1$d/%2$d</string>
+    <string name="report_compare_pick_hint">勾選 2 至 3 份報告進行比較</string>
+    <string name="report_compare_remove_entry">移出 %1$s</string>
+    <string name="report_compare_table">比較結果</string>
+    <string name="report_compare_missing">無此項</string>
+    <string name="report_compare_open_post">開啟報告所在的帖子</string>
 
     <string name="award_title">推薦閱讀</string>
     <string name="award_empty">還沒有加精的文章</string>

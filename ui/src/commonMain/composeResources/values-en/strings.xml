@@ -26,6 +26,9 @@
     <string name="action_collapse">Collapse</string>
     <string name="report_show_source">See the raw report</string>
     <string name="report_open_fullscreen">Full screen</string>
+    <string name="report_compare_add">Add to compare</string>
+    <string name="report_compare_remove">Remove from compare</string>
+    <string name="report_compare_open">Compare (%1$d)</string>
     <string name="action_retry">Retry</string>
     <string name="action_refresh">Refresh</string>
     <string name="search_load_more_failed">Could not load more</string>
@@ -938,6 +941,15 @@
     <string name="tools_invite_subtitle">1000 drumsticks buys one invite code</string>
     <string name="tools_ruling">Moderation log</string>
     <string name="tools_ruling_subtitle">The published table of penalties and rewards</string>
+    <string name="report_compare_title">Compare reports</string>
+    <string name="report_compare_subtitle">Benchmark reports you added, side by side</string>
+    <string name="report_compare_empty">No reports to compare yet. Tap “Add to compare” under a benchmark report in a thread; up to 6 are kept.</string>
+    <string name="report_compare_basket">Basket · %1$d/%2$d</string>
+    <string name="report_compare_pick_hint">Tick 2 or 3 reports to compare them</string>
+    <string name="report_compare_remove_entry">Remove %1$s</string>
+    <string name="report_compare_table">Comparison</string>
+    <string name="report_compare_missing">Not reported</string>
+    <string name="report_compare_open_post">Open the thread this report is from</string>
 
     <string name="award_title">Recommended reading</string>
     <string name="award_empty">No awarded posts yet</string>

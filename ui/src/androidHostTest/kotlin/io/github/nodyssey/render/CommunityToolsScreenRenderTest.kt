@@ -41,6 +41,7 @@ class CommunityToolsScreenRenderTest {
                 onLucky = {},
                 onInvite = {},
                 onRuling = {},
+                onReportCompare = {},
                 onAboutCommunity = {},
             )
         }

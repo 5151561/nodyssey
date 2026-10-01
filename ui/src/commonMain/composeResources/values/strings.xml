@@ -11,6 +11,11 @@
     <string name="action_collapse">收起</string>
     <string name="report_show_source">查看原始报告</string>
     <string name="report_open_fullscreen">全屏查看</string>
+    <!-- 测评报告卡片底部：把这份报告放进「测评对比」的对比栏，或从中拿出；对比栏最多存 6 份 -->
+    <string name="report_compare_add">加入对比</string>
+    <string name="report_compare_remove">移出对比</string>
+    <!-- 对比栏不空时出现在卡片底部，打开测评对比页；%1$d 是对比栏里的报告数 -->
+    <string name="report_compare_open">对比 (%1$d)</string>
     <string name="action_retry">重试</string>
     <string name="action_refresh">刷新</string>
     <string name="search_load_more_failed">加载更多失败</string>
@@ -1126,6 +1131,24 @@
     <string name="tools_invite_subtitle">花费 1000 鸡腿购买一个邀请码</string>
     <string name="tools_ruling">管理记录</string>
     <string name="tools_ruling_subtitle">处罚与奖励公示表格</string>
+
+    <!-- 测评对比：把加入对比栏的 2–3 份测评报告按小节、按项目并排列出；入口在报告卡片和社区工具 -->
+    <string name="report_compare_title">测评对比</string>
+    <string name="report_compare_subtitle">把加入对比的测评报告并排比较</string>
+    <!-- 对比栏为空时的说明 -->
+    <string name="report_compare_empty">还没有加入对比的报告。在帖子里的测评报告下方点「加入对比」，最多保留 6 份。</string>
+    <!-- 对比栏的小节标题；%1$d 是已加入的份数，%2$d 是上限 -->
+    <string name="report_compare_basket">对比栏 · %1$d/%2$d</string>
+    <!-- 勾选的报告不足两份时，代替对比表显示的提示 -->
+    <string name="report_compare_pick_hint">勾选 2 至 3 份报告进行对比</string>
+    <!-- 对比栏一行右侧移出按钮的读屏说明；%1$s 是那一行的名字 -->
+    <string name="report_compare_remove_entry">移出 %1$s</string>
+    <!-- 对比表的小节标题 -->
+    <string name="report_compare_table">对比结果</string>
+    <!-- 某份报告没有这一项时，表格里画「—」，读屏读这句 -->
+    <string name="report_compare_missing">无此项</string>
+    <!-- 对比表列头可点，打开报告所在的帖子；这是点按动作的读屏说明 -->
+    <string name="report_compare_open_post">打开报告所在的帖子</string>
 
     <!-- Curated reading (9b) -->
     <string name="award_title">推荐阅读</string>

@@ -59,6 +59,7 @@ import io.github.nodyssey.ui.common.appName
 import io.github.nodyssey.ui.common.contentSwipeBack
 import io.github.nodyssey.ui.common.contentSwipeBackSupported
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
+import io.github.nodyssey.ui.compare.LocalOpenReportCompare
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.navigation.NodysseyNavigationItems
 import io.github.nodyssey.ui.navigation.TopLevelDestination
@@ -582,11 +583,14 @@ fun MainNavigation(
              */
             val eink = LocalEinkMode.current
             val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
+            val openReportCompare = remember(backStack) { { backStack.add(ReportCompareKey) } }
             CompositionLocalProvider(
                 LocalThreadTransition provides
                     this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
                 // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
                 LocalOpenNetworkCheck provides { openNetworkCheck() },
+                // 测评对比 from any report card's 对比 (n), onto whichever tab the card is in.
+                LocalOpenReportCompare provides { openReportCompare() },
             ) {
                 NavDisplay(
                     entries = entries,

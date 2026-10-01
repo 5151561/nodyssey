@@ -58,6 +58,7 @@ import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -126,6 +127,9 @@ import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
 import io.github.nodyssey.ui.common.sharedThreadTitle
+import io.github.nodyssey.ui.compare.LocalReportOrigin
+import io.github.nodyssey.ui.compare.ReportOrigin
+import io.github.nodyssey.ui.compare.ReportOriginFloor
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -697,46 +701,52 @@ fun PostDetailScreen(
                             indicatorBottomPadding = bottomActionsHeight,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            ThreadList(
-                                state = state,
-                                listState = listState,
-                                bottomRoom = bottomActionsHeight,
-                                onOpenOriginalPost = openOriginalPost,
-                                onOpenBrowser = onLinkClick,
-                                onImageClick = onImageClick,
-                                onJumpToFloor = { floor ->
-                                    // A quote can point anywhere in the thread, including pages nobody
-                                    // has opened. Scroll when it is here, fetch its page when it is not.
-                                    val index = state.indexOfFloor(floor)
-                                    if (index != null) {
-                                        scope.launch { listState.animateScrollToItem(index) }
-                                    } else {
-                                        onJumpToFloor(floor)
-                                    }
-                                },
-                                onReact = reactTo,
-                                onOpenFloorActions = { floorActions = it },
-                                onReplyToFloor = onReply,
-                                onQuoteFloor = onQuote,
-                                onEditFloor = { target ->
-                                    // Same gate as everything else that writes: an expired session is
-                                    // discovered before the editor opens, not after a save is refused.
-                                    if (state.isSignedIn) onEdit(target) else onSignIn()
-                                },
-                                onAuthorClick = onAuthorClick,
-                                // Same gate as the editor and the marks: the account has to exist before
-                                // the action, not after a rejection that also spent the tap.
-                                onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
-                                voteContent = voteContent,
-                                stardustContent = stardustContent,
-                                onTitleBottom = { collapsedTitleThreshold = it },
-                                modifier =
-                                Modifier.floatingToolbarVerticalNestedScroll(
-                                    expanded = toolbarExpanded,
-                                    onExpand = { pageToolbarExpanded = true },
-                                    onCollapse = { pageToolbarExpanded = false },
-                                ),
-                            )
+                            // Which thread a report on these floors came from, for 测评对比's basket;
+                            // each floor adds its own number on top. See [LocalReportOrigin].
+                            CompositionLocalProvider(
+                                LocalReportOrigin provides ReportOrigin(state.postId, state.title),
+                            ) {
+                                ThreadList(
+                                    state = state,
+                                    listState = listState,
+                                    bottomRoom = bottomActionsHeight,
+                                    onOpenOriginalPost = openOriginalPost,
+                                    onOpenBrowser = onLinkClick,
+                                    onImageClick = onImageClick,
+                                    onJumpToFloor = { floor ->
+                                        // A quote can point anywhere in the thread, including pages nobody
+                                        // has opened. Scroll when it is here, fetch its page when it is not.
+                                        val index = state.indexOfFloor(floor)
+                                        if (index != null) {
+                                            scope.launch { listState.animateScrollToItem(index) }
+                                        } else {
+                                            onJumpToFloor(floor)
+                                        }
+                                    },
+                                    onReact = reactTo,
+                                    onOpenFloorActions = { floorActions = it },
+                                    onReplyToFloor = onReply,
+                                    onQuoteFloor = onQuote,
+                                    onEditFloor = { target ->
+                                        // Same gate as everything else that writes: an expired session is
+                                        // discovered before the editor opens, not after a save is refused.
+                                        if (state.isSignedIn) onEdit(target) else onSignIn()
+                                    },
+                                    onAuthorClick = onAuthorClick,
+                                    // Same gate as the editor and the marks: the account has to exist before
+                                    // the action, not after a rejection that also spent the tap.
+                                    onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
+                                    voteContent = voteContent,
+                                    stardustContent = stardustContent,
+                                    onTitleBottom = { collapsedTitleThreshold = it },
+                                    modifier =
+                                    Modifier.floatingToolbarVerticalNestedScroll(
+                                        expanded = toolbarExpanded,
+                                        onExpand = { pageToolbarExpanded = true },
+                                        onCollapse = { pageToolbarExpanded = false },
+                                    ),
+                                )
+                            }
                         }
                     }
             }
@@ -1571,15 +1581,17 @@ private fun ThreadOpeningPost(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            PostRichContent(
-                nodes = body.nodes,
-                onLinkClick = onOpenBrowser,
-                onImageClick = onImageClick,
-                onQuoteRefClick = { onJumpToFloor(it.floor) },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                voteContent = voteContent,
-                stardustContent = stardustContent,
-            )
+            ReportOriginFloor(body.floor) {
+                PostRichContent(
+                    nodes = body.nodes,
+                    onLinkClick = onOpenBrowser,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = { onJumpToFloor(it.floor) },
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    voteContent = voteContent,
+                    stardustContent = stardustContent,
+                )
+            }
         }
         UserSignature(
             nodes = body.signatureNodes,
@@ -1749,15 +1761,17 @@ private fun CommentRow(
                 }
                 FloorTimeLine(comment)
             }
-            PostRichContent(
-                nodes = comment.nodes,
-                onLinkClick = onOpenBrowser,
-                onImageClick = onImageClick,
-                onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
-                textStyle = replyBodyStyle(),
-                voteContent = voteContent,
-                stardustContent = stardustContent,
-            )
+            ReportOriginFloor(comment.floor) {
+                PostRichContent(
+                    nodes = comment.nodes,
+                    onLinkClick = onOpenBrowser,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
+                    textStyle = replyBodyStyle(),
+                    voteContent = voteContent,
+                    stardustContent = stardustContent,
+                )
+            }
             UserSignature(
                 nodes = comment.signatureNodes,
                 bodyStyle = replyBodyStyle(),

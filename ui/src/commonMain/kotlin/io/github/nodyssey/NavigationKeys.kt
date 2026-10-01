@@ -315,6 +315,10 @@ data object InviteKey : NavKey
 @Serializable
 data object RulingKey : NavKey
 
+/** 测评对比 — the basket of reports set aside from report cards, and two or three of them side by side. */
+@Serializable
+data object ReportCompareKey : NavKey
+
 /**
  * Full-screen image viewer.
  *

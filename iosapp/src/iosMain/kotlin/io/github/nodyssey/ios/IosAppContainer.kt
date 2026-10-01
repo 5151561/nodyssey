@@ -87,6 +87,7 @@ import io.github.nodyssey.data.session.DefaultAccountSignOut
 import io.github.nodyssey.data.session.NodeSeekSignInRepository
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
+import io.github.nodyssey.data.settings.ReportCompareStore
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
@@ -394,6 +395,8 @@ class IosAppContainer(
             devChannelDefault = isPreReleaseVersionName(appVersion.name),
         )
     }
+
+    override val reportCompareStore: ReportCompareStore get() = settingsRepository.reportCompare
 
     override val notificationRepository: NotificationRepository by lazy { NotificationRepository(jsonClient) }
 

@@ -36,6 +36,7 @@ import io.github.nodyssey.data.proxy.ProxySettings
 import io.github.nodyssey.data.session.AccountSignOut
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
+import io.github.nodyssey.data.settings.ReportCompareStore
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.plaza.core.AppClock
@@ -76,6 +77,9 @@ interface AppContainer {
     val trackedThreadStore: TrackedThreadStore
     val categoryRepository: CategoryRepository
     val settingsRepository: SettingsRepository
+
+    /** 测评对比's basket — the reports set aside to compare. Lives in [settingsRepository]'s store. */
+    val reportCompareStore: ReportCompareStore
     val notificationRepository: NotificationRepository
     val messageRepository: MessageRepository
     val profileRepository: ProfileRepository
