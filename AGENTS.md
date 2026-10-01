@@ -45,7 +45,7 @@ every language there is no bundle for, and they are the only copy carrying comme
 file says what a string *is* in that language and nothing about why it exists.
 
 Three resource systems are involved and each keeps its own copy of the same three languages:
-`ui/src/commonMain/composeResources/values{,-en,-zh-rTW}` (1384 strings, the screens),
+`ui/src/commonMain/composeResources/values{,-en,-zh-rTW}` (1,384 strings, the screens),
 `designsys/src/commonMain/composeResources/values{,-en,-zh-rTW}` (44, the shared components) and
 `app/src/main/res/values{,-en,-zh-rTW}` (17, the launcher label, the launcher shortcuts and what
 the notification worker posts). A key present only in the unqualified file is not a gap — it falls back, which is right for a
