@@ -15,6 +15,7 @@ import io.github.nodyssey.core.net.dnsOverHttpsResolvers
 import io.github.nodyssey.data.AppCacheStore
 import io.github.nodyssey.data.AssetsRepository
 import io.github.nodyssey.data.AwardRepository
+import io.github.nodyssey.data.BackgroundAlertChecker
 import io.github.nodyssey.data.CategoryRepository
 import io.github.nodyssey.data.CoilImageCaches
 import io.github.nodyssey.data.CollectedPostMetaStore
@@ -157,6 +158,9 @@ interface AndroidAppContainer : AppContainer {
      * [okHttpClient], minus the cookie jar. See the builder for why the jar is the one thing removed.
      */
     val imageContentClient: OkHttpClient
+
+    /** 提醒关键词 and 追踪新回复's half of the background poll. Android-only: iOS has no poll yet. */
+    val backgroundAlerts: BackgroundAlertChecker
 }
 
 class DefaultAppContainer(
@@ -452,6 +456,15 @@ class DefaultAppContainer(
     private val database by lazy { createNodeSeekDatabase(appContext) }
 
     private val remotePosts by lazy { NetworkPostDataSource(htmlClient, dispatchers, clock) }
+
+    override val backgroundAlerts: BackgroundAlertChecker by lazy {
+        BackgroundAlertChecker(
+            loadList = { sort, page -> remotePosts.loadList(categorySlug = null, page = page, sort = sort).posts },
+            keywords = titleKeywordStore,
+            tracked = trackedThreadStore,
+            settings = settingsRepository,
+        )
+    }
 
     override val postRepository: PostRepository by lazy {
         OfflineFirstPostRepository(

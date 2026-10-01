@@ -181,6 +181,10 @@ import io.github.nodyssey.ui.resources.post_reaction_like
 import io.github.nodyssey.ui.resources.post_reaction_spent
 import io.github.nodyssey.ui.resources.post_reply_action
 import io.github.nodyssey.ui.resources.post_reply_to
+import io.github.nodyssey.ui.resources.post_track_full
+import io.github.nodyssey.ui.resources.post_track_thread
+import io.github.nodyssey.ui.resources.post_tracked
+import io.github.nodyssey.ui.resources.post_untrack_thread
 import io.github.nodyssey.ui.resources.user_note_action
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.plaza.core.richtext.InlineNode
@@ -280,6 +284,8 @@ fun PostDetailRoute(
         onReactionFailureShown = viewModel::onReactionFailureShown,
         onCollect = viewModel::toggleCollect,
         onCollectFailureShown = viewModel::onCollectFailureShown,
+        onToggleTrack = viewModel::toggleTrack,
+        onTrackMessageShown = viewModel::onTrackMessageShown,
         voteContent = voteContent,
         stardustContent = stardustContent,
         replyOpen = replyState.visible,
@@ -364,6 +370,9 @@ fun PostDetailScreen(
     /** Collects the thread, or takes it out. Whole-thread, so only the opening post offers it. */
     onCollect: () -> Unit = {},
     onCollectFailureShown: () -> Unit = {},
+    /** 追踪新回复 / 取消追踪, from the overflow menu. */
+    onToggleTrack: () -> Unit = {},
+    onTrackMessageShown: () -> Unit = {},
     /**
      * Draws the votes embedded in the body and the comments.
      *
@@ -632,6 +641,8 @@ fun PostDetailScreen(
                 onOpenInBrowser = { onOpenBrowser(postUrl) },
                 onRefresh = { onRefreshPage(visiblePage) },
                 showBackButton = showBackButton,
+                tracked = state.tracked,
+                onToggleTrack = onToggleTrack,
             )
         },
     ) { padding ->
@@ -826,6 +837,16 @@ fun PostDetailScreen(
         onRetry = onCollect,
     )
 
+    // Shown, then consumed — the order `SiteErrorSnackbar` uses, so clearing the message cannot
+    // cancel the effect that is showing it.
+    val trackTracked = stringResource(Res.string.post_tracked)
+    val trackFull = stringResource(Res.string.post_track_full)
+    LaunchedEffect(state.trackMessage) {
+        val message = state.trackMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(if (message == TrackMessage.TRACKED) trackTracked else trackFull)
+        onTrackMessageShown()
+    }
+
     if (showPageSheet) {
         val loadedFloors = state.comments.size + if (state.body != null) 1 else 0
         // "上次阅读" is the place a previous visit left behind when there is one, and otherwise the
@@ -934,6 +955,9 @@ private fun DetailTopBar(
     onOpenInBrowser: () -> Unit,
     onRefresh: () -> Unit,
     showBackButton: Boolean,
+    /** Null hides 追踪新回复: this build has nowhere to keep the list. */
+    tracked: Boolean? = null,
+    onToggleTrack: () -> Unit = {},
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val shareText = rememberShareText()
@@ -1015,6 +1039,17 @@ private fun DetailTopBar(
                             shareText("$title\n$postUrl", shareLabel)
                         },
                     )
+                    tracked?.let { on ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(stringResource(if (on) Res.string.post_untrack_thread else Res.string.post_track_thread))
+                            },
+                            onClick = {
+                                menuOpen = false
+                                onToggleTrack()
+                            },
+                        )
+                    }
                 }
             }
         },

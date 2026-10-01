@@ -5,11 +5,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import io.github.nodyssey.data.TitleKeywordStore
+import io.github.nodyssey.data.TrackedThreadStore
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.model.TitleKeywordKind
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -19,7 +23,15 @@ import kotlinx.coroutines.launch
  */
 class NotificationSettingsViewModel(
     private val settings: SettingsRepository,
+    titleKeywords: TitleKeywordStore,
+    trackedThreads: TrackedThreadStore,
 ) : ViewModel() {
+    /** How many 提醒关键词 and followed threads there are — the two 管理 rows' subtitles. */
+    val alertCounts: StateFlow<AlertCounts> =
+        combine(titleKeywords.keywords(TitleKeywordKind.ALERT), trackedThreads.tracked) { keywords, tracked ->
+            AlertCounts(keywords = keywords.size, trackedThreads = tracked.size)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AlertCounts())
+
     val uiState: StateFlow<UserSettings> =
         settings.settings
             .stateIn(
@@ -52,12 +64,29 @@ class NotificationSettingsViewModel(
         viewModelScope.launch { settings.setNotifyMessages(value) }
     }
 
+    fun setNotifyKeywordAlerts(value: Boolean) {
+        viewModelScope.launch { settings.setNotifyKeywordAlerts(value) }
+    }
+
+    fun setNotifyTrackedThreads(value: Boolean) {
+        viewModelScope.launch { settings.setNotifyTrackedThreads(value) }
+    }
+
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
-                    NotificationSettingsViewModel(settings = container.settingsRepository)
+                    NotificationSettingsViewModel(
+                        settings = container.settingsRepository,
+                        titleKeywords = container.titleKeywordStore,
+                        trackedThreads = container.trackedThreadStore,
+                    )
                 }
             }
     }
 }
+
+data class AlertCounts(
+    val keywords: Int = 0,
+    val trackedThreads: Int = 0,
+)

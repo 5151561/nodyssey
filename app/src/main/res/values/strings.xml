@@ -35,4 +35,13 @@
     <plurals name="notify_body_messages">
         <item quantity="other">%1$d 条新私信</item>
     </plurals>
+    <!-- 两个 App 自己的提醒渠道：关键词命中新帖、追踪的帖子有新回复 -->
+    <string name="notifications_keyword_alerts">关键词提醒</string>
+    <string name="notifications_tracked_threads">追踪新回复</string>
+    <!-- 关键词提醒的通知标题，%1$s 是命中的关键词；正文是帖子标题 -->
+    <string name="notify_keyword_title">新帖含「%1$s」</string>
+    <!-- 追踪帖的通知正文；标题是帖子标题 -->
+    <plurals name="notify_body_tracked_thread">
+        <item quantity="other">%1$d 条新回复</item>
+    </plurals>
 </resources>

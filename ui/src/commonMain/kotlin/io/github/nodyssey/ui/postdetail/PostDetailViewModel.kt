@@ -12,10 +12,12 @@ import io.github.nodyssey.data.NoReadingPositions
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ReadingPosition
 import io.github.nodyssey.data.ReadingPositionStore
+import io.github.nodyssey.data.TrackedThreadStore
 import io.github.nodyssey.data.session.SessionState
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.model.PostContent
 import io.github.nodyssey.model.ReactionAction
+import io.github.nodyssey.model.ThreadSnapshot
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -71,6 +73,8 @@ class PostDetailViewModel(
     showBlockedContent: StateFlow<Boolean> = MutableStateFlow(false),
     /** Where this thread was left off last time, and where this read's own place is written. */
     private val readingPositions: ReadingPositionStore = NoReadingPositions,
+    /** 追踪新回复; absent in a test that does not care, which also hides the menu item. */
+    private val trackedThreads: TrackedThreadStore? = null,
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
@@ -157,8 +161,17 @@ class PostDetailViewModel(
                 // uncached post offline shows nothing but an error, and the thread still ended up
                 // dimmed in the list as though it had been read.
                 repository.markThreadRead(postId)
+                // Reading the last page is being told about every reply on it, so a followed thread
+                // must not announce those replies later. Only the last page: floor #10 on page 1 of
+                // forty says nothing about how many replies the thread has.
+                thread.lastFloorNumberIfComplete()?.let { trackedThreads?.advance(postId, it) }
             }
         }
+
+        trackedThreads
+            ?.isTracked(postId)
+            ?.onEach { tracked -> _uiState.update { it.copy(tracked = tracked) } }
+            ?.launchIn(viewModelScope)
 
         showBlockedContent
             .onEach { show -> _uiState.update { it.copy(showBlockedContent = show) } }
@@ -514,6 +527,29 @@ class PostDetailViewModel(
         }
     }
 
+    /**
+     * 追踪新回复 / 取消追踪. The count recorded is the thread's last floor when the last page is on
+     * screen, and unknown otherwise — the next poll then takes whatever it sees as the baseline.
+     */
+    fun toggleTrack() {
+        val store = trackedThreads ?: return
+        val state = _uiState.value
+        viewModelScope.launch {
+            if (state.tracked == true) {
+                store.untrack(postId)
+                return@launch
+            }
+            val complete = state.hasContent && !state.hasNextPage && state.lastLoadedPage >= state.totalPages
+            val known = if (complete) lastFloorNumber(state.comments) else null
+            val added = store.track(postId, state.title, known)
+            _uiState.update { it.copy(trackMessage = if (added) TrackMessage.TRACKED else TrackMessage.FULL) }
+        }
+    }
+
+    fun onTrackMessageShown() {
+        _uiState.update { it.copy(trackMessage = null) }
+    }
+
     /** The collection failure has been shown; stop holding it. */
     fun onCollectFailureShown() {
         _uiState.update { it.copy(collectFailure = null) }
@@ -608,6 +644,7 @@ class PostDetailViewModel(
                         preview,
                         container.settingsRepository.showBlockedContent,
                         container.readingPositionStore,
+                        container.trackedThreadStore,
                     )
                 }
             }
@@ -685,6 +722,10 @@ data class PostDetailUiState(
     val collectPending: Boolean = false,
     /** A refused collection toggle, held until the screen has shown it once. */
     val collectFailure: ReactionFailure? = null,
+    /** Whether 追踪新回复 is on for this thread; null where this build cannot follow threads. */
+    val tracked: Boolean? = null,
+    /** What the last 追踪新回复 tap came to, held until the screen has said so once. */
+    val trackMessage: TrackMessage? = null,
 ) {
     /**
      * Whether there is a thread on screen to read and act on.
@@ -696,6 +737,18 @@ data class PostDetailUiState(
      */
     val hasContent: Boolean get() = body != null || comments.isNotEmpty()
 }
+
+enum class TrackMessage { TRACKED, FULL }
+
+/**
+ * The highest floor number on the thread's last page, when that page is loaded — the one moment the
+ * floors on screen say how many replies the thread has.
+ */
+private fun ThreadSnapshot.lastFloorNumberIfComplete(): Int? =
+    if (hasNextPage || lastLoadedPage < totalPages) null else lastFloorNumber(comments)
+
+/** The highest numbered floor among [comments]; zero for a thread with no replies at all. */
+private fun lastFloorNumber(comments: List<PostContent>): Int = comments.mapNotNull { NodeSeekSite.parseFloorNumber(it.floor) }.maxOrNull() ?: 0
 
 data class PendingReaction(
     val commentId: Long,

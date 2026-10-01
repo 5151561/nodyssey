@@ -80,29 +80,45 @@ class TitleKeywordStore(
     }
 }
 
+/**
+ * A followed thread. [lastKnownCount] is the reply count the reader has been told about; negative
+ * while it is not known yet — see [TrackedThreadStore.track].
+ */
+data class TrackedThread(
+    val postId: Long,
+    val title: String,
+    val lastKnownCount: Int,
+)
+
 /** 追踪新回复 — the threads the reader wants to hear about, and how far they have been told. */
 class TrackedThreadStore(
     private val dao: TrackedThreadDao,
     private val clock: AppClock,
 ) {
-    val tracked: Flow<List<TrackedThreadEntity>> = dao.observeAll()
+    val tracked: Flow<List<TrackedThread>> = dao.observeAll().map { rows -> rows.map { it.toModel() } }
 
     fun isTracked(postId: Long): Flow<Boolean> = dao.observeIsTracked(postId)
 
-    suspend fun all(): List<TrackedThreadEntity> = dao.all()
+    suspend fun all(): List<TrackedThread> = dao.all().map { it.toModel() }
 
-    /** False when the list is already at [MAX_TRACKED] and nothing was added. */
+    /**
+     * False when the list is already at [MAX_TRACKED] and nothing was added.
+     *
+     * [commentCount] is null when the caller cannot know the total — a thread read from page 1 of 40
+     * has seen ten floors, not four hundred. The next poll then takes the count it finds as the
+     * baseline instead of announcing four hundred new replies.
+     */
     suspend fun track(
         postId: Long,
         title: String,
-        commentCount: Int,
+        commentCount: Int?,
     ): Boolean {
         if (dao.count() >= MAX_TRACKED) return false
         dao.upsert(
             TrackedThreadEntity(
                 postId = postId,
                 title = title,
-                lastKnownCount = commentCount,
+                lastKnownCount = commentCount ?: UNKNOWN_COUNT,
                 addedAtMillis = clock.nowMillis(),
             ),
         )
@@ -119,5 +135,10 @@ class TrackedThreadStore(
 
     companion object {
         const val MAX_TRACKED = 50
+
+        /** [TrackedThread.lastKnownCount] before any count has been seen. */
+        const val UNKNOWN_COUNT = -1
     }
 }
+
+private fun TrackedThreadEntity.toModel() = TrackedThread(postId, title, lastKnownCount)

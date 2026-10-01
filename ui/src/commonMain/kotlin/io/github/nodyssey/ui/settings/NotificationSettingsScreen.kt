@@ -39,8 +39,13 @@ import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.keywords_alert_title
+import io.github.nodyssey.ui.resources.keywords_summary_count
+import io.github.nodyssey.ui.resources.keywords_summary_none
 import io.github.nodyssey.ui.resources.notifications_interactions
 import io.github.nodyssey.ui.resources.notifications_messages
+import io.github.nodyssey.ui.resources.notify_app_alerts_footer
+import io.github.nodyssey.ui.resources.notify_app_alerts_section
 import io.github.nodyssey.ui.resources.notify_channels_section
 import io.github.nodyssey.ui.resources.notify_check_section
 import io.github.nodyssey.ui.resources.notify_frequency
@@ -49,6 +54,7 @@ import io.github.nodyssey.ui.resources.notify_frequency_30
 import io.github.nodyssey.ui.resources.notify_frequency_60
 import io.github.nodyssey.ui.resources.notify_frequency_every
 import io.github.nodyssey.ui.resources.notify_frequency_hint
+import io.github.nodyssey.ui.resources.notify_keyword_alerts
 import io.github.nodyssey.ui.resources.notify_master_hint
 import io.github.nodyssey.ui.resources.notify_master_title
 import io.github.nodyssey.ui.resources.notify_quiet_hours
@@ -57,8 +63,10 @@ import io.github.nodyssey.ui.resources.notify_settings_title
 import io.github.nodyssey.ui.resources.notify_telegram_action
 import io.github.nodyssey.ui.resources.notify_telegram_body
 import io.github.nodyssey.ui.resources.notify_telegram_title
+import io.github.nodyssey.ui.resources.notify_tracked_threads
 import io.github.nodyssey.ui.resources.notify_wifi_only
 import io.github.nodyssey.ui.resources.notify_wifi_only_hint
+import io.github.nodyssey.ui.resources.tracked_threads_title
 import io.github.plaza.designsys.component.ChoiceRow
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
@@ -82,9 +90,12 @@ fun NotificationSettingsRoute(
     viewModel: NotificationSettingsViewModel,
     onBack: () -> Unit,
     onOpenTelegram: () -> Unit,
+    onOpenAlertKeywords: () -> Unit,
+    onOpenTrackedThreads: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val settings by viewModel.uiState.collectAsStateWithLifecycle()
+    val alertCounts by viewModel.alertCounts.collectAsStateWithLifecycle()
     val requestNotificationPermission = rememberNotificationPermissionRequest()
     NotificationSettingsScreen(
         settings = settings,
@@ -99,6 +110,11 @@ fun NotificationSettingsRoute(
         onNotifyInteractionsChange = viewModel::setNotifyInteractions,
         onNotifyMessagesChange = viewModel::setNotifyMessages,
         onOpenTelegram = onOpenTelegram,
+        alertCounts = alertCounts,
+        onNotifyKeywordAlertsChange = viewModel::setNotifyKeywordAlerts,
+        onNotifyTrackedThreadsChange = viewModel::setNotifyTrackedThreads,
+        onOpenAlertKeywords = onOpenAlertKeywords,
+        onOpenTrackedThreads = onOpenTrackedThreads,
         modifier = modifier,
     )
 }
@@ -123,6 +139,11 @@ fun NotificationSettingsScreen(
     onNotifyMessagesChange: (Boolean) -> Unit,
     onOpenTelegram: () -> Unit,
     modifier: Modifier = Modifier,
+    alertCounts: AlertCounts = AlertCounts(),
+    onNotifyKeywordAlertsChange: (Boolean) -> Unit = {},
+    onNotifyTrackedThreadsChange: (Boolean) -> Unit = {},
+    onOpenAlertKeywords: () -> Unit = {},
+    onOpenTrackedThreads: () -> Unit = {},
 ) {
     val enabled = settings.notificationsEnabled
     val appBarState = rememberOneHandAppBarState()
@@ -242,6 +263,46 @@ fun NotificationSettingsScreen(
                         trailing = { GroupedListItemSwitch(checked = settings.notifyMessages, enabled = enabled) },
                     )
                 }
+
+                // The app's own alerts. They read public lists, so unlike the two above they work
+                // signed out — the section says so rather than leaving it to be discovered.
+                SectionLabel(stringResource(Res.string.notify_app_alerts_section))
+                SettingsGroup {
+                    GroupedRow(
+                        title = stringResource(Res.string.notify_keyword_alerts),
+                        first = true,
+                        icon = PlazaIcons.Campaign,
+                        checked = settings.notifyKeywordAlerts,
+                        onCheckedChange = onNotifyKeywordAlertsChange,
+                        enabled = enabled,
+                        trailing = { GroupedListItemSwitch(checked = settings.notifyKeywordAlerts, enabled = enabled) },
+                    )
+                    GroupedRow(
+                        title = stringResource(Res.string.keywords_alert_title),
+                        subtitle = countSummary(alertCounts.keywords),
+                        onClick = onOpenAlertKeywords,
+                    )
+                    GroupedRow(
+                        title = stringResource(Res.string.notify_tracked_threads),
+                        icon = PlazaIcons.Forum,
+                        checked = settings.notifyTrackedThreads,
+                        onCheckedChange = onNotifyTrackedThreadsChange,
+                        enabled = enabled,
+                        trailing = { GroupedListItemSwitch(checked = settings.notifyTrackedThreads, enabled = enabled) },
+                    )
+                    GroupedRow(
+                        title = stringResource(Res.string.tracked_threads_title),
+                        subtitle = countSummary(alertCounts.trackedThreads),
+                        last = true,
+                        onClick = onOpenTrackedThreads,
+                    )
+                }
+                Text(
+                    stringResource(Res.string.notify_app_alerts_footer),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = Spacing.xs),
+                )
             }
 
             // The Telegram pointer stays active regardless of the master switch: the site's own
@@ -368,3 +429,7 @@ private fun NotificationSettingsPreview() {
         )
     }
 }
+
+@Composable
+private fun countSummary(count: Int): String =
+    if (count == 0) stringResource(Res.string.keywords_summary_none) else stringResource(Res.string.keywords_summary_count, count)

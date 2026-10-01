@@ -112,6 +112,8 @@ class SettingsRepository(
                     // migration costs nothing and an older build finds its own keys intact.
                     ?: ((preferences[KEY_NOTIFY_MENTIONS] ?: true) || (preferences[KEY_NOTIFY_REPLIES] ?: true)),
                 notifyMessages = preferences[KEY_NOTIFY_MESSAGES] ?: true,
+                notifyKeywordAlerts = preferences[KEY_NOTIFY_KEYWORD_ALERTS] ?: true,
+                notifyTrackedThreads = preferences[KEY_NOTIFY_TRACKED_THREADS] ?: true,
                 readHistoryLimit = readHistoryLimit(preferences),
                 updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
                 updateDevChannel = preferences[KEY_UPDATE_DEV_CHANNEL] ?: devChannelDefault,
@@ -285,6 +287,18 @@ class SettingsRepository(
         edit { it[KEY_NOTIFY_INTERACTIONS] = enabled }
 
     suspend fun setNotifyMessages(enabled: Boolean) = edit { it[KEY_NOTIFY_MESSAGES] = enabled }
+
+    suspend fun setNotifyKeywordAlerts(enabled: Boolean) = edit { it[KEY_NOTIFY_KEYWORD_ALERTS] = enabled }
+
+    suspend fun setNotifyTrackedThreads(enabled: Boolean) = edit { it[KEY_NOTIFY_TRACKED_THREADS] = enabled }
+
+    /**
+     * The newest thread id 提醒关键词 has already looked at, or null before its first run. Worker
+     * bookkeeping like [notificationSeenCounts], and per site: the two sites number threads apart.
+     */
+    suspend fun keywordAlertBaseline(): Long? = preferences()[KEY_ALERT_LAST_POST_ID]
+
+    suspend fun setKeywordAlertBaseline(postId: Long) = edit { it[KEY_ALERT_LAST_POST_ID] = postId }
 
     /**
      * How long 浏览历史 remembers. Anything outside [READ_HISTORY_LIMIT_CHOICES] is refused rather
@@ -637,6 +651,9 @@ class SettingsRepository(
         private val KEY_NOTIFY_MENTIONS = booleanPreferencesKey("notify_mentions")
         private val KEY_NOTIFY_REPLIES = booleanPreferencesKey("notify_replies")
         private val KEY_NOTIFY_MESSAGES = booleanPreferencesKey("notify_messages")
+        private val KEY_NOTIFY_KEYWORD_ALERTS = booleanPreferencesKey("notify_keyword_alerts")
+        private val KEY_NOTIFY_TRACKED_THREADS = booleanPreferencesKey("notify_tracked_threads")
+        private val KEY_ALERT_LAST_POST_ID = longPreferencesKey("keyword_alert_last_post_id$boardKeySuffix")
         private val KEY_SEEN_REPLIES = intPreferencesKey("notification_seen_replies")
         private val KEY_SEEN_MENTIONS = intPreferencesKey("notification_seen_mentions")
         private val KEY_SEEN_MESSAGES = intPreferencesKey("notification_seen_messages")
@@ -845,6 +862,10 @@ data class UserSettings(
      */
     val notifyInteractions: Boolean = true,
     val notifyMessages: Boolean = true,
+    /** 提醒关键词: a new thread whose title holds one of them. Off-able without deleting the words. */
+    val notifyKeywordAlerts: Boolean = true,
+    /** 追踪新回复: new replies on a thread the reader chose to follow. */
+    val notifyTrackedThreads: Boolean = true,
     /** 浏览历史保留条数; [SettingsRepository.READ_HISTORY_UNLIMITED] for 无上限. */
     val readHistoryLimit: Int = SettingsRepository.DEFAULT_READ_HISTORY_LIMIT,
     /**

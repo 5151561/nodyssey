@@ -11,15 +11,21 @@ import androidx.annotation.PluralsRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import io.github.nodyssey.MainActivity
 import io.github.nodyssey.R
+import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.data.BackgroundAlertChecker
+import io.github.nodyssey.data.KeywordHit
 import io.github.nodyssey.data.NotificationCounts
 import io.github.nodyssey.data.NotificationRepository
 import io.github.nodyssey.data.NotificationTab
+import io.github.nodyssey.data.TrackedThreadUpdate
 import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.settings.UserSettings
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.net.SiteError
 import io.github.plaza.core.net.SiteException
@@ -45,24 +51,11 @@ class NotificationPollWorker(
     private val sessionRepository: SessionRepository,
     private val notificationRepository: NotificationRepository,
     private val clock: AppClock,
+    private val alerts: BackgroundAlertChecker,
 ) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
         if (!settings.notificationsEnabled) return Result.success()
-        if (!sessionRepository.peek().isSignedIn) return Result.success()
-
-        val fetched =
-            try {
-                notificationRepository.refreshCounts()
-            } catch (e: SiteException) {
-                return if (e.error is SiteError.Network) Result.retry() else Result.success()
-            }
-
-        val previous = settingsRepository.notificationSeenCounts()
-        val counts = withOverlap(previous, fetched) ?: return Result.retry()
-        // Recorded before deciding whether to post, so the quiet window "collects silently":
-        // arrivals inside it never turn into a burst of stale notifications at 07:00.
-        settingsRepository.setNotificationSeenCounts(counts)
 
         val minuteOfDay =
             Instant
@@ -70,11 +63,123 @@ class NotificationPollWorker(
                 .atZone(ZoneId.systemDefault())
                 .toLocalTime()
                 .let { it.hour * 60 + it.minute }
-        if (settings.notificationQuietHours && isInQuietHours(minuteOfDay)) return Result.success()
+        // Every check below still runs and records inside the quiet window — it "collects silently",
+        // so arrivals there never turn into a burst of stale notifications at 07:00.
+        val quiet = settings.notificationQuietHours && isInQuietHours(minuteOfDay)
+
+        // The site's own notifications need an account; 提醒关键词 and 追踪新回复 read public lists
+        // and do not, so a signed-out reader still gets those.
+        var retry = false
+        if (sessionRepository.peek().isSignedIn) retry = !checkSiteNotifications(settings, quiet)
+        if (settings.notifyKeywordAlerts) {
+            val hits = alertsOrRetry { alerts.checkKeywords() }
+            if (hits == null) {
+                retry = true
+            } else if (!quiet) {
+                hits.take(MAX_KEYWORD_NOTIFICATIONS).forEach(::notifyKeywordHit)
+            }
+        }
+        if (settings.notifyTrackedThreads) {
+            val updates = alertsOrRetry { alerts.checkTrackedThreads() }
+            if (updates == null) {
+                retry = true
+            } else if (!quiet) {
+                updates.forEach(::notifyTrackedThread)
+            }
+        }
+        return if (retry) Result.retry() else Result.success()
+    }
+
+    /**
+     * [check]'s answer, an empty one for anything that is not about the network — a challenge page
+     * retried every quarter hour is the traffic the challenge exists to stop — or null to retry.
+     */
+    private suspend fun <T> alertsOrRetry(check: suspend () -> List<T>): List<T>? =
+        try {
+            check()
+        } catch (e: SiteException) {
+            if (e.error is SiteError.Network) null else emptyList()
+        }
+
+    /** The unread-count half; false asks for a retry. */
+    private suspend fun checkSiteNotifications(
+        settings: UserSettings,
+        quiet: Boolean,
+    ): Boolean {
+        val fetched =
+            try {
+                notificationRepository.refreshCounts()
+            } catch (e: SiteException) {
+                return e.error !is SiteError.Network
+            }
+
+        val previous = settingsRepository.notificationSeenCounts()
+        val counts = withOverlap(previous, fetched) ?: return false
+        settingsRepository.setNotificationSeenCounts(counts)
+        if (quiet) return true
 
         if (settings.notifyInteractions) notify(NotificationTab.INTERACTIONS, previous, counts)
         if (settings.notifyMessages) notify(NotificationTab.MESSAGES, previous, counts)
-        return Result.success()
+        return true
+    }
+
+    private fun notifyKeywordHit(hit: KeywordHit) =
+        postThreadNotification(
+            channel = NotificationChannels.KEYWORD_ALERTS,
+            tag = "keyword-${hit.postId}",
+            postId = hit.postId,
+            title = applicationContext.getString(R.string.notify_keyword_title, hit.keyword),
+            body = hit.title,
+        )
+
+    private fun notifyTrackedThread(update: TrackedThreadUpdate) =
+        postThreadNotification(
+            channel = NotificationChannels.TRACKED_THREADS,
+            // Tagged by thread, so a second batch of replies updates the same entry.
+            tag = "thread-${update.postId}",
+            postId = update.postId,
+            title = update.title,
+            body = applicationContext.resources.getQuantityString(
+                R.plurals.notify_body_tracked_thread,
+                update.newReplies,
+                update.newReplies,
+            ),
+        )
+
+    /** One notification about one thread; tapping it opens that thread through the deep-link route. */
+    @SuppressLint("MissingPermission")
+    private fun postThreadNotification(
+        channel: String,
+        tag: String,
+        postId: Long,
+        title: String,
+        body: String,
+    ) {
+        if (!canPostNotifications()) return
+        val context = applicationContext
+        val openThread =
+            PendingIntent.getActivity(
+                context,
+                tag.hashCode(),
+                Intent(Intent.ACTION_VIEW, (NodeSeekSite.BASE_URL + NodeSeekSite.postPath(postId)).toUri())
+                    .setClass(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        val notification =
+            NotificationCompat
+                .Builder(context, channel)
+                .setSmallIcon(R.drawable.ic_stat_notification)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setContentIntent(openThread)
+                .setAutoCancel(true)
+                .build()
+        try {
+            NotificationManagerCompat.from(context).notify(tag, THREAD_NOTIFICATION_ID, notification)
+        } catch (_: SecurityException) {
+            // Permission can be revoked between the explicit check and this call.
+        }
     }
 
     /**
@@ -159,6 +264,14 @@ class NotificationPollWorker(
             NotificationTab.INTERACTIONS -> R.string.notifications_interactions
             NotificationTab.MESSAGES -> R.string.notifications_messages
         }
+
+    private companion object {
+        /** The id under each thread's tag; tags keep them apart, and away from the tabs' ids 0 and 1. */
+        const val THREAD_NOTIFICATION_ID = 100
+
+        /** A burst of matches is a sign the keyword is too broad, not a reason to fill the shade. */
+        const val MAX_KEYWORD_NOTIFICATIONS = 5
+    }
 
     @PluralsRes
     private fun bodyRes(tab: NotificationTab): Int =

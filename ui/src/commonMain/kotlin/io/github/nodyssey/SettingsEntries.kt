@@ -30,6 +30,8 @@ import io.github.nodyssey.ui.settings.SettingsRoute
 import io.github.nodyssey.ui.settings.SettingsViewModel
 import io.github.nodyssey.ui.settings.TitleKeywordsRoute
 import io.github.nodyssey.ui.settings.TitleKeywordsViewModel
+import io.github.nodyssey.ui.settings.TrackedThreadsRoute
+import io.github.nodyssey.ui.settings.TrackedThreadsViewModel
 import io.github.nodyssey.ui.settings.theme.DynamicColorRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsRoute
 import io.github.nodyssey.ui.settings.theme.ThemeSettingsViewModel
@@ -99,6 +101,18 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(nav: StackEntryScope) = 
             onBack = { backStack.removeLastOrNull() },
             // 绑定 Telegram lives on 联系方式 (d6 3/4), the site's own binding entry.
             onOpenTelegram = { backStack.add(AccountContactKey) },
+            onOpenAlertKeywords = { backStack.add(TitleKeywordsKey(alerts = true)) },
+            onOpenTrackedThreads = { backStack.add(TrackedThreadsKey) },
+        )
+    }
+
+    entry<TrackedThreadsKey> {
+        val viewModel: TrackedThreadsViewModel =
+            viewModel(factory = TrackedThreadsViewModel.factory(container))
+        TrackedThreadsRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
+            onOpenThread = { postId -> backStack.add(PostDetailKey(postId)) },
         )
     }
 

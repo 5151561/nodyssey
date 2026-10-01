@@ -1248,7 +1248,7 @@
     <string name="offline_images">同時下載圖片</string>
     <string name="offline_images_body">關閉後離線只留文字，佔用小很多</string>
     <string name="offline_auto_sync">自動補新回覆</string>
-    <string name="offline_auto_sync_body">每天一次，只拉增量</string>
+    <string name="offline_auto_sync_body">每 6 小時一次，只拉增量</string>
     <string name="offline_retention">離線內容保留</string>
     <string name="offline_retention_body">逾期自動清理，收藏本身不動</string>
     <string name="offline_retention_days">%1$d 天</string>
@@ -1397,4 +1397,15 @@
     <string name="keywords_remove">刪除 %1$s</string>
     <string name="keywords_block_footer">標題含這些詞的帖子不出現在首頁、版塊和搜尋裡。只存在這台手機上，不隨帳號走；「臨時顯示被屏蔽內容」打開時也會一併顯示。</string>
     <string name="keywords_alert_footer">背景檢查通知時順便看一眼最新發佈的帖子，標題含這些詞就推送一條通知。只存在這台手機上。</string>
+    <string name="notify_app_alerts_section">App 提醒</string>
+    <string name="notify_keyword_alerts">關鍵詞提醒</string>
+    <string name="notify_tracked_threads">追蹤新回覆</string>
+    <string name="notify_app_alerts_footer">這兩項看的是公開列表，不登入也能用。追帖只看「最新回覆」排序的前兩頁：一個檢查週期內被頂出前兩頁的帖子會漏掉提醒，你在首頁隱藏的版塊裡的帖子也追不到。</string>
+    <string name="tracked_threads_title">追蹤的帖子</string>
+    <string name="tracked_threads_empty">還沒有追蹤的帖子。在帖子右上角的選單裡點「追蹤新回覆」。</string>
+    <string name="tracked_threads_untrack">取消追蹤 %1$s</string>
+    <string name="post_track_thread">追蹤新回覆</string>
+    <string name="post_untrack_thread">取消追蹤</string>
+    <string name="post_tracked">已追蹤，有新回覆會通知你</string>
+    <string name="post_track_full">最多追蹤 50 個帖子，先取消幾個</string>
 </resources>

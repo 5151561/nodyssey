@@ -9,6 +9,7 @@ import io.github.nodyssey.data.OfflineFirstPostRepository
 import io.github.nodyssey.data.PostRepository
 import io.github.nodyssey.data.ReadingPosition
 import io.github.nodyssey.data.ReadingPositionStore
+import io.github.nodyssey.data.TrackedThreadStore
 import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.local.toEntity
@@ -67,6 +68,7 @@ class PostDetailViewModelTest {
         initialPage: Int? = null,
         preview: ThreadPreview? = null,
         readingPositions: ReadingPositionStore = NoReadingPositions,
+        trackedThreads: TrackedThreadStore? = null,
     ) = PostDetailViewModel(
         postId,
         repository,
@@ -75,6 +77,7 @@ class PostDetailViewModelTest {
         initialPage,
         preview,
         readingPositions = readingPositions,
+        trackedThreads = trackedThreads,
     )
 
     /**
@@ -403,6 +406,42 @@ class PostDetailViewModelTest {
 
             assertNull(vm.uiState.value.firstNewFloor)
             assertNull(vm.uiState.value.pendingScroll)
+        }
+
+    /**
+     * The last page is on screen, so its replies are read: a followed thread must not announce them
+     * on the next poll. A first page of many says nothing about the total and must not move it.
+     */
+    @Test
+    fun `reading a followed thread to its last floor moves what it has been told`() =
+        runTest(dispatcher) {
+            val tracked = TrackedThreadStore(database.trackedThreadDao(), clock)
+            tracked.track(42, "thread 42", commentCount = 1)
+            remote.detailResult = { postId, page ->
+                val detail = FakePostRemoteDataSource.detail(postId, page, commentCount = 3, totalPages = 1)
+                detail.copy(comments = detail.comments.mapIndexed { i, c -> c.copy(floor = "#${i + 1}") })
+            }
+
+            viewModel(trackedThreads = tracked)
+            advanceUntilIdle()
+
+            assertEquals(listOf(3), tracked.all().map { it.lastKnownCount })
+        }
+
+    @Test
+    fun `reading only the first page of a followed thread leaves its count alone`() =
+        runTest(dispatcher) {
+            val tracked = TrackedThreadStore(database.trackedThreadDao(), clock)
+            tracked.track(42, "thread 42", commentCount = 1)
+            remote.detailResult = { postId, page ->
+                val detail = FakePostRemoteDataSource.detail(postId, page, commentCount = 3, totalPages = 5)
+                detail.copy(comments = detail.comments.mapIndexed { i, c -> c.copy(floor = "#${i + 1}") })
+            }
+
+            viewModel(trackedThreads = tracked)
+            advanceUntilIdle()
+
+            assertEquals(listOf(1), tracked.all().map { it.lastKnownCount })
         }
 
     /** The window is still what suppresses the request when the list has nothing new to report. */

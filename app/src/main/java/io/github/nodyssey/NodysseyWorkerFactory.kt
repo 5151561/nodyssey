@@ -59,6 +59,7 @@ class NodysseyWorkerFactory(
                     container.sessionRepository,
                     container.notificationRepository,
                     container.clock,
+                    container.backgroundAlerts,
                 )
 
             // Not an error: null sends WorkManager down its reflective default path, which is the

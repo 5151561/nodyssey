@@ -106,6 +106,10 @@ data object OpenSourceLicensesKey : NavKey
 @Serializable
 data class TitleKeywordsKey(val alerts: Boolean = false) : NavKey
 
+/** 追踪的帖子 — a child of [NotificationSettingsKey]. */
+@Serializable
+data object TrackedThreadsKey : NavKey
+
 /**
  * 账号设置 (8g) and its five sub-pages (d6 1–5/5).
  *

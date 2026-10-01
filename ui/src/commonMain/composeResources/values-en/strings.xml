@@ -1255,7 +1255,7 @@
     <string name="offline_images">Download images too</string>
     <string name="offline_images_body">Off keeps text only, which takes far less room</string>
     <string name="offline_auto_sync">Fetch new replies automatically</string>
-    <string name="offline_auto_sync_body">Once a day, and only what is new</string>
+    <string name="offline_auto_sync_body">Every 6 hours, and only what is new</string>
     <string name="offline_retention">Keep offline content for</string>
     <string name="offline_retention_body">Swept once it is older; the bookmarks themselves stay</string>
     <string name="offline_retention_days">%1$d days</string>
@@ -1405,4 +1405,15 @@
     <string name="keywords_remove">Remove %1$s</string>
     <string name="keywords_block_footer">Threads whose titles contain these words are hidden from the home feed, boards and search. Kept on this device only, not on your account. Show blocked content reveals them too.</string>
     <string name="keywords_alert_footer">Each background check also looks at the newest threads and notifies you when a title contains one of these words. Kept on this device only.</string>
+    <string name="notify_app_alerts_section">App alerts</string>
+    <string name="notify_keyword_alerts">Keyword alerts</string>
+    <string name="notify_tracked_threads">Followed threads</string>
+    <string name="notify_app_alerts_footer">These read public lists, so they work signed out. Followed threads are checked on the first two pages sorted by latest reply: a thread pushed past them within one check interval is missed, and threads in boards you hid from the home feed cannot be followed.</string>
+    <string name="tracked_threads_title">Followed threads</string>
+    <string name="tracked_threads_empty">No followed threads. Use Follow new replies in a thread’s menu.</string>
+    <string name="tracked_threads_untrack">Unfollow %1$s</string>
+    <string name="post_track_thread">Follow new replies</string>
+    <string name="post_untrack_thread">Unfollow</string>
+    <string name="post_tracked">Following. You’ll be notified of new replies.</string>
+    <string name="post_track_full">You can follow up to 50 threads. Unfollow some first.</string>
 </resources>

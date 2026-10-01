@@ -47,6 +47,7 @@ internal val NavKeySavedStateConfiguration =
                     subclass(HelpKey::class)
                     subclass(OpenSourceLicensesKey::class)
                     subclass(TitleKeywordsKey::class)
+                    subclass(TrackedThreadsKey::class)
                     subclass(AccountSettingsKey::class)
                     subclass(AccountProfileFieldsKey::class)
                     subclass(AccountSecurityKey::class)

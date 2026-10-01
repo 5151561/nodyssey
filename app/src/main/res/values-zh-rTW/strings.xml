@@ -18,4 +18,10 @@
     <plurals name="notify_body_messages">
         <item quantity="other">%1$d 則新私訊</item>
     </plurals>
+    <string name="notifications_keyword_alerts">關鍵詞提醒</string>
+    <string name="notifications_tracked_threads">追蹤新回覆</string>
+    <string name="notify_keyword_title">新帖含「%1$s」</string>
+    <plurals name="notify_body_tracked_thread">
+        <item quantity="other">%1$d 則新回覆</item>
+    </plurals>
 </resources>

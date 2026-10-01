@@ -1488,7 +1488,7 @@
     <string name="offline_images">同时下载图片</string>
     <string name="offline_images_body">关闭后离线只留文字，占用小很多</string>
     <string name="offline_auto_sync">自动补新回复</string>
-    <string name="offline_auto_sync_body">每天一次，只拉增量</string>
+    <string name="offline_auto_sync_body">每 6 小时一次，只拉增量</string>
     <string name="offline_retention">离线内容保留</string>
     <string name="offline_retention_body">超期自动清理，收藏本身不动</string>
     <string name="offline_retention_days">%1$d 天</string>
@@ -1651,4 +1651,19 @@
     <string name="keywords_remove">删除 %1$s</string>
     <string name="keywords_block_footer">标题含这些词的帖子不出现在首页、版块和搜索里。只存在这台手机上，不随账号走；「临时显示被屏蔽内容」打开时也会一并显示。</string>
     <string name="keywords_alert_footer">后台检查通知时顺便看一眼最新发布的帖子，标题含这些词就推送一条通知。只存在这台手机上。</string>
+    <!-- 通知设置里 App 自己的两种提醒：关键词命中新帖、追踪的帖子有新回复 -->
+    <string name="notify_app_alerts_section">App 提醒</string>
+    <string name="notify_keyword_alerts">关键词提醒</string>
+    <string name="notify_tracked_threads">追踪新回复</string>
+    <string name="notify_app_alerts_footer">这两项看的是公开列表，不登录也能用。追帖只看「最新回复」排序的前两页：一个检查周期内被顶出前两页的帖子会漏掉提醒，你在首页隐藏的版块里的帖子也追不到。</string>
+    <!-- 追踪的帖子列表页 -->
+    <string name="tracked_threads_title">追踪的帖子</string>
+    <string name="tracked_threads_empty">还没有追踪的帖子。在帖子右上角的菜单里点「追踪新回复」。</string>
+    <!-- %1$s 是帖子标题，读屏用 -->
+    <string name="tracked_threads_untrack">取消追踪 %1$s</string>
+    <!-- 帖子详情溢出菜单 -->
+    <string name="post_track_thread">追踪新回复</string>
+    <string name="post_untrack_thread">取消追踪</string>
+    <string name="post_tracked">已追踪，有新回复会通知你</string>
+    <string name="post_track_full">最多追踪 50 个帖子，先取消几个</string>
 </resources>

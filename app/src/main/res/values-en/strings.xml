@@ -19,4 +19,11 @@
         <item quantity="one">%1$d new direct message</item>
         <item quantity="other">%1$d new direct messages</item>
     </plurals>
+    <string name="notifications_keyword_alerts">Keyword alerts</string>
+    <string name="notifications_tracked_threads">Followed threads</string>
+    <string name="notify_keyword_title">New thread: “%1$s”</string>
+    <plurals name="notify_body_tracked_thread">
+        <item quantity="one">%1$d new reply</item>
+        <item quantity="other">%1$d new replies</item>
+    </plurals>
 </resources>

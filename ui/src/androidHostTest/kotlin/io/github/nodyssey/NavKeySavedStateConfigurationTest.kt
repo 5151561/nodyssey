@@ -144,6 +144,7 @@ private val EVERY_KEY: List<NavKey> =
         HelpKey,
         OpenSourceLicensesKey,
         TitleKeywordsKey(alerts = true),
+        TrackedThreadsKey,
         AccountSettingsKey,
         AccountProfileFieldsKey,
         AccountSecurityKey,
