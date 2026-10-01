@@ -115,6 +115,7 @@ import io.github.nodyssey.ui.common.shortMessage
 import io.github.nodyssey.ui.common.siteErrorRecovery
 import io.github.nodyssey.ui.common.snackbarDuration
 import io.github.nodyssey.ui.common.webViewUrl
+import io.github.nodyssey.ui.common.withoutBottom
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_create_post
 import io.github.nodyssey.ui.resources.action_sort
@@ -599,9 +600,12 @@ fun PostListScreen(
             }
         },
     ) { padding ->
+        // The list runs on under the bottom bar and takes the bar's height as content padding — see
+        // [withoutBottom].
+        val bottomInset = padding.calculateBottomPadding()
         Box(
             Modifier
-                .padding(padding)
+                .padding(padding.withoutBottom())
                 .fillMaxSize(),
         ) {
             HorizontalPager(
@@ -622,6 +626,7 @@ fun PostListScreen(
                     onBrowseElsewhere = { onBoardClick(null) },
                     navigationBarScrollConnection = navigationBarScrollConnection,
                     topBarScrollBehavior = topBarScrollBehavior,
+                    bottomInset = bottomInset,
                 )
             }
 
@@ -638,7 +643,9 @@ fun PostListScreen(
                     onNext = { goToPage((visiblePage + 1).coerceAtMost(state.totalPages)) },
                     onPageClick = { showPageSheet = true },
                     onCreatePost = onCreatePost,
-                    modifier = Modifier.align(Alignment.BottomEnd),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = bottomInset),
                 )
             }
         }
@@ -692,6 +699,8 @@ private fun BoardFeed(
     onBrowseElsewhere: () -> Unit,
     navigationBarScrollConnection: NavigationBarScrollConnection,
     topBarScrollBehavior: TopAppBarScrollBehavior,
+    /** The bottom bar's height, which the list scrolls under rather than stopping at. */
+    bottomInset: Dp,
 ) {
     val refreshState = posts.loadState.refresh
     val appendState = posts.loadState.append
@@ -765,7 +774,7 @@ private fun BoardFeed(
                             start = LayerPageGutter,
                             end = LayerPageGutter,
                             top = Spacing.xs,
-                            bottom = FeedBottomClearance,
+                            bottom = FeedBottomClearance + bottomInset,
                         ),
                         verticalArrangement = Arrangement.spacedBy(LayerCardGap),
                     ) {

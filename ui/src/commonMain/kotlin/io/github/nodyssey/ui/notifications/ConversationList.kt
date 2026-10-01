@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.nodyssey.data.MessageConversation
 import io.github.nodyssey.data.UserSearchResult
@@ -91,6 +92,8 @@ internal fun ConversationList(
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge; the sheet's search is the one thing here that can hit one. */
     onVerify: (String) -> Unit,
+    /** The bottom bar's height: the list scrolls under it and the 新建私信 button stands above it. */
+    bottomInset: Dp,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
@@ -111,7 +114,12 @@ internal fun ConversationList(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 contentPadding =
-                PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = 12.dp, bottom = FAB_CLEARANCE),
+                PaddingValues(
+                    start = LayerPageGutter,
+                    end = LayerPageGutter,
+                    top = 12.dp,
+                    bottom = FAB_CLEARANCE + bottomInset,
+                ),
             ) {
                 // Each pinned conversation is a card on its own, so a second one — which the site
                 // has never sent — would still not be drawn as the first row of the member list.
@@ -155,6 +163,7 @@ internal fun ConversationList(
             onClick = onNewConversation,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
+                .padding(bottom = bottomInset)
                 .padding(Spacing.lg),
         )
     }
@@ -456,6 +465,7 @@ private fun ConversationListPreview() {
             onRecipientClick = {},
             onSignIn = {},
             onVerify = {},
+            bottomInset = 0.dp,
         )
     }
 }
