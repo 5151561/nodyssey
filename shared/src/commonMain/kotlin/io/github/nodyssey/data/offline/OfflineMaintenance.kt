@@ -8,11 +8,11 @@ import io.github.plaza.core.net.SiteException
 import kotlinx.coroutines.flow.first
 
 /**
- * The daily housekeeping, once — 离线内容保留 and 自动补新回复 — with nothing platform-specific in it.
+ * The periodic housekeeping, once — 离线内容保留 and 自动补新回复 — with nothing platform-specific in it.
  *
  * It lived in `:app`'s `OfflineMaintenanceWorker` while iOS had no scheduler at all. It is here now
  * because the errand is the same on both platforms and only the trigger differs: WorkManager runs it
- * once a day on Android, `BGTaskScheduler` does on iOS, and both call this. Duplicating it would be
+ * every six hours on Android, `BGTaskScheduler` does on iOS, and both call this. Duplicating it would be
  * two copies of the same 20-page walk, the same signed-out short-circuit and the same
  * network-vs-anything-else retry rule — a place for the two to drift.
  *

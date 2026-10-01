@@ -18,12 +18,13 @@ import java.util.concurrent.TimeUnit
  * - **The drain** is one-time work, enqueued whenever something is added to the queue. Its network
  *   constraint is 仅 Wi-Fi 下载, which is why the setting takes effect on already-waiting downloads
  *   only by re-enqueuing them — see [startDrain]'s `restart`.
- * - **The sweep** is daily periodic work, always scheduled. 保留期限 has to run on a device nobody
+ * - **The sweep** is periodic work every six hours, always scheduled. 保留期限 has to run on a device nobody
  *   has opened 收藏 on for a fortnight, which is precisely the case a check at screen-open misses.
  */
 object OfflineWork {
     const val DRAIN_WORK = "offline-download"
     const val MAINTENANCE_WORK = "offline-maintenance"
+    private const val MAINTENANCE_INTERVAL_HOURS = 6L
 
     fun startDrain(
         context: Context,
@@ -55,7 +56,11 @@ object OfflineWork {
 
     fun ensureMaintenance(context: Context) {
         val request =
-            PeriodicWorkRequestBuilder<OfflineMaintenanceWorker>(1, TimeUnit.DAYS)
+            // Every six hours, so a collected thread catches up within the morning rather than by
+            // tomorrow. Any connection, not 仅 Wi-Fi: the walk itself is a few list pages, and the
+            // downloads it queues already wait for Wi-Fi through the drain's own constraint. An
+            // UNMETERED walk would also never run behind a VPN that drops NOT_METERED.
+            PeriodicWorkRequestBuilder<OfflineMaintenanceWorker>(MAINTENANCE_INTERVAL_HOURS, TimeUnit.HOURS)
                 .setConstraints(
                     Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build(),
                 ).build()

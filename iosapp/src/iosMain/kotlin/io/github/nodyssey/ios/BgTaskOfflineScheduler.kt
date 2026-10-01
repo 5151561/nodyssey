@@ -232,7 +232,7 @@ class BgTaskOfflineScheduler(
         const val DRAIN_TASK_ID = "io.github.nodyssey.offline.drain"
         const val MAINTENANCE_TASK_ID = "io.github.nodyssey.offline.maintenance"
 
-        /** A day, like the Android periodic sweep. iOS treats it as "no earlier than", not "exactly". */
-        const val MAINTENANCE_INTERVAL_SECONDS = 24.0 * 60.0 * 60.0
+        /** Six hours, like the Android periodic sweep. iOS treats it as "no earlier than", not "exactly". */
+        const val MAINTENANCE_INTERVAL_SECONDS = 6.0 * 60.0 * 60.0
     }
 }
