@@ -167,6 +167,10 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setHomePageBar(value) }
     }
 
+    fun setClipboardPostPrompt(value: Boolean) {
+        viewModelScope.launch { settings.setClipboardPostPrompt(value) }
+    }
+
     fun setUpdateCheckOnLaunch(value: Boolean) {
         viewModelScope.launch { settings.setUpdateCheckOnLaunch(value) }
     }

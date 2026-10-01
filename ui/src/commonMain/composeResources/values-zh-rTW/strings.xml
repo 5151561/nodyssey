@@ -365,6 +365,10 @@
     <string name="settings_report_format_source">顯示原文</string>
     <string name="settings_home_page_bar">首頁翻頁列</string>
     <string name="settings_home_page_bar_hint">在首頁右下角顯示頁碼</string>
+    <string name="settings_clipboard_post">識別剪貼簿中的帖子</string>
+    <string name="settings_clipboard_post_hint">回到 App 時詢問是否開啟複製的帖子連結</string>
+    <string name="clipboard_post_prompt">開啟剪貼簿裡的帖子？</string>
+    <string name="clipboard_post_open">開啟</string>
     <string name="settings_wifi_images">僅 Wi-Fi 下載入圖片</string>
     <string name="settings_wifi_images_hint">行動網路下點擊才載入</string>
     <string name="settings_clear_cache">清除快取</string>

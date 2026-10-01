@@ -19,6 +19,7 @@
 - 选中文字可在 NodeSeek 搜索（Android）。
 - 长按图标可直达搜索、发帖、通知（Android）。
 - 其他 App 可分享文字图片来发帖（Android）。
+- 剪贴板有帖子链接时提示打开（Android）。
 
 ### 改进
 

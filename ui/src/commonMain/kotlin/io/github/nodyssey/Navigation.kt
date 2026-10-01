@@ -7,8 +7,17 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
@@ -33,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,8 +66,11 @@ import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.common.LocalOpenNetworkCheck
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.appName
+import io.github.nodyssey.ui.common.clipboardPostPromptSupported
+import io.github.nodyssey.ui.common.clipboardPostToOffer
 import io.github.nodyssey.ui.common.contentSwipeBack
 import io.github.nodyssey.ui.common.contentSwipeBackSupported
+import io.github.nodyssey.ui.common.rememberNewClipboardText
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
 import io.github.nodyssey.ui.compare.LocalOpenReportCompare
 import io.github.nodyssey.ui.composer.ComposerShare
@@ -71,6 +84,8 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_privacy
 import io.github.nodyssey.ui.resources.about_rss
 import io.github.nodyssey.ui.resources.about_site
+import io.github.nodyssey.ui.resources.clipboard_post_open
+import io.github.nodyssey.ui.resources.clipboard_post_prompt
 import io.github.nodyssey.ui.resources.home_pane_empty
 import io.github.nodyssey.ui.resources.notifications_pane_empty
 import io.github.nodyssey.ui.resources.search_pane_empty
@@ -80,6 +95,7 @@ import io.github.nodyssey.ui.settings.UpdateReminderViewModel
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -326,6 +342,47 @@ fun MainNavigation(
             }
         }
         onLaunchRequestHandled()
+    }
+
+    /*
+     * 识别剪贴板中的帖子: a thread link copied in another app, offered on the way back in.
+     *
+     * On window focus rather than on resume, because focus is what Android 10+ actually checks before
+     * it lets an app read the clipboard — at ON_RESUME the window may not have it yet, and the read
+     * comes back empty. The snackbar is shown from the composition's own scope rather than this
+     * effect's, so pulling down the notification shade (which takes focus) does not snatch it away.
+     *
+     * Onto whichever stack is open, the way a link tapped inside the app would be: the reader chose
+     * to come back to this tab, and the thread is something to look at from here, not a reason to
+     * be moved somewhere else.
+     */
+    val clipboardSnackbar = remember { SnackbarHostState() }
+    val readClipboard = rememberNewClipboardText()
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
+    val currentBackStack by rememberUpdatedState(backStack)
+    val clipboardPrompt = stringResource(Res.string.clipboard_post_prompt)
+    val clipboardOpen = stringResource(Res.string.clipboard_post_open)
+    LaunchedEffect(windowFocused) {
+        if (!windowFocused || !clipboardPostPromptSupported) return@LaunchedEffect
+        val settings = container.settingsRepository
+        val current = settings.settings.first()
+        // Not over the first-run guide, which is drawn above all of this and would hide the prompt.
+        if (!current.clipboardPostPrompt || !current.onboardingSeen) return@LaunchedEffect
+        val text = readClipboard() ?: return@LaunchedEffect
+        val post = clipboardPostToOffer(text, settings.lastClipboardPostLink()) ?: return@LaunchedEffect
+        settings.setLastClipboardPostLink(post.url)
+        scope.launch {
+            val result =
+                clipboardSnackbar.showSnackbar(
+                    message = clipboardPrompt,
+                    actionLabel = clipboardOpen,
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Long,
+                )
+            if (result == SnackbarResult.ActionPerformed) {
+                currentBackStack.add(PostDetailKey(post.postId, page = post.page))
+            }
+        }
     }
 
     /*
@@ -587,14 +644,15 @@ fun MainNavigation(
         ),
         state = navigationSuiteState,
     ) {
-        SharedTransitionLayout(
-            Modifier
-                .fillMaxSize()
-                // iOS 26's swipe-anywhere back, within a tab's own stack only: a tab's root has no
-                // content swipe on iOS, and here it would mean "jump to 首页" — which stays on the
-                // edge swipe, as it always was.
-                .contentSwipeBack(enabled = contentSwipeBackSupported && backStack.size > 1),
-        ) {
+        Box(Modifier.fillMaxSize()) {
+            SharedTransitionLayout(
+                Modifier
+                    .fillMaxSize()
+                    // iOS 26's swipe-anywhere back, within a tab's own stack only: a tab's root has no
+                    // content swipe on iOS, and here it would mean "jump to 首页" — which stays on the
+                    // edge swipe, as it always was.
+                    .contentSwipeBack(enabled = contentSwipeBackSupported && backStack.size > 1),
+            ) {
             /*
              * Withheld on a two-pane window, where a row and the thread it opens are on screen at
              * once and a single shared-element key would have two live claims on it. Provided as a
@@ -606,47 +664,54 @@ fun MainNavigation(
              * header is a per-frame redraw of two moving areas, which is the most expensive shape a
              * transition can have on a panel and the one that ghosts worst.
              */
-            val eink = LocalEinkMode.current
-            val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
-            val openReportCompare = remember(backStack) { { backStack.add(ReportCompareKey) } }
-            CompositionLocalProvider(
-                LocalThreadTransition provides
-                    this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
-                // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
-                LocalOpenNetworkCheck provides { openNetworkCheck() },
-                // 测评对比 from any report card's 对比 (n), onto whichever tab the card is in.
-                LocalOpenReportCompare provides { openReportCompare() },
-            ) {
-                NavDisplay(
-                    entries = entries,
-                    // The current tab first, and only when it is spent does back mean "leave this
-                    // tab". `NavDisplay` handles back whenever there is more than one entry, and
-                    // with 首页 underneath there always is — so popping blindly would empty a
-                    // secondary tab's stack.
-                    onBack = {
-                        if (backStack.size > 1) {
-                            backStack.removeLastOrNull()
+                val eink = LocalEinkMode.current
+                val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
+                val openReportCompare = remember(backStack) { { backStack.add(ReportCompareKey) } }
+                CompositionLocalProvider(
+                    LocalThreadTransition provides
+                        this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
+                    // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
+                    LocalOpenNetworkCheck provides { openNetworkCheck() },
+                    // 测评对比 from any report card's 对比 (n), onto whichever tab the card is in.
+                    LocalOpenReportCompare provides { openReportCompare() },
+                ) {
+                    NavDisplay(
+                        entries = entries,
+                        // The current tab first, and only when it is spent does back mean "leave this
+                        // tab". `NavDisplay` handles back whenever there is more than one entry, and
+                        // with 首页 underneath there always is — so popping blindly would empty a
+                        // secondary tab's stack.
+                        onBack = {
+                            if (backStack.size > 1) {
+                                backStack.removeLastOrNull()
+                            } else {
+                                currentTab = TopLevelDestination.HOME
+                            }
+                        },
+                        sceneStrategies = listOf(listDetailSceneStrategy),
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        // Nav3's own defaults are a 700ms slide built from `tween` and `spring`, written
+                        // out rather than taken from the motion scheme — so `PlazaTheme`'s snapped scheme,
+                        // which silences everything else, does not reach them. On paper a slide is the
+                        // whole screen redrawing for two thirds of a second; a cut is one refresh.
+                        transitionSpec = if (eink) SNAP_TRANSITION else defaultTransitionSpec(),
+                        popTransitionSpec =
+                        if (eink) SNAP_TRANSITION else defaultPopTransitionSpec(),
+                        predictivePopTransitionSpec =
+                        if (eink) {
+                            { _ -> SNAP_CONTENT_TRANSFORM }
                         } else {
-                            currentTab = TopLevelDestination.HOME
-                        }
-                    },
-                    sceneStrategies = listOf(listDetailSceneStrategy),
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    // Nav3's own defaults are a 700ms slide built from `tween` and `spring`, written
-                    // out rather than taken from the motion scheme — so `PlazaTheme`'s snapped scheme,
-                    // which silences everything else, does not reach them. On paper a slide is the
-                    // whole screen redrawing for two thirds of a second; a cut is one refresh.
-                    transitionSpec = if (eink) SNAP_TRANSITION else defaultTransitionSpec(),
-                    popTransitionSpec =
-                    if (eink) SNAP_TRANSITION else defaultPopTransitionSpec(),
-                    predictivePopTransitionSpec =
-                    if (eink) {
-                        { _ -> SNAP_CONTENT_TRANSFORM }
-                    } else {
-                        defaultPredictivePopTransitionSpec()
-                    },
-                )
+                            defaultPredictivePopTransitionSpec()
+                        },
+                    )
+                }
             }
+            SnackbarHost(
+                hostState = clipboardSnackbar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
+            )
         }
     }
 }

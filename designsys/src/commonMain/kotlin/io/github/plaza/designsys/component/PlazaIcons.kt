@@ -197,6 +197,17 @@ object PlazaIcons {
         )
     }
 
+    /** Reading from the clipboard, as opposed to writing to it — [ContentCopy]. */
+    val ContentPaste: ImageVector by lazy {
+        materialIcon(
+            name = "ContentPaste",
+            pathData =
+            "M19,2h-4.18C14.4,0.84 13.3,0 12,0c-1.3,0 -2.4,0.84 -2.82,2H5c-1.1,0 -2,0.9 -2,2v16" +
+                "c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2zM12,2c0.55,0 1,0.45 1,1" +
+                "s-0.45,1 -1,1 -1,-0.45 -1,-1 0.45,-1 1,-1zM19,20H5V4h2v3h10V4h2v16z",
+        )
+    }
+
     /** Curated reading list. */
     val MenuBook: ImageVector by lazy {
         materialIcon(

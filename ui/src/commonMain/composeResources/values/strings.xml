@@ -464,6 +464,12 @@
     <string name="settings_report_format_source">显示原文</string>
     <string name="settings_home_page_bar">首页翻页栏</string>
     <string name="settings_home_page_bar_hint">在首页右下角显示页码</string>
+    <!-- 设置 › 内容：回到 App 时若剪贴板里是帖子链接，弹一条可点「打开」的提示（仅 Android，iOS 每次读剪贴板都会弹系统授权框） -->
+    <string name="settings_clipboard_post">识别剪贴板中的帖子</string>
+    <string name="settings_clipboard_post_hint">回到 App 时询问是否打开复制的帖子链接</string>
+    <!-- 上面那条提示本身：底部 Snackbar 的文字和按钮 -->
+    <string name="clipboard_post_prompt">打开剪贴板里的帖子？</string>
+    <string name="clipboard_post_open">打开</string>
     <string name="settings_wifi_images">仅 Wi-Fi 下加载图片</string>
     <string name="settings_wifi_images_hint">移动网络下点击才加载</string>
     <string name="settings_clear_cache">清除缓存</string>

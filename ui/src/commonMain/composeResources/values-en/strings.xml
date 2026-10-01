@@ -371,6 +371,10 @@
     <string name="settings_report_format_source">As posted</string>
     <string name="settings_home_page_bar">Page bar on home</string>
     <string name="settings_home_page_bar_hint">Shows the page number at the bottom right of home</string>
+    <string name="settings_clipboard_post">Detect copied post links</string>
+    <string name="settings_clipboard_post_hint">Offer to open a copied post link when you come back</string>
+    <string name="clipboard_post_prompt">Open the post on your clipboard?</string>
+    <string name="clipboard_post_open">Open</string>
     <string name="settings_wifi_images">Load images on Wi-Fi only</string>
     <string name="settings_wifi_images_hint">On mobile data, tap an image to load it</string>
     <string name="settings_clear_cache">Clear the cache</string>
