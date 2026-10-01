@@ -333,6 +333,27 @@ class PostComposerViewModelTest {
         assertEquals("tech", viewModel.uiState.value.boardSlug)
     }
 
+    /**
+     * A share applied before 继续上次的草稿？ is answered is an edit, and an edit settles the question —
+     * the draft would vanish unoffered, or "continue" would then overwrite the shared text.
+     */
+    @Test
+    fun `a share waits for the draft question and lands after the restored draft`() = runTest(dispatcher) {
+        repository.draftState.value = PostDraft(title = "旧标题", body = "旧正文")
+        val viewModel = viewModel()
+        viewModel.receiveShare(ComposerShare(title = "分享标题", text = "分享的正文", images = emptyList()))
+        advanceUntilIdle()
+
+        assertEquals("旧标题", viewModel.uiState.value.pendingDraft?.title)
+
+        viewModel.continueDraft()
+        advanceUntilIdle()
+
+        assertEquals("旧标题", viewModel.titleState.text.toString())
+        assertTrue(viewModel.bodyState.text.startsWith("旧正文"))
+        assertTrue(viewModel.bodyState.text.endsWith("分享的正文"))
+    }
+
     @Test
     fun `editing autosaves without blocking each keystroke`() = runTest(dispatcher) {
         val viewModel = viewModel()

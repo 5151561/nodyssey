@@ -19,3 +19,9 @@ expect fun rememberImagePicker(
     fallbackName: String,
     onPicked: (List<PickedImage>) -> Unit,
 ): () -> Unit
+
+/**
+ * How many pictures one pick may add to an editor — and so how many one share from another app may
+ * bring with it, since a share is the same thing arriving from outside.
+ */
+const val MAX_IMAGES_PER_PICK = 9

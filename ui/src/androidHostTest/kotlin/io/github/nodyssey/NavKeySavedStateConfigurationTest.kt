@@ -126,7 +126,7 @@ private const val PACKAGE_PATH = "io/github/nodyssey"
 private val EVERY_KEY: List<NavKey> =
     listOf(
         PostListKey,
-        SearchKey,
+        SearchKey(query = "vps"),
         NotificationsKey,
         ProfileKey,
         SettingsKey,

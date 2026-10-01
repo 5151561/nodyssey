@@ -968,8 +968,6 @@ private fun formatTime(timestamp: Long): String = TimeFormat.clock(timestamp)
 
 private val IMAGE_MARKDOWN = Regex("""!\[[^]]*]\([^)]+\)""")
 
-private const val MAX_IMAGES_PER_PICK = 9
-
 /** The page's text margin: 16dp since 3c, the reply sheet's and the list's. */
 private val PageMargin = 16.dp
 

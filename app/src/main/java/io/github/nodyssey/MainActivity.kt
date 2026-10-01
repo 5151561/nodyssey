@@ -1,16 +1,22 @@
 package io.github.nodyssey
 
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.IntentCompat
+import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
+import io.github.nodyssey.ui.composer.MAX_IMAGES_PER_PICK
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.settings.AndroidAppLanguage
 import kotlinx.coroutines.flow.first
@@ -57,10 +63,11 @@ class MainActivity : ComponentActivity() {
             } else {
                 TopLevelDestination.HOME
             }
-        // A cold start from a notification is already covered by `initialTab` above; only a link
-        // needs the composition to go somewhere it would not have gone on its own — and only on a
-        // start that is not a recreation. See [launchLinkOf].
-        launchRequest = launchLinkOf(intent, isRecreation = savedInstanceState != null)
+        // A cold start from a notification is already covered by `initialTab` above; a link, a share,
+        // a selected word or a launcher shortcut needs the composition to go somewhere it would not
+        // have gone on its own — and only on a start that is not a recreation. See [launchRequestOf].
+        launchRequest =
+            launchRequestOf(intent, isRecreation = savedInstanceState != null, contentResolver, packageName)
         val initialSettings = readSettingsForFirstFrame(container.settingsRepository)
 
         setContent {
@@ -81,16 +88,18 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        launchRequest =
-            deepLinkOf(intent)
-                ?: intent
-                    .takeIf { it.getStringExtra(EXTRA_OPEN_TAB) == TAB_NOTIFICATIONS }
-                    ?.let { LaunchRequest.OpenTab(TopLevelDestination.NOTIFICATIONS) }
+        launchRequest = requestOf(intent, contentResolver, packageName)
     }
 
     companion object {
+        /** Read by a notification tap and by the 通知 launcher shortcut (`res/xml/shortcuts.xml`). */
         const val EXTRA_OPEN_TAB = "io.github.nodyssey.OPEN_TAB"
         const val TAB_NOTIFICATIONS = "notifications"
+
+        /** Which launcher shortcut this is; the values are spelled again in `res/xml/shortcuts.xml`. */
+        const val EXTRA_SHORTCUT = "io.github.nodyssey.SHORTCUT"
+        const val SHORTCUT_SEARCH = "search"
+        const val SHORTCUT_COMPOSE = "compose"
     }
 }
 
@@ -113,7 +122,30 @@ private fun readSettingsForFirstFrame(repository: SettingsRepository): UserSetti
 /** Long enough for a slow disk, far short of the five seconds that make an ANR. */
 private const val SETTINGS_READ_TIMEOUT_MS = 1_000L
 
-/** The screen an intent asks for, or null when it is not asking for one. */
+/**
+ * Where an intent asks the app to go, or null when it asks for nothing.
+ *
+ * Everything here arrives through an exported Activity, so every extra is something another app
+ * wrote: text is capped, only `content://` pictures are taken, and never more of them than one pick
+ * in the editor may add. [contentResolver] answers a picture's type and name, and is null in tests,
+ * where the intent's own type has to be enough. [ownPackage] is this app's, whose own providers a
+ * share is not allowed to name — the share cache `rememberShareImage` writes is one of them.
+ */
+internal fun requestOf(
+    intent: Intent,
+    contentResolver: ContentResolver? = null,
+    ownPackage: String = "",
+): LaunchRequest? =
+    when (intent.action) {
+        Intent.ACTION_VIEW -> deepLinkOf(intent) ?: shortcutOf(intent)
+        Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE -> shareOf(intent, contentResolver, ownPackage)
+        Intent.ACTION_PROCESS_TEXT -> selectedTextOf(intent)
+        else -> null
+    } ?: intent
+        .takeIf { it.getStringExtra(MainActivity.EXTRA_OPEN_TAB) == MainActivity.TAB_NOTIFICATIONS }
+        ?.let { LaunchRequest.OpenTab(TopLevelDestination.NOTIFICATIONS) }
+
+/** The screen a site link asks for, or null when the intent carries no link. */
 internal fun deepLinkOf(intent: Intent): LaunchRequest.OpenLink? =
     intent
         .takeIf { it.action == Intent.ACTION_VIEW }
@@ -121,20 +153,121 @@ internal fun deepLinkOf(intent: Intent): LaunchRequest.OpenLink? =
         ?.toString()
         ?.let(LaunchRequest::OpenLink)
 
+/** 搜索 or 发帖 from the launcher's long-press menu. 通知 rides [MainActivity.EXTRA_OPEN_TAB] instead. */
+private fun shortcutOf(intent: Intent): LaunchRequest? =
+    when (intent.getStringExtra(MainActivity.EXTRA_SHORTCUT)) {
+        MainActivity.SHORTCUT_SEARCH -> LaunchRequest.Search(query = null)
+        MainActivity.SHORTCUT_COMPOSE -> LaunchRequest.OpenComposer
+        else -> null
+    }
+
+/** 在 NodeSeek 搜索 from another app's text selection. A blank selection asks for nothing. */
+private fun selectedTextOf(intent: Intent): LaunchRequest.Search? =
+    intent
+        .getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)
+        ?.toString()
+        ?.trim()
+        ?.take(MAX_SEARCH_QUERY_LENGTH)
+        ?.takeIf(String::isNotEmpty)
+        ?.let { LaunchRequest.Search(query = it) }
+
 /**
- * The link a starting Activity still has to act on, which on a recreation is none.
+ * A share into a new post. Null when nothing usable came with it — a share of only a video, say, or
+ * of a picture whose address the app could not read anyway.
+ */
+private fun shareOf(
+    intent: Intent,
+    contentResolver: ContentResolver?,
+    ownPackage: String,
+): LaunchRequest.ShareToComposer? {
+    val streams =
+        if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
+            IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+        } else {
+            listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
+        }
+    val images =
+        streams
+            .asSequence()
+            .filterNotNull()
+            .filter { it.scheme == ContentResolver.SCHEME_CONTENT }
+            // Our own providers are ours to read, which is exactly why another app must not be able
+            // to point the upload at them.
+            .filter { ownPackage.isEmpty() || it.authority?.startsWith(ownPackage) != true }
+            .filter { uri -> isImage(intent.type, contentResolver?.let { runCatching { it.getType(uri) }.getOrNull() }) }
+            .distinct()
+            .take(MAX_IMAGES_PER_PICK)
+            .map { uri -> PickedImage(source = uri.toString(), name = displayNameOf(uri, contentResolver)) }
+            .toList()
+    val text =
+        intent
+            .getCharSequenceExtra(Intent.EXTRA_TEXT)
+            ?.toString()
+            ?.trim()
+            ?.take(MAX_SHARED_TEXT_LENGTH)
+            ?.takeIf(String::isNotEmpty)
+    val title =
+        intent
+            .getStringExtra(Intent.EXTRA_SUBJECT)
+            ?.trim()
+            ?.take(MAX_SHARED_TITLE_LENGTH)
+            ?.takeIf(String::isNotEmpty)
+    if (images.isEmpty() && text == null) return null
+    return LaunchRequest.ShareToComposer(title = title, text = text, images = images)
+}
+
+/**
+ * Whether a shared stream is a picture: by the provider's own answer when there is one, and by the
+ * intent's declared type otherwise. A mixed share declares a wildcard type, which says nothing either way,
+ * so without the provider's answer it is refused rather than guessed.
+ */
+private fun isImage(intentType: String?, providerType: String?): Boolean =
+    (providerType ?: intentType)?.startsWith("image/") == true
+
+private fun displayNameOf(uri: Uri, contentResolver: ContentResolver?): String {
+    val fromProvider =
+        contentResolver?.let { resolver ->
+            runCatching {
+                resolver
+                    .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+            }.getOrNull()
+        }
+    return fromProvider?.takeIf(String::isNotBlank)
+        ?: uri.lastPathSegment?.substringAfterLast('/')?.takeIf(String::isNotBlank)
+        ?: FALLBACK_IMAGE_NAME
+}
+
+/**
+ * What a starting Activity still has to act on, which on a recreation is nothing.
  *
  * `getIntent` answers with whatever the task was last handed — `onNewIntent`'s `setIntent` included
  * — and the system hands that same intent to every recreation of the Activity. So `onCreate`
  * reading it unguarded meant a rotation replayed a link the reader had followed once and long since
  * walked away from: the tab was switched back to 首页 and the thread pushed onto 首页's stack a
  * second time, underneath whatever they were actually reading. Back then popped that stack instead
- * of theirs, which is what "返回直接回到首页" was.
+ * of theirs, which is what "返回直接回到首页" was. A share replayed the same way would add its
+ * pictures to the editor a second time.
  *
  * A non-null `savedInstanceState` is the platform saying this composition has its place saved, and
- * that saved back stack already holds wherever the link took them the first time. Process death is
+ * that saved back stack already holds wherever the intent took them the first time. Process death is
  * the same answer for the same reason — restoring the stack is what re-opens the thread, not
  * following the link again.
  */
-internal fun launchLinkOf(intent: Intent?, isRecreation: Boolean): LaunchRequest.OpenLink? =
-    if (isRecreation) null else intent?.let(::deepLinkOf)
+internal fun launchRequestOf(
+    intent: Intent?,
+    isRecreation: Boolean,
+    contentResolver: ContentResolver? = null,
+    ownPackage: String = "",
+): LaunchRequest? = if (isRecreation) null else intent?.let { requestOf(it, contentResolver, ownPackage) }
+
+/** A selection longer than this is a paragraph, not something anybody meant to search for. */
+private const val MAX_SEARCH_QUERY_LENGTH = 100
+
+/** Generous for a post, and a ceiling on what another app can push into the editor in one go. */
+private const val MAX_SHARED_TEXT_LENGTH = 20_000
+
+private const val MAX_SHARED_TITLE_LENGTH = 200
+
+/** Only reached when the provider answers with no name and the address has no last segment. */
+private const val FALLBACK_IMAGE_NAME = "image"

@@ -26,4 +26,12 @@
         <item quantity="one">%1$d new reply</item>
         <item quantity="other">%1$d new replies</item>
     </plurals>
+    <string name="share_to_composer">New post</string>
+    <string name="process_text_search">Search NodeSeek</string>
+    <string name="shortcut_search">Search</string>
+    <string name="shortcut_search_long">Search posts and users</string>
+    <string name="shortcut_compose">New post</string>
+    <string name="shortcut_compose_long">Write a new post</string>
+    <string name="shortcut_notifications">Notifications</string>
+    <string name="shortcut_notifications_long">Open notifications</string>
 </resources>

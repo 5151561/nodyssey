@@ -120,7 +120,38 @@
                 <data android:path="/member" />
                 <data android:path="/notification" />
             </intent-filter>
+
+            <!--
+                分享到发帖: text, one picture, or several pictures from another app's share sheet, into
+                a new post. Everything that arrives this way is another app's say-so — MainActivity's
+                `shareOf` caps the text, takes only content:// pictures and never more than one
+                pick's worth of them.
+            -->
+            <intent-filter android:label="@string/share_to_composer">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter android:label="@string/share_to_composer">
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+
+            <!-- 在 NodeSeek 搜索, in the menu over a text selection in any app. -->
+            <intent-filter android:label="@string/process_text_search">
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- 搜索 / 发帖 / 通知 on the launcher icon's long press. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
 
         <!--
             Where an install session reports back: the system's confirmation screen on the way out,

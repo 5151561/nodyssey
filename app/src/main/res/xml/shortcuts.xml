@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  搜索 / 发帖 / 通知 on the launcher icon's long press, read by MainActivity's `requestOf`.
+
+  `targetPackage` has to be a literal — manifest placeholders do not reach resource files — so the
+  debug build, whose applicationId carries `.debug`, has its own copy of this file under
+  `src/debug/res/xml`. Change one, change both. The extras' names and values are
+  `MainActivity.EXTRA_SHORTCUT` / `EXTRA_OPEN_TAB` and their constants, spelled out again here.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_search"
+        android:shortcutId="search"
+        android:shortcutLongLabel="@string/shortcut_search_long"
+        android:shortcutShortLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="search" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_compose"
+        android:shortcutId="compose"
+        android:shortcutLongLabel="@string/shortcut_compose_long"
+        android:shortcutShortLabel="@string/shortcut_compose">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="compose" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_notifications"
+        android:shortcutId="notifications"
+        android:shortcutLongLabel="@string/shortcut_notifications_long"
+        android:shortcutShortLabel="@string/shortcut_notifications">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey">
+            <extra
+                android:name="io.github.nodyssey.OPEN_TAB"
+                android:value="notifications" />
+        </intent>
+    </shortcut>
+</shortcuts>

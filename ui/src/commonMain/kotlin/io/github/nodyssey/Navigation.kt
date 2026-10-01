@@ -60,6 +60,8 @@ import io.github.nodyssey.ui.common.contentSwipeBack
 import io.github.nodyssey.ui.common.contentSwipeBackSupported
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
 import io.github.nodyssey.ui.compare.LocalOpenReportCompare
+import io.github.nodyssey.ui.composer.ComposerShare
+import io.github.nodyssey.ui.composer.PendingComposerShare
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.navigation.NodysseyNavigationItems
 import io.github.nodyssey.ui.navigation.TopLevelDestination
@@ -161,6 +163,9 @@ fun MainNavigation(
      */
     val homeFeedStates = rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() }
 
+    /** A share from another app, on its way to the new-post editor — see [PendingComposerShare]. */
+    val pendingComposerShare = remember { PendingComposerShare() }
+
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
     /*
@@ -251,6 +256,25 @@ fun MainNavigation(
             null -> return@LaunchedEffect
 
             is LaunchRequest.OpenTab -> currentTab = request.tab
+
+            // 搜索 and 发帖 ride 首页's stack wherever else they are opened from, so a shortcut or a
+            // text selection lands them there too — and Back walks out through the feed.
+            is LaunchRequest.Search -> {
+                currentTab = TopLevelDestination.HOME
+                homeStack.bringToTop(SearchKey(request.query))
+            }
+
+            LaunchRequest.OpenComposer -> {
+                currentTab = TopLevelDestination.HOME
+                homeStack.bringToTop(PostComposerKey())
+            }
+
+            is LaunchRequest.ShareToComposer -> {
+                currentTab = TopLevelDestination.HOME
+                // Offered before the editor is pushed, so the editor finds it on its first frame.
+                pendingComposerShare.offer(ComposerShare(request.title, request.text, request.images))
+                homeStack.bringToTop(PostComposerKey())
+            }
 
             is LaunchRequest.OpenLink -> {
                 val route = NodeSeekSite.parseInternalRoute(request.url)
@@ -415,6 +439,7 @@ fun MainNavigation(
                 openContentUrl = openContentUrl,
                 openHomeTab = { currentTab = TopLevelDestination.HOME },
                 openProfileTab = { currentTab = TopLevelDestination.PROFILE },
+                pendingComposerShare = pendingComposerShare,
             )
         return entryProvider {
             tabRootEntries(entryScope)
@@ -670,7 +695,9 @@ internal fun paneRoleOf(key: NavKey?): PaneRole? =
         // Every list of things worth opening one of. 搜索 is one wherever it is reached from — it is
         // pushed onto 首页's stack now, and a result opened from it still lands beside it. 我的 is not:
         // it is a menu whose rows are settings pages, and a settings page is not a detail.
-        PostListKey, SearchKey, NotificationsKey -> PaneRole.LIST
+        PostListKey, NotificationsKey -> PaneRole.LIST
+
+        is SearchKey -> PaneRole.LIST
 
         // A user's space is a list wherever it is reached from — including on top of a thread, where
         // tapping an author then leaves their posts beside the one being read.
@@ -723,7 +750,7 @@ private fun paneMetadataOf(key: NavKey, destination: TopLevelDestination): Map<S
 internal fun emptyDetailTextOf(key: NavKey): StringResource =
     when (key) {
         PostListKey -> Res.string.home_pane_empty
-        SearchKey -> Res.string.search_pane_empty
+        is SearchKey -> Res.string.search_pane_empty
         NotificationsKey -> Res.string.notifications_pane_empty
         is UserSpaceKey -> Res.string.space_pane_empty
         else -> error("$key is a list pane with nothing to say when its detail is empty")
@@ -740,6 +767,23 @@ private fun stackScopedEntryProvider(
         metadata = entry.metadata + paneMetadataOf(key, destination),
     ) {
         entry.Content()
+    }
+}
+
+/**
+ * Puts [key] on top of this stack: pushed when it is not already there, and otherwise uncovered by
+ * popping what sits above it.
+ *
+ * Not a plain `add`, because the stack cannot hold the same key twice — an entry's saved state is
+ * keyed by it, and two live entries asking for one key is a crash rather than a second copy. A
+ * shortcut tapped twice, or a second share while the editor is open, would otherwise do exactly that.
+ */
+internal fun MutableList<NavKey>.bringToTop(key: NavKey) {
+    val existing = lastIndexOf(key)
+    if (existing < 0) {
+        add(key)
+    } else {
+        while (size > existing + 1) removeAt(lastIndex)
     }
 }
 

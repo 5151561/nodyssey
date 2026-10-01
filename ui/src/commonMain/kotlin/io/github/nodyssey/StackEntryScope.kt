@@ -4,6 +4,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.composer.PendingComposerShare
 import io.github.nodyssey.ui.notifications.NotificationsViewModel
 import io.github.nodyssey.ui.postlist.HomeFeedStates
 
@@ -66,4 +67,6 @@ internal class StackEntryScope(
     val openHomeTab: () -> Unit,
     /** Switches to 我的, for the account avatar at the end of 首页's bar. A tab switch for the same reason as [openHomeTab]. */
     val openProfileTab: () -> Unit,
+    /** What another app shared into a new post, waiting for the editor; one for the whole app. */
+    val pendingComposerShare: PendingComposerShare,
 )

@@ -621,5 +621,4 @@ private fun formatTime(timestamp: Long): String = TimeFormat.clock(timestamp)
 
 private val MIN_EDITOR_HEIGHT = 80.dp
 private val MAX_EDITOR_HEIGHT = 260.dp
-private const val MAX_IMAGES_PER_PICK = 9
 private const val SLIDE_FRACTION = 6
