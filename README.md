@@ -29,6 +29,8 @@
 
 到 [Releases](https://github.com/5151561/nodyssey/releases) 下载最新 APK，应用内也可以检查更新。各版本变化见 [CHANGELOG.md](CHANGELOG.md)。
 
+> **关于 iOS**：项目只维护 Android。iOS 版本已停止维护，不再加功能、不再修 iOS 专属的问题，也不接受 iOS 方向的 PR。
+
 ## 功能
 
 - **浏览与互动**：发帖、评论、编辑；点赞 / 反对 / 投喂鸡腿、收藏、签到；投票帖阅读与投票

@@ -1,0 +1,31 @@
+name: Stale PRs
+
+# Closes pull requests whose author has gone quiet after a review — and only those. The maintainer
+# opts a PR in by labelling it `等待作者` once the review is posted; nothing else is ever touched, so
+# an issue, a PR nobody has looked at yet, or a PR waiting on the maintainer never goes stale.
+#
+# Any activity on the PR (a push, a comment) resets the clock. Take the label off once the author has
+# answered and the next move is the maintainer's.
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v11
+        with:
+          only-pr-labels: 等待作者
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          days-before-pr-stale: 14
+          days-before-pr-close: 7
+          stale-pr-label: stale
+          stale-pr-message: review 之后已经两周没有动静了。这个 PR 会在 7 天后自动关闭；在这之前推送修改或留言，计时就会重置。
+          close-pr-message: review 之后三周没有回应，先关闭了。之后想继续的话，按 review 意见改完重新打开或另开一个 PR 就行。
