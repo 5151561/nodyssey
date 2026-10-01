@@ -145,6 +145,10 @@
     <string name="post_reply_to">Reply to %1$s</string>
     <string name="post_quote_floor">Quote this floor</string>
     <string name="post_copy_body">Copy text</string>
+    <string name="post_share_image">Share as image</string>
+    <string name="post_share_image_generating">Creating image…</string>
+    <string name="post_share_image_failed">Couldn’t create the image</string>
+    <string name="post_share_image_truncated">Too long to show in full — see the original post</string>
     <string name="post_body_copied">Text copied</string>
     <string name="post_reaction_irreversible">Reactions can’t be undone</string>
     <string name="page_jump_previous">Previous</string>

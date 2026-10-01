@@ -167,6 +167,11 @@
     <string name="post_reply_to">回复 %1$s</string>
     <string name="post_quote_floor">引用这一楼</string>
     <string name="post_copy_body">复制正文</string>
+    <!-- 楼层面板里的「分享为图片」：把这一楼画成一张图交给系统分享；生成中、失败时的提示，以及正文太长被截断时图里的那行说明 -->
+    <string name="post_share_image">分享为图片</string>
+    <string name="post_share_image_generating">正在生成图片…</string>
+    <string name="post_share_image_failed">图片生成失败</string>
+    <string name="post_share_image_truncated">内容较长，完整内容请看原帖</string>
     <string name="post_body_copied">正文已复制</string>
     <!-- 面板底部的一行说明：三种表态都没有撤销 -->
     <string name="post_reaction_irreversible">表态后不可撤销</string>

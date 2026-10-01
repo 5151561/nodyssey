@@ -154,6 +154,21 @@
 
 
         <!--
+            分享为图片 hands the floor's picture to another app through this. Not exported, and the
+            paths file names one directory — the share cache — so a grant can reach nothing else the
+            app keeps. See `rememberShareImage` in :ui.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
+
+        <!--
             Where an install session reports back: the system's confirmation screen on the way out,
             the outcome on the way back. Not exported — the only sender is our own PendingIntent.
         -->

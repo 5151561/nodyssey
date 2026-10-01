@@ -12,6 +12,7 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.common.rememberShareImage
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -141,6 +142,7 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
                     onSignIn = { backStack.add(SignInKey) },
                 )
             },
+            shareImage = rememberShareImage(container.dispatchers),
         )
     }
 

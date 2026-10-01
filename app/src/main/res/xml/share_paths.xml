@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What the FileProvider may hand out: `cacheDir/share/` and nothing else. 分享为图片 writes there and
+  nowhere else, so a stray grant cannot reach the database, the settings or the WebView profile.
+-->
+<paths>
+    <cache-path
+        name="share"
+        path="share/" />
+</paths>

@@ -139,6 +139,10 @@
     <string name="post_reply_to">回覆 %1$s</string>
     <string name="post_quote_floor">引用這一樓</string>
     <string name="post_copy_body">複製正文</string>
+    <string name="post_share_image">分享為圖片</string>
+    <string name="post_share_image_generating">正在產生圖片…</string>
+    <string name="post_share_image_failed">圖片產生失敗</string>
+    <string name="post_share_image_truncated">內容較長，完整內容請看原帖</string>
     <string name="post_body_copied">正文已複製</string>
     <string name="post_reaction_irreversible">表態後無法撤銷</string>
     <string name="page_jump_previous">上一頁</string>
