@@ -99,24 +99,23 @@ jobs:
       # release with no notes is the failure this is meant to prevent.
       #
       # Dev tags have no section of their own — they aren't a versioned step in the app's history —
-      # so they take the `## Unreleased` section instead: that is exactly what a test build contains,
-      # and a tester who can't see what changed has nothing to look for. An empty Unreleased is fine
-      # here (the notice above still says what the build is), which is why only the release branch
-      # treats empty as a failure.
+      # so they take what `## Unreleased` gained since the previous tag: Unreleased accumulates until
+      # the next stable release, and printed whole it re-announced every earlier dev build's changes
+      # (see dev-release-notes.py). An empty result is fine here (the notice above still says what
+      # the build is), which is why only the release branch treats empty as a failure.
       - name: Take the release notes from CHANGELOG.md
         run: |
           version="${{ steps.version.outputs.version }}"
+          previous=$(git tag -l 'v*' --sort=-v:refname | grep -Fxv "${{ steps.version.outputs.tag }}" | head -1)
           if [ "${{ steps.version.outputs.is_dev }}" = "true" ]; then
+            previous_changelog=()
+            if [ -n "$previous" ] && git show "$previous:CHANGELOG.md" > "$RUNNER_TEMP/previous-changelog.md" 2>/dev/null; then
+              previous_changelog=("$RUNNER_TEMP/previous-changelog.md")
+            fi
             {
               echo "测试版，由 tag \`${{ steps.version.outputs.tag }}\` 构建。不是正式版本，可能不稳定。"
               echo
-              awk '
-                $0 ~ "^## Unreleased" { inside = 1; next }
-                inside && /^## / { exit }
-                # The blank line under the heading would stack on the one echoed above.
-                inside && !started && /^[[:space:]]*$/ { next }
-                inside { started = 1; print }
-              ' CHANGELOG.md
+              python3 .github/scripts/dev-release-notes.py CHANGELOG.md "${previous_changelog[@]}"
             } > release-notes.md
           else
             awk -v v="$version" '
@@ -129,7 +128,6 @@ jobs:
               exit 1
             fi
           fi
-          previous=$(git tag -l 'v*' --sort=-v:refname | grep -Fxv "${{ steps.version.outputs.tag }}" | head -1)
           if [ -n "$previous" ]; then
             {
               echo
