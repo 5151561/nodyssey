@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The debug build's copy of src/main/res/xml/shortcuts.xml, differing only in `targetPackage`:
+  a static shortcut names its package literally, and this build's applicationId ends in `.debug`.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_search"
+        android:shortcutId="search"
+        android:shortcutLongLabel="@string/shortcut_search_long"
+        android:shortcutShortLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="search" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_compose"
+        android:shortcutId="compose"
+        android:shortcutLongLabel="@string/shortcut_compose_long"
+        android:shortcutShortLabel="@string/shortcut_compose">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="compose" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_notifications"
+        android:shortcutId="notifications"
+        android:shortcutLongLabel="@string/shortcut_notifications_long"
+        android:shortcutShortLabel="@string/shortcut_notifications">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.OPEN_TAB"
+                android:value="notifications" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sign_in_random"
+        android:shortcutId="sign_in_random"
+        android:shortcutLongLabel="@string/shortcut_sign_in_random_long"
+        android:shortcutShortLabel="@string/shortcut_sign_in_random">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="sign_in_random" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sign_in_fixed"
+        android:shortcutId="sign_in_fixed"
+        android:shortcutLongLabel="@string/shortcut_sign_in_fixed_long"
+        android:shortcutShortLabel="@string/shortcut_sign_in_fixed">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="sign_in_fixed" />
+        </intent>
+    </shortcut>
+</shortcuts>

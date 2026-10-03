@@ -43,6 +43,7 @@ import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.ui.account.shortNameRes
 import io.github.nodyssey.ui.common.UpdateDot
+import io.github.nodyssey.ui.common.clipboardPostPromptSupported
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.rememberFileSizeLabel
 import io.github.nodyssey.ui.resources.Res
@@ -67,6 +68,8 @@ import io.github.nodyssey.ui.resources.settings_appearance
 import io.github.nodyssey.ui.resources.settings_body_size
 import io.github.nodyssey.ui.resources.settings_clear_cache
 import io.github.nodyssey.ui.resources.settings_clear_cache_size
+import io.github.nodyssey.ui.resources.settings_clipboard_post
+import io.github.nodyssey.ui.resources.settings_clipboard_post_hint
 import io.github.nodyssey.ui.resources.settings_content
 import io.github.nodyssey.ui.resources.settings_doh_entry
 import io.github.nodyssey.ui.resources.settings_doh_summary_chain
@@ -169,6 +172,7 @@ fun SettingsRoute(
         onImagesOnWifiOnlyChange = viewModel::setImagesOnWifiOnly,
         onReportFormatChange = viewModel::setReportFormat,
         onHomePageBarChange = viewModel::setHomePageBar,
+        onClipboardPostPromptChange = viewModel::setClipboardPostPrompt.takeIf { clipboardPostPromptSupported },
         onUpdateCheckOnLaunchChange = viewModel::setUpdateCheckOnLaunch,
         onUpdateDevChannelChange = viewModel::setUpdateDevChannel,
         onClearCache = viewModel::clearCache,
@@ -214,6 +218,8 @@ fun SettingsScreen(
     onOpenBlockKeywords: () -> Unit = {},
     onAppLanguageChange: (AppLanguage) -> Unit = {},
     onEinkModeChange: (Boolean) -> Unit = {},
+    /** Null hides 识别剪贴板中的帖子: a platform where reading the clipboard costs a prompt each time. */
+    onClipboardPostPromptChange: ((Boolean) -> Unit)? = null,
 ) {
     var bodyFontSize by remember(state.settings.fontScale) {
         mutableFloatStateOf(fontScaleToBodySize(state.settings.fontScale))
@@ -411,6 +417,16 @@ fun SettingsScreen(
                     onCheckedChange = onHomePageBarChange,
                     trailing = { GroupedListItemSwitch(checked = state.settings.homePageBar) },
                 )
+                onClipboardPostPromptChange?.let { onChange ->
+                    GroupedRow(
+                        icon = PlazaIcons.ContentPaste,
+                        title = stringResource(Res.string.settings_clipboard_post),
+                        subtitle = stringResource(Res.string.settings_clipboard_post_hint),
+                        checked = state.settings.clipboardPostPrompt,
+                        onCheckedChange = onChange,
+                        trailing = { GroupedListItemSwitch(checked = state.settings.clipboardPostPrompt) },
+                    )
+                }
                 GroupedRow(
                     icon = PlazaIcons.VisibilityOff,
                     title = stringResource(Res.string.keywords_block_title),

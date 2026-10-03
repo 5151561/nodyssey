@@ -7,8 +7,17 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
@@ -33,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,12 +63,19 @@ import androidx.navigation3.ui.defaultTransitionSpec
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.assets.PendingAttendance
 import io.github.nodyssey.ui.common.LocalOpenNetworkCheck
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.appName
+import io.github.nodyssey.ui.common.clipboardPostPromptSupported
+import io.github.nodyssey.ui.common.clipboardPostToOffer
 import io.github.nodyssey.ui.common.contentSwipeBack
 import io.github.nodyssey.ui.common.contentSwipeBackSupported
+import io.github.nodyssey.ui.common.rememberNewClipboardText
 import io.github.nodyssey.ui.common.rememberTouchExplorationEnabled
+import io.github.nodyssey.ui.compare.LocalOpenReportCompare
+import io.github.nodyssey.ui.composer.ComposerShare
+import io.github.nodyssey.ui.composer.PendingComposerShare
 import io.github.nodyssey.ui.login.WebViewGoal
 import io.github.nodyssey.ui.navigation.NodysseyNavigationItems
 import io.github.nodyssey.ui.navigation.TopLevelDestination
@@ -68,6 +85,8 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_privacy
 import io.github.nodyssey.ui.resources.about_rss
 import io.github.nodyssey.ui.resources.about_site
+import io.github.nodyssey.ui.resources.clipboard_post_open
+import io.github.nodyssey.ui.resources.clipboard_post_prompt
 import io.github.nodyssey.ui.resources.home_pane_empty
 import io.github.nodyssey.ui.resources.notifications_pane_empty
 import io.github.nodyssey.ui.resources.search_pane_empty
@@ -77,6 +96,7 @@ import io.github.nodyssey.ui.settings.UpdateReminderViewModel
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -157,6 +177,10 @@ fun MainNavigation(
      * switch without depending on SaveableStateHolder timing.
      */
     val homeFeedStates = rememberSaveable(saver = HomeFeedStates.Saver) { HomeFeedStates() }
+
+    /** A share from another app, on its way to the new-post editor — see [PendingComposerShare]. */
+    val pendingComposerShare = remember { PendingComposerShare() }
+    val pendingAttendance = remember { PendingAttendance() }
 
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
@@ -249,6 +273,32 @@ fun MainNavigation(
 
             is LaunchRequest.OpenTab -> currentTab = request.tab
 
+            // 搜索 and 发帖 ride 首页's stack wherever else they are opened from, so a shortcut or a
+            // text selection lands them there too — and Back walks out through the feed.
+            is LaunchRequest.Search -> {
+                currentTab = TopLevelDestination.HOME
+                homeStack.bringToTop(SearchKey(request.query))
+            }
+
+            LaunchRequest.OpenComposer -> {
+                currentTab = TopLevelDestination.HOME
+                homeStack.bringToTop(PostComposerKey())
+            }
+
+            // 账户与成长 lives on 我的's stack; the sign-in itself waits there for the screen.
+            is LaunchRequest.SignInForToday -> {
+                currentTab = TopLevelDestination.PROFILE
+                pendingAttendance.offer(request.mode)
+                profileStack.bringToTop(AssetsKey)
+            }
+
+            is LaunchRequest.ShareToComposer -> {
+                currentTab = TopLevelDestination.HOME
+                // Offered before the editor is pushed, so the editor finds it on its first frame.
+                pendingComposerShare.offer(ComposerShare(request.title, request.text, request.images))
+                homeStack.bringToTop(PostComposerKey())
+            }
+
             is LaunchRequest.OpenLink -> {
                 val route = NodeSeekSite.parseInternalRoute(request.url)
                 /*
@@ -319,7 +369,50 @@ fun MainNavigation(
             onTabBarHiddenByScroll = { tabBarHiddenByScroll = it },
             selectTab = { currentTab = it },
             scope = scope,
+            pendingComposerShare = pendingComposerShare,
+            pendingAttendance = pendingAttendance,
         )
+
+    /*
+     * 识别剪贴板中的帖子: a thread link copied in another app, offered on the way back in.
+     *
+     * On window focus rather than on resume, because focus is what Android 10+ actually checks before
+     * it lets an app read the clipboard — at ON_RESUME the window may not have it yet, and the read
+     * comes back empty. The snackbar is shown from the composition's own scope rather than this
+     * effect's, so pulling down the notification shade (which takes focus) does not snatch it away.
+     *
+     * Onto whichever stack is open, the way a link tapped inside the app would be: the reader chose
+     * to come back to this tab, and the thread is something to look at from here, not a reason to
+     * be moved somewhere else.
+     */
+    val clipboardSnackbar = remember { SnackbarHostState() }
+    val readClipboard = rememberNewClipboardText()
+    val windowFocused = LocalWindowInfo.current.isWindowFocused
+    val currentBackStack by rememberUpdatedState(backStack)
+    val clipboardPrompt = stringResource(Res.string.clipboard_post_prompt)
+    val clipboardOpen = stringResource(Res.string.clipboard_post_open)
+    LaunchedEffect(windowFocused) {
+        if (!windowFocused || !clipboardPostPromptSupported) return@LaunchedEffect
+        val settings = container.settingsRepository
+        val current = settings.settings.first()
+        // Not over the first-run guide, which is drawn above all of this and would hide the prompt.
+        if (!current.clipboardPostPrompt || !current.onboardingSeen) return@LaunchedEffect
+        val text = readClipboard() ?: return@LaunchedEffect
+        val post = clipboardPostToOffer(text, settings.lastClipboardPostLink()) ?: return@LaunchedEffect
+        settings.setLastClipboardPostLink(post.url)
+        scope.launch {
+            val result =
+                clipboardSnackbar.showSnackbar(
+                    message = clipboardPrompt,
+                    actionLabel = clipboardOpen,
+                    withDismissAction = true,
+                    duration = SnackbarDuration.Long,
+                )
+            if (result == SnackbarResult.ActionPerformed) {
+                currentBackStack.add(PostDetailKey(post.postId, page = post.page))
+            }
+        }
+    }
 
     /*
      * One provider per stack, built once.
@@ -458,14 +551,15 @@ fun MainNavigation(
         ),
         state = navigationSuiteState,
     ) {
-        SharedTransitionLayout(
-            Modifier
-                .fillMaxSize()
-                // iOS 26's swipe-anywhere back, within a tab's own stack only: a tab's root has no
-                // content swipe on iOS, and here it would mean "jump to 首页" — which stays on the
-                // edge swipe, as it always was.
-                .contentSwipeBack(enabled = contentSwipeBackSupported && backStack.size > 1),
-        ) {
+        Box(Modifier.fillMaxSize()) {
+            SharedTransitionLayout(
+                Modifier
+                    .fillMaxSize()
+                    // iOS 26's swipe-anywhere back, within a tab's own stack only: a tab's root has no
+                    // content swipe on iOS, and here it would mean "jump to 首页" — which stays on the
+                    // edge swipe, as it always was.
+                    .contentSwipeBack(enabled = contentSwipeBackSupported && backStack.size > 1),
+            ) {
             /*
              * Withheld on a two-pane window, where a row and the thread it opens are on screen at
              * once and a single shared-element key would have two live claims on it. Provided as a
@@ -477,44 +571,54 @@ fun MainNavigation(
              * header is a per-frame redraw of two moving areas, which is the most expensive shape a
              * transition can have on a panel and the one that ghosts worst.
              */
-            val eink = LocalEinkMode.current
-            val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
-            CompositionLocalProvider(
-                LocalThreadTransition provides
-                    this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
-                // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
-                LocalOpenNetworkCheck provides { openNetworkCheck() },
-            ) {
-                NavDisplay(
-                    entries = entries,
-                    // The current tab first, and only when it is spent does back mean "leave this
-                    // tab". `NavDisplay` handles back whenever there is more than one entry, and
-                    // with 首页 underneath there always is — so popping blindly would empty a
-                    // secondary tab's stack.
-                    onBack = {
-                        if (backStack.size > 1) {
-                            backStack.removeLastOrNull()
+                val eink = LocalEinkMode.current
+                val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
+                val openReportCompare = remember(backStack) { { backStack.add(ReportCompareKey) } }
+                CompositionLocalProvider(
+                    LocalThreadTransition provides
+                        this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
+                    // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
+                    LocalOpenNetworkCheck provides { openNetworkCheck() },
+                    // 测评对比 from any report card's 对比 (n), onto whichever tab the card is in.
+                    LocalOpenReportCompare provides { openReportCompare() },
+                ) {
+                    NavDisplay(
+                        entries = entries,
+                        // The current tab first, and only when it is spent does back mean "leave this
+                        // tab". `NavDisplay` handles back whenever there is more than one entry, and
+                        // with 首页 underneath there always is — so popping blindly would empty a
+                        // secondary tab's stack.
+                        onBack = {
+                            if (backStack.size > 1) {
+                                backStack.removeLastOrNull()
+                            } else {
+                                currentTab = TopLevelDestination.HOME
+                            }
+                        },
+                        sceneStrategies = listOf(listDetailSceneStrategy),
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        // Nav3's own defaults are a 700ms slide built from `tween` and `spring`, written
+                        // out rather than taken from the motion scheme — so `PlazaTheme`'s snapped scheme,
+                        // which silences everything else, does not reach them. On paper a slide is the
+                        // whole screen redrawing for two thirds of a second; a cut is one refresh.
+                        transitionSpec = if (eink) SNAP_TRANSITION else defaultTransitionSpec(),
+                        popTransitionSpec =
+                        if (eink) SNAP_TRANSITION else defaultPopTransitionSpec(),
+                        predictivePopTransitionSpec =
+                        if (eink) {
+                            { _ -> SNAP_CONTENT_TRANSFORM }
                         } else {
-                            currentTab = TopLevelDestination.HOME
-                        }
-                    },
-                    sceneStrategies = listOf(listDetailSceneStrategy),
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    // Nav3's own defaults are a 700ms slide built from `tween` and `spring`, written
-                    // out rather than taken from the motion scheme — so `PlazaTheme`'s snapped scheme,
-                    // which silences everything else, does not reach them. On paper a slide is the
-                    // whole screen redrawing for two thirds of a second; a cut is one refresh.
-                    transitionSpec = if (eink) SNAP_TRANSITION else defaultTransitionSpec(),
-                    popTransitionSpec =
-                    if (eink) SNAP_TRANSITION else defaultPopTransitionSpec(),
-                    predictivePopTransitionSpec =
-                    if (eink) {
-                        { _ -> SNAP_CONTENT_TRANSFORM }
-                    } else {
-                        defaultPredictivePopTransitionSpec()
-                    },
-                )
+                            defaultPredictivePopTransitionSpec()
+                        },
+                    )
+                }
             }
+            SnackbarHost(
+                hostState = clipboardSnackbar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
+            )
         }
     }
 }
@@ -633,6 +737,8 @@ internal fun destinationProvider(
             openContentUrl = openContentUrl,
             openHomeTab = { dependencies.selectTab(TopLevelDestination.HOME) },
             openProfileTab = { dependencies.selectTab(TopLevelDestination.PROFILE) },
+            pendingComposerShare = dependencies.pendingComposerShare,
+            pendingAttendance = dependencies.pendingAttendance,
         )
     return entryProvider {
         tabRootEntries(entryScope)
@@ -689,7 +795,9 @@ internal fun paneRoleOf(key: NavKey?): PaneRole? =
         // Every list of things worth opening one of. 搜索 is one wherever it is reached from — it is
         // pushed onto 首页's stack now, and a result opened from it still lands beside it. 我的 is not:
         // it is a menu whose rows are settings pages, and a settings page is not a detail.
-        PostListKey, SearchKey, NotificationsKey -> PaneRole.LIST
+        PostListKey, NotificationsKey -> PaneRole.LIST
+
+        is SearchKey -> PaneRole.LIST
 
         // A user's space is a list wherever it is reached from — including on top of a thread, where
         // tapping an author then leaves their posts beside the one being read.
@@ -742,7 +850,7 @@ private fun paneMetadataOf(key: NavKey, destination: TopLevelDestination): Map<S
 internal fun emptyDetailTextOf(key: NavKey): StringResource =
     when (key) {
         PostListKey -> Res.string.home_pane_empty
-        SearchKey -> Res.string.search_pane_empty
+        is SearchKey -> Res.string.search_pane_empty
         NotificationsKey -> Res.string.notifications_pane_empty
         is UserSpaceKey -> Res.string.space_pane_empty
         else -> error("$key is a list pane with nothing to say when its detail is empty")
@@ -759,6 +867,23 @@ private fun stackScopedEntryProvider(
         metadata = entry.metadata + paneMetadataOf(key, destination),
     ) {
         entry.Content()
+    }
+}
+
+/**
+ * Puts [key] on top of this stack: pushed when it is not already there, and otherwise uncovered by
+ * popping what sits above it.
+ *
+ * Not a plain `add`, because the stack cannot hold the same key twice — an entry's saved state is
+ * keyed by it, and two live entries asking for one key is a crash rather than a second copy. A
+ * shortcut tapped twice, or a second share while the editor is open, would otherwise do exactly that.
+ */
+internal fun MutableList<NavKey>.bringToTop(key: NavKey) {
+    val existing = lastIndexOf(key)
+    if (existing < 0) {
+        add(key)
+    } else {
+        while (size > existing + 1) removeAt(lastIndex)
     }
 }
 

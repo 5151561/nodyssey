@@ -26,6 +26,9 @@
     <string name="action_collapse">Collapse</string>
     <string name="report_show_source">See the raw report</string>
     <string name="report_open_fullscreen">Full screen</string>
+    <string name="report_compare_add">Add to compare</string>
+    <string name="report_compare_remove">Remove from compare</string>
+    <string name="report_compare_open">Compare (%1$d)</string>
     <string name="action_retry">Retry</string>
     <string name="action_refresh">Refresh</string>
     <string name="search_load_more_failed">Could not load more</string>
@@ -142,6 +145,10 @@
     <string name="post_reply_to">Reply to %1$s</string>
     <string name="post_quote_floor">Quote this floor</string>
     <string name="post_copy_body">Copy text</string>
+    <string name="post_share_image">Share as image</string>
+    <string name="post_share_image_generating">Creating image…</string>
+    <string name="post_share_image_failed">Couldn’t create the image</string>
+    <string name="post_share_image_truncated">Too long to show in full — see the original post</string>
     <string name="post_body_copied">Text copied</string>
     <string name="post_reaction_irreversible">Reactions can’t be undone</string>
     <string name="page_jump_previous">Previous</string>
@@ -368,6 +375,10 @@
     <string name="settings_report_format_source">As posted</string>
     <string name="settings_home_page_bar">Page bar on home</string>
     <string name="settings_home_page_bar_hint">Shows the page number at the bottom right of home</string>
+    <string name="settings_clipboard_post">Detect copied post links</string>
+    <string name="settings_clipboard_post_hint">Offer to open a copied post link when you come back</string>
+    <string name="clipboard_post_prompt">Open the post on your clipboard?</string>
+    <string name="clipboard_post_open">Open</string>
     <string name="settings_wifi_images">Load images on Wi-Fi only</string>
     <string name="settings_wifi_images_hint">On mobile data, tap an image to load it</string>
     <string name="settings_clear_cache">Clear the cache</string>
@@ -938,6 +949,15 @@
     <string name="tools_invite_subtitle">1000 drumsticks buys one invite code</string>
     <string name="tools_ruling">Moderation log</string>
     <string name="tools_ruling_subtitle">The published table of penalties and rewards</string>
+    <string name="report_compare_title">Compare reports</string>
+    <string name="report_compare_subtitle">Benchmark reports you added, side by side</string>
+    <string name="report_compare_empty">No reports to compare yet. Tap “Add to compare” under a benchmark report in a thread; up to 6 are kept.</string>
+    <string name="report_compare_basket">Basket · %1$d/%2$d</string>
+    <string name="report_compare_pick_hint">Tick 2 or 3 reports to compare them</string>
+    <string name="report_compare_remove_entry">Remove %1$s</string>
+    <string name="report_compare_table">Comparison</string>
+    <string name="report_compare_missing">Not reported</string>
+    <string name="report_compare_open_post">Open the thread this report is from</string>
 
     <string name="award_title">Recommended reading</string>
     <string name="award_empty">No awarded posts yet</string>

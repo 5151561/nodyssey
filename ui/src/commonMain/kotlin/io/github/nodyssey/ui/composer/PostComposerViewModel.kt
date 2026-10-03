@@ -109,6 +109,9 @@ class PostComposerViewModel(
     private var authorJob: Job? = null
     private var profileLoaded = false
 
+    /** A share from another app, held until the draft question has been answered. See [receiveShare]. */
+    private var pendingShare: ComposerShare? = null
+
     init {
         boards
             .onEach { boards ->
@@ -159,6 +162,7 @@ class PostComposerViewModel(
                         )
                     }
                 }
+                applyShareIfDecided()
             }
         } else {
             loadEditSource()
@@ -240,11 +244,46 @@ class PostComposerViewModel(
                 draftDecisionMade = true,
             )
         }
+        applyShareIfDecided()
     }
 
     fun discardDraft() {
         viewModelScope.launch { repository.deleteDraft() }
         _uiState.update { it.copy(pendingDraft = null, draftDecisionMade = true) }
+        applyShareIfDecided()
+    }
+
+    /**
+     * Adds what another app shared to this post — its text after whatever the body holds, its
+     * pictures to the upload queue, its subject line as the title when there is none yet.
+     *
+     * Not applied until 继续上次的草稿？ has been answered. Writing into the body is an edit, and an
+     * edit is what tells this ViewModel the draft question is settled (see [mutate]) — so applying a
+     * share before the answer would silently throw away the draft the prompt was about to offer, and
+     * "continue" afterwards would overwrite the share instead. Waiting puts the share on top of
+     * whichever the reader chose.
+     */
+    fun receiveShare(share: ComposerShare) {
+        if (editTarget != null) return
+        pendingShare = share
+        applyShareIfDecided()
+    }
+
+    private fun applyShareIfDecided() {
+        if (!_uiState.value.draftDecisionMade) return
+        val share = pendingShare ?: return
+        pendingShare = null
+        val title = share.title?.trim().orEmpty()
+        if (title.isNotEmpty() && titleState.text.isBlank()) {
+            titleState.editFromViewModel {
+                replace(0, length, title.take(MAX_TITLE_LENGTH))
+                placeCursorAtEnd()
+            }
+        }
+        share.text?.trim()?.takeIf(String::isNotEmpty)?.let { text ->
+            bodyState.editFromViewModel { appendBlock(text) }
+        }
+        addImages(share.images.take(MAX_IMAGES_PER_PICK))
     }
 
     // --- Attachments --------------------------------------------------------
@@ -346,6 +385,8 @@ class PostComposerViewModel(
 
     private fun mutate(transform: (PostComposerUiState) -> PostComposerUiState) {
         _uiState.update { transform(it).copy(draftDecisionMade = true, pendingDraft = null) }
+        // An edit settles the draft question too, so a share that was waiting on it can land now.
+        applyShareIfDecided()
         scheduleSave()
     }
 

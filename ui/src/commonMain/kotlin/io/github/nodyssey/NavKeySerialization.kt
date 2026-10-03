@@ -71,6 +71,7 @@ internal val NavKeySavedStateConfiguration =
                     subclass(LuckyKey::class)
                     subclass(InviteKey::class)
                     subclass(RulingKey::class)
+                    subclass(ReportCompareKey::class)
                     subclass(ImageViewerKey::class)
                     subclass(SignInKey::class)
                     subclass(WebKey::class)

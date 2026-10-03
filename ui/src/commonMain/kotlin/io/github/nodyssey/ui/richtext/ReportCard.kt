@@ -23,9 +23,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,9 +40,16 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nodyssey.core.report.QualityReport
+import io.github.nodyssey.data.settings.ReportCompareEntry
+import io.github.nodyssey.ui.compare.LocalOpenReportCompare
+import io.github.nodyssey.ui.compare.LocalReportCompareBasket
+import io.github.nodyssey.ui.compare.LocalReportOrigin
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_collapse
 import io.github.nodyssey.ui.resources.action_expand
+import io.github.nodyssey.ui.resources.report_compare_add
+import io.github.nodyssey.ui.resources.report_compare_open
+import io.github.nodyssey.ui.resources.report_compare_remove
 import io.github.nodyssey.ui.resources.report_show_source
 import io.github.plaza.designsys.component.SpecRow
 import io.github.plaza.designsys.component.SpecTable
@@ -113,7 +122,7 @@ fun ReportCard(
                     report.sections.forEach { ReportSection(it) }
                     if (report.footnotes.isNotEmpty()) Footnotes(report.footnotes)
                 }
-                SourceAction(onShowSource)
+                CardActions(report = report, onShowSource = onShowSource)
             }
         }
     }
@@ -269,7 +278,7 @@ private fun FieldRow(field: QualityReport.Block.Field) {
  * theme is currently using — which in dark mode is not the same green at all.
  */
 @Composable
-private fun toneColour(tone: QualityReport.Tone): Color = when (tone) {
+internal fun toneColour(tone: QualityReport.Tone): Color = when (tone) {
     QualityReport.Tone.Neutral -> MaterialTheme.colorScheme.onSurface
     QualityReport.Tone.Good -> LocalPlazaExtraColors.current.success
     QualityReport.Tone.Warn -> LocalPlazaExtraColors.current.warning
@@ -354,22 +363,49 @@ private fun Footnotes(footnotes: List<String>) {
     }
 }
 
+/**
+ * 查看原始报告, and — inside the app, where there is a basket — 加入对比 and the way to the comparison.
+ *
+ * 对比 (n) is here rather than only under 我的 › 社区工具 because the moment a second report goes in
+ * is the moment the reader wants to see the two side by side, and they are on a thread, not in 我的.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SourceAction(onShowSource: () -> Unit) {
-    Row(
+private fun CardActions(
+    report: QualityReport,
+    onShowSource: () -> Unit,
+) {
+    val basket = LocalReportCompareBasket.current
+    val origin = LocalReportOrigin.current
+    val openCompare = LocalOpenReportCompare.current
+    FlowRow(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onShowSource)
-            .defaultMinSize(minHeight = Sizes.minTouchTarget)
-            .padding(horizontal = Spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            .padding(horizontal = Spacing.xs),
     ) {
-        Text(
-            text = stringResource(Res.string.report_show_source),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
+        TextButton(onClick = onShowSource) {
+            Text(stringResource(Res.string.report_show_source))
+        }
+        if (basket != null) {
+            val entry =
+                remember(report, origin) {
+                    ReportCompareEntry(
+                        report = report,
+                        postId = origin?.postId,
+                        threadTitle = origin?.threadTitle,
+                        floor = origin?.floor,
+                    )
+                }
+            val added = entry in basket
+            TextButton(onClick = { if (added) basket.remove(entry) else basket.add(entry) }) {
+                Text(stringResource(if (added) Res.string.report_compare_remove else Res.string.report_compare_add))
+            }
+            if (basket.size > 0 && openCompare != null) {
+                TextButton(onClick = openCompare) {
+                    Text(stringResource(Res.string.report_compare_open, basket.size))
+                }
+            }
+        }
     }
 }
 

@@ -18,7 +18,10 @@ import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.assets.PendingAttendance
 import io.github.nodyssey.ui.common.LocalOpenNetworkCheck
+import io.github.nodyssey.ui.compare.LocalOpenReportCompare
+import io.github.nodyssey.ui.composer.PendingComposerShare
 import io.github.nodyssey.ui.navigation.StackMirror
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.notifications.NotificationsViewModel
@@ -131,6 +134,8 @@ private class NativeShell(
     private val notificationsViewModel: NotificationsViewModel =
         ViewModelProvider.create(shellStore, NotificationsViewModel.factory(container))[NotificationsViewModel::class]
     private val homeFeedStates = HomeFeedStates()
+    private val pendingComposerShare = PendingComposerShare()
+    private val pendingAttendance = PendingAttendance()
     private var homeReselectRequests by mutableIntStateOf(0)
     private var notificationsScrollToTopRequests by mutableIntStateOf(0)
 
@@ -177,6 +182,8 @@ private class NativeShell(
             onTabBarHiddenByScroll = {},
             selectTab = { root.selectedIndex = it.ordinal.toULong() },
             scope = scope,
+            pendingComposerShare = pendingComposerShare,
+            pendingAttendance = pendingAttendance,
         )
 
     private val providers: Map<TopLevelDestination, (NavKey) -> NavEntry<NavKey>> =
@@ -247,6 +254,8 @@ private class NativeShell(
                         LocalViewModelStoreOwner provides owner,
                         // 网络自检 from any screen's network-error state — see [LocalOpenNetworkCheck].
                         LocalOpenNetworkCheck provides { stack.add(NetworkCheckKey) },
+                        // 测评对比 from any report card's 对比 (n), onto this page's tab.
+                        LocalOpenReportCompare provides { stack.add(ReportCompareKey) },
                     ) {
                         entry.Content()
                     }

@@ -24,4 +24,16 @@
     <plurals name="notify_body_tracked_thread">
         <item quantity="other">%1$d 則新回覆</item>
     </plurals>
+    <string name="share_to_composer">發新帖</string>
+    <string name="process_text_search">在 NodeSeek 搜尋</string>
+    <string name="shortcut_search">搜尋</string>
+    <string name="shortcut_search_long">搜尋帖子和使用者</string>
+    <string name="shortcut_compose">發帖</string>
+    <string name="shortcut_compose_long">發一個新帖</string>
+    <string name="shortcut_notifications">通知</string>
+    <string name="shortcut_notifications_long">查看通知</string>
+    <string name="shortcut_sign_in_random">隨機簽到</string>
+    <string name="shortcut_sign_in_random_long">今日簽到：隨機雞腿</string>
+    <string name="shortcut_sign_in_fixed">固定簽到</string>
+    <string name="shortcut_sign_in_fixed_long">今日簽到：固定 5 個雞腿</string>
 </resources>

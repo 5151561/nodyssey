@@ -1,5 +1,6 @@
 package io.github.nodyssey
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -142,6 +143,8 @@ internal fun EntryProviderScope<NavKey>.spaceEntries(nav: StackEntryScope) = wit
     entry<AssetsKey> {
         val viewModel: AssetsViewModel =
             viewModel(factory = AssetsViewModel.factory(container))
+        val attendance = pendingAttendance.pending
+        LaunchedEffect(attendance) { pendingAttendance.take()?.let(viewModel::signInForToday) }
         AssetsRoute(
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },

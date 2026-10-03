@@ -44,4 +44,21 @@
     <plurals name="notify_body_tracked_thread">
         <item quantity="other">%1$d 条新回复</item>
     </plurals>
+    <!--
+      系统集成：系统替 App 画的几处入口——分享面板里的目标名、文字选择菜单里的一项、长按图标的三个快捷方式。
+      快捷方式的短标签放得下约 10 个字符，长标签约 25 个。
+    -->
+    <string name="share_to_composer">发新帖</string>
+    <string name="process_text_search">在 NodeSeek 搜索</string>
+    <string name="shortcut_search">搜索</string>
+    <string name="shortcut_search_long">搜索帖子和用户</string>
+    <string name="shortcut_compose">发帖</string>
+    <string name="shortcut_compose_long">发一个新帖</string>
+    <string name="shortcut_notifications">通知</string>
+    <string name="shortcut_notifications_long">查看通知</string>
+    <!-- 长按图标的两个签到快捷方式：随机鸡腿、固定 5 个 -->
+    <string name="shortcut_sign_in_random">随机签到</string>
+    <string name="shortcut_sign_in_random_long">今日签到：随机鸡腿</string>
+    <string name="shortcut_sign_in_fixed">固定签到</string>
+    <string name="shortcut_sign_in_fixed_long">今日签到：固定 5 个鸡腿</string>
 </resources>

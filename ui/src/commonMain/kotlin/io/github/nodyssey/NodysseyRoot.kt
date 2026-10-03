@@ -25,6 +25,8 @@ import io.github.nodyssey.ui.common.ProvideUserNotes
 import io.github.nodyssey.ui.common.SystemBarsMatchTheme
 import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.common.rememberReducedMotionEnabled
+import io.github.nodyssey.ui.compare.LocalReportCompareBasket
+import io.github.nodyssey.ui.compare.rememberReportCompareBasket
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.onboarding.OnboardingScreen
 import io.github.nodyssey.ui.richtext.LocalReportFormat
@@ -215,10 +217,14 @@ internal fun NodysseyChrome(
             // The handler and the prefetcher are one object because on Android they are one connection
             // to the browser: what gets warmed on press is what the tab is then launched through.
             val browserLinks = rememberBrowserLinks()
+            // 测评对比's basket rides here for the reason 测评报告 does: a report turns up wherever a
+            // post body does, and the card is what adds to it.
+            val reportCompareBasket = rememberReportCompareBasket(container.reportCompareStore)
             CompositionLocalProvider(
                 LocalUriHandler provides browserLinks.uriHandler,
                 LocalLinkPrefetcher provides browserLinks.prefetcher,
                 LocalReportFormat provides settings.reportFormat,
+                LocalReportCompareBasket provides reportCompareBasket,
                 LocalStickerSizing provides stickerSizing,
                 // The one thing on this list that is not a setting: it is what the platform says this
                 // build is called, so that a debug build's screens say "Nodyssey·D" like its launcher

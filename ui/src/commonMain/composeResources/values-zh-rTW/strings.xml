@@ -21,6 +21,9 @@
     <string name="action_collapse">收合</string>
     <string name="report_show_source">檢視原始報告</string>
     <string name="report_open_fullscreen">全螢幕檢視</string>
+    <string name="report_compare_add">加入比較</string>
+    <string name="report_compare_remove">移出比較</string>
+    <string name="report_compare_open">比較 (%1$d)</string>
     <string name="action_retry">重試</string>
     <string name="action_refresh">重新整理</string>
     <string name="search_load_more_failed">載入更多失敗</string>
@@ -136,6 +139,10 @@
     <string name="post_reply_to">回覆 %1$s</string>
     <string name="post_quote_floor">引用這一樓</string>
     <string name="post_copy_body">複製正文</string>
+    <string name="post_share_image">分享為圖片</string>
+    <string name="post_share_image_generating">正在產生圖片…</string>
+    <string name="post_share_image_failed">圖片產生失敗</string>
+    <string name="post_share_image_truncated">內容較長，完整內容請看原帖</string>
     <string name="post_body_copied">正文已複製</string>
     <string name="post_reaction_irreversible">表態後無法撤銷</string>
     <string name="page_jump_previous">上一頁</string>
@@ -362,6 +369,10 @@
     <string name="settings_report_format_source">顯示原文</string>
     <string name="settings_home_page_bar">首頁翻頁列</string>
     <string name="settings_home_page_bar_hint">在首頁右下角顯示頁碼</string>
+    <string name="settings_clipboard_post">識別剪貼簿中的帖子</string>
+    <string name="settings_clipboard_post_hint">回到 App 時詢問是否開啟複製的帖子連結</string>
+    <string name="clipboard_post_prompt">開啟剪貼簿裡的帖子？</string>
+    <string name="clipboard_post_open">開啟</string>
     <string name="settings_wifi_images">僅 Wi-Fi 下載入圖片</string>
     <string name="settings_wifi_images_hint">行動網路下點擊才載入</string>
     <string name="settings_clear_cache">清除快取</string>
@@ -932,6 +943,15 @@
     <string name="tools_invite_subtitle">花費 1000 雞腿購買一個邀請碼</string>
     <string name="tools_ruling">管理紀錄</string>
     <string name="tools_ruling_subtitle">處罰與獎勵公告表格</string>
+    <string name="report_compare_title">測評比較</string>
+    <string name="report_compare_subtitle">將加入比較的測評報告並排比較</string>
+    <string name="report_compare_empty">還沒有加入比較的報告。在帖子裡的測評報告下方點「加入比較」，最多保留 6 份。</string>
+    <string name="report_compare_basket">比較欄 · %1$d/%2$d</string>
+    <string name="report_compare_pick_hint">勾選 2 至 3 份報告進行比較</string>
+    <string name="report_compare_remove_entry">移出 %1$s</string>
+    <string name="report_compare_table">比較結果</string>
+    <string name="report_compare_missing">無此項</string>
+    <string name="report_compare_open_post">開啟報告所在的帖子</string>
 
     <string name="award_title">推薦閱讀</string>
     <string name="award_empty">還沒有加精的文章</string>

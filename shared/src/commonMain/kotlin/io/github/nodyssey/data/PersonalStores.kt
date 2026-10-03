@@ -6,6 +6,7 @@ import io.github.nodyssey.data.local.TrackedThreadDao
 import io.github.nodyssey.data.local.TrackedThreadEntity
 import io.github.nodyssey.data.local.UserNoteDao
 import io.github.nodyssey.data.local.UserNoteEntity
+import io.github.nodyssey.model.PostSummary
 import io.github.nodyssey.model.TitleKeywordKind
 import io.github.plaza.core.AppClock
 import kotlinx.coroutines.flow.Flow
@@ -88,6 +89,9 @@ data class TrackedThread(
     val postId: Long,
     val title: String,
     val lastKnownCount: Int,
+    val authorName: String? = null,
+    val categoryTitle: String? = null,
+    val categorySlug: String? = null,
 )
 
 /** 追踪新回复 — the threads the reader wants to hear about, and how far they have been told. */
@@ -112,6 +116,9 @@ class TrackedThreadStore(
         postId: Long,
         title: String,
         commentCount: Int?,
+        authorName: String? = null,
+        categoryTitle: String? = null,
+        categorySlug: String? = null,
     ): Boolean {
         if (dao.count() >= MAX_TRACKED) return false
         dao.upsert(
@@ -120,12 +127,18 @@ class TrackedThreadStore(
                 title = title,
                 lastKnownCount = commentCount ?: UNKNOWN_COUNT,
                 addedAtMillis = clock.nowMillis(),
+                authorName = authorName,
+                categoryTitle = categoryTitle,
+                categorySlug = categorySlug,
             ),
         )
         return true
     }
 
     suspend fun untrack(postId: Long) = dao.delete(postId)
+
+    /** What a list row said about a followed thread, for the parts of its row still blank. */
+    suspend fun fillSnapshot(post: PostSummary) = dao.fillSnapshot(post.postId, post.authorName, post.categoryTitle, post.categorySlug)
 
     /** The reader now knows about [count] replies — by a notification, or by reading the thread. */
     suspend fun advance(
@@ -141,4 +154,4 @@ class TrackedThreadStore(
     }
 }
 
-private fun TrackedThreadEntity.toModel() = TrackedThread(postId, title, lastKnownCount)
+private fun TrackedThreadEntity.toModel() = TrackedThread(postId, title, lastKnownCount, authorName, categoryTitle, categorySlug)

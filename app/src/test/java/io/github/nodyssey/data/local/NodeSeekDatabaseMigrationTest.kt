@@ -442,6 +442,25 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /** A followed thread keeps its title and count and gains an author and board it does not know yet. */
+    @Test
+    fun `migration 16 to 17 gives followed threads an author and board`() {
+        helper.createDatabase(DATABASE_NAME, 16).apply {
+            execSQL("INSERT INTO tracked_threads(postId, title, lastKnownCount, addedAtMillis) VALUES(42, 't', 3, 1000)")
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 17, true, MIGRATION_16_17)
+
+        migrated.query("SELECT title, lastKnownCount, authorName FROM tracked_threads WHERE postId = 42").use {
+            it.moveToFirst()
+            assertEquals("t", it.getString(0))
+            assertEquals(3, it.getInt(1))
+            assertTrue(it.isNull(2))
+        }
+        migrated.close()
+    }
+
     /**
      * The whole ladder at once, which is the only test that runs it the way a device does.
      *
@@ -450,10 +469,10 @@ class NodeSeekDatabaseMigrationTest {
      * it, on a file that has actually climbed the versions in between rather than being created at
      * the version under test. A reader on the oldest still-migratable store upgrades through all
      * twelve in one open, so that is what this runs: real v3 rows in, `runMigrationsAndValidate`
-     * against the exported v16 schema out, the oldest data still readable at the top.
+     * against the exported v17 schema out, the oldest data still readable at the top.
      */
     @Test
-    fun `a v3 store climbs every migration to v16 with its data intact`() {
+    fun `a v3 store climbs every migration to v17 with its data intact`() {
         helper.createDatabase(DATABASE_NAME, 3).apply {
             execSQL(
                 """
@@ -480,7 +499,7 @@ class NodeSeekDatabaseMigrationTest {
             close()
         }
 
-        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 16, true, *NODESEEK_MIGRATIONS)
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 17, true, *NODESEEK_MIGRATIONS)
 
         migrated.query("SELECT title, isBlocked, isAwarded FROM posts WHERE postId = 42").use {
             it.moveToFirst()

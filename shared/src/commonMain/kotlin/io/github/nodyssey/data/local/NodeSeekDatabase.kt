@@ -36,7 +36,7 @@ import androidx.sqlite.execSQL
         TitleKeywordEntity::class,
         TrackedThreadEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -407,6 +407,22 @@ val MIGRATION_15_16 =
     }
 
 /**
+ * Gives a followed thread its author and board, so 追踪的帖子 can say more than a title.
+ *
+ * Null on every existing row, which is honest: v16 never recorded them. A version of its own rather
+ * than a wider v16 because debug builds already carry v16, and a changed identity hash at the same
+ * version throws on open instead of upgrading.
+ */
+val MIGRATION_16_17 =
+    object : Migration(16, 17) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `tracked_threads` ADD COLUMN `authorName` TEXT")
+            connection.execSQL("ALTER TABLE `tracked_threads` ADD COLUMN `categoryTitle` TEXT")
+            connection.execSQL("ALTER TABLE `tracked_threads` ADD COLUMN `categorySlug` TEXT")
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -432,4 +448,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_13_14,
     MIGRATION_14_15,
     MIGRATION_15_16,
+    MIGRATION_16_17,
 )

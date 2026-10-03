@@ -53,7 +53,7 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
                 )
             },
             onCreatePost = { backStack.add(PostComposerKey()) },
-            onSearch = { backStack.add(SearchKey) },
+            onSearch = { backStack.add(SearchKey()) },
             onAccountClick = openProfileTab,
             onSignIn = {
                 backStack.add(SignInKey)
@@ -68,9 +68,9 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
         )
     }
 
-    entry<SearchKey> {
+    entry<SearchKey> { key ->
         val viewModel: SearchViewModel =
-            viewModel(factory = SearchViewModel.factory(container))
+            viewModel(factory = SearchViewModel.factory(container, initialQuery = key.query))
         SearchRoute(
             viewModel = viewModel,
             onPostClick = { backStack.add(PostDetailKey(it)) },

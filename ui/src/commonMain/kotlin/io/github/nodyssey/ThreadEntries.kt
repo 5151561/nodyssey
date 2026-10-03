@@ -4,6 +4,7 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -11,6 +12,7 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.NavDisplay
 import io.github.nodyssey.core.NodeSeekSite
+import io.github.nodyssey.ui.common.rememberShareImage
 import io.github.nodyssey.ui.composer.PostComposerRoute
 import io.github.nodyssey.ui.composer.PostComposerViewModel
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -140,6 +142,7 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
                     onSignIn = { backStack.add(SignInKey) },
                 )
             },
+            shareImage = rememberShareImage(container.dispatchers),
         )
     }
 
@@ -151,6 +154,12 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
                 key = "composer-${key.edit?.commentId ?: "new"}",
                 factory = PostComposerViewModel.factory(container, key.edit),
             )
+        if (key.edit == null) {
+            // Keyed on the pending share so a second one arriving while this editor is open lands
+            // in it too; `take` is what keeps a recomposition from adding the same one twice.
+            val share = pendingComposerShare.pending
+            LaunchedEffect(share) { pendingComposerShare.take()?.let(viewModel::receiveShare) }
+        }
         // Whatever this editor is about: the thread when editing, the new-post page otherwise.
         val webUrl =
             key.edit

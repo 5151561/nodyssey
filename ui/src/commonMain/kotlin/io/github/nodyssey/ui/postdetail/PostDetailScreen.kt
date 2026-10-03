@@ -48,6 +48,7 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -58,6 +59,7 @@ import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -75,6 +77,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -126,6 +129,9 @@ import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
 import io.github.nodyssey.ui.common.sharedThreadTitle
+import io.github.nodyssey.ui.compare.LocalReportOrigin
+import io.github.nodyssey.ui.compare.ReportOrigin
+import io.github.nodyssey.ui.compare.ReportOriginFloor
 import io.github.nodyssey.ui.composer.FloorReference
 import io.github.nodyssey.ui.composer.ReplyComposerHost
 import io.github.nodyssey.ui.composer.ReplyComposerViewModel
@@ -181,6 +187,9 @@ import io.github.nodyssey.ui.resources.post_reaction_like
 import io.github.nodyssey.ui.resources.post_reaction_spent
 import io.github.nodyssey.ui.resources.post_reply_action
 import io.github.nodyssey.ui.resources.post_reply_to
+import io.github.nodyssey.ui.resources.post_share_image
+import io.github.nodyssey.ui.resources.post_share_image_failed
+import io.github.nodyssey.ui.resources.post_share_image_generating
 import io.github.nodyssey.ui.resources.post_track_full
 import io.github.nodyssey.ui.resources.post_track_thread
 import io.github.nodyssey.ui.resources.post_tracked
@@ -243,6 +252,8 @@ fun PostDetailRoute(
     /** Draws the votes embedded in the thread; see [PostDetailScreen]. */
     voteContent: @Composable (Long) -> Unit = {},
     stardustContent: (@Composable (RichNode.StardustReceive) -> Unit)? = null,
+    /** 分享为图片's hand-off to the platform; null hides the row. See [PostDetailScreen]. */
+    shareImage: (suspend (ImageBitmap, String?) -> Boolean)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val replyState by replyViewModel.uiState.collectAsStateWithLifecycle()
@@ -289,6 +300,7 @@ fun PostDetailRoute(
         voteContent = voteContent,
         stardustContent = stardustContent,
         replyOpen = replyState.visible,
+        shareImage = shareImage,
         modifier = modifier,
     )
 
@@ -387,6 +399,11 @@ fun PostDetailScreen(
     onLinkClick: (String) -> Unit = onOpenBrowser,
     /** Opens the tapped author's space. */
     onAuthorClick: (Long) -> Unit = {},
+    /**
+     * Hands a picture of a floor to the platform's share sheet, answering whether it did. Null — a
+     * preview, a test, a platform with no sheet — hides 分享为图片 from the floor panel.
+     */
+    shareImage: (suspend (ImageBitmap, String?) -> Boolean)? = null,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -395,6 +412,9 @@ fun PostDetailScreen(
     /** The floor whose 1c panel is open — from its ⋯, or a long press on its card. */
     var floorActions by remember { mutableStateOf<FloorActions?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    /** The floor 分享为图片 is drawing, from the panel's tap until the share sheet has it. */
+    var shareImageOf by remember { mutableStateOf<PostContent?>(null) }
     var showPageSheet by remember { mutableStateOf(false) }
     var pageToolbarExpanded by rememberSaveable { mutableStateOf(true) }
     val density = LocalDensity.current
@@ -647,6 +667,27 @@ fun PostDetailScreen(
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
+            // First in the Box, though it is never drawn: see [FloorShareCapture].
+            val sharing = shareImageOf
+            if (sharing != null && shareImage != null) {
+                val generating = stringResource(Res.string.post_share_image_generating)
+                val failed = stringResource(Res.string.post_share_image_failed)
+                val shareLabel = stringResource(Res.string.post_share_image)
+                LaunchedEffect(sharing) { snackbarHostState.showSnackbar(generating, duration = SnackbarDuration.Indefinite) }
+                FloorShareCapture(
+                    content = sharing,
+                    threadTitle = state.title,
+                    postUrl = postUrl,
+                    onCaptured = { image ->
+                        scope.launch {
+                            shareImageOf = null
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            val shared = image != null && shareImage(image, shareLabel)
+                            if (!shared) snackbarHostState.showSnackbar(failed)
+                        }
+                    },
+                )
+            }
             val error = state.error
             when {
                 /*
@@ -697,46 +738,52 @@ fun PostDetailScreen(
                             indicatorBottomPadding = bottomActionsHeight,
                             modifier = Modifier.fillMaxSize(),
                         ) {
-                            ThreadList(
-                                state = state,
-                                listState = listState,
-                                bottomRoom = bottomActionsHeight,
-                                onOpenOriginalPost = openOriginalPost,
-                                onOpenBrowser = onLinkClick,
-                                onImageClick = onImageClick,
-                                onJumpToFloor = { floor ->
-                                    // A quote can point anywhere in the thread, including pages nobody
-                                    // has opened. Scroll when it is here, fetch its page when it is not.
-                                    val index = state.indexOfFloor(floor)
-                                    if (index != null) {
-                                        scope.launch { listState.animateScrollToItem(index) }
-                                    } else {
-                                        onJumpToFloor(floor)
-                                    }
-                                },
-                                onReact = reactTo,
-                                onOpenFloorActions = { floorActions = it },
-                                onReplyToFloor = onReply,
-                                onQuoteFloor = onQuote,
-                                onEditFloor = { target ->
-                                    // Same gate as everything else that writes: an expired session is
-                                    // discovered before the editor opens, not after a save is refused.
-                                    if (state.isSignedIn) onEdit(target) else onSignIn()
-                                },
-                                onAuthorClick = onAuthorClick,
-                                // Same gate as the editor and the marks: the account has to exist before
-                                // the action, not after a rejection that also spent the tap.
-                                onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
-                                voteContent = voteContent,
-                                stardustContent = stardustContent,
-                                onTitleBottom = { collapsedTitleThreshold = it },
-                                modifier =
-                                Modifier.floatingToolbarVerticalNestedScroll(
-                                    expanded = toolbarExpanded,
-                                    onExpand = { pageToolbarExpanded = true },
-                                    onCollapse = { pageToolbarExpanded = false },
-                                ),
-                            )
+                            // Which thread a report on these floors came from, for 测评对比's basket;
+                            // each floor adds its own number on top. See [LocalReportOrigin].
+                            CompositionLocalProvider(
+                                LocalReportOrigin provides ReportOrigin(state.postId, state.title),
+                            ) {
+                                ThreadList(
+                                    state = state,
+                                    listState = listState,
+                                    bottomRoom = bottomActionsHeight,
+                                    onOpenOriginalPost = openOriginalPost,
+                                    onOpenBrowser = onLinkClick,
+                                    onImageClick = onImageClick,
+                                    onJumpToFloor = { floor ->
+                                        // A quote can point anywhere in the thread, including pages nobody
+                                        // has opened. Scroll when it is here, fetch its page when it is not.
+                                        val index = state.indexOfFloor(floor)
+                                        if (index != null) {
+                                            scope.launch { listState.animateScrollToItem(index) }
+                                        } else {
+                                            onJumpToFloor(floor)
+                                        }
+                                    },
+                                    onReact = reactTo,
+                                    onOpenFloorActions = { floorActions = it },
+                                    onReplyToFloor = onReply,
+                                    onQuoteFloor = onQuote,
+                                    onEditFloor = { target ->
+                                        // Same gate as everything else that writes: an expired session is
+                                        // discovered before the editor opens, not after a save is refused.
+                                        if (state.isSignedIn) onEdit(target) else onSignIn()
+                                    },
+                                    onAuthorClick = onAuthorClick,
+                                    // Same gate as the editor and the marks: the account has to exist before
+                                    // the action, not after a rejection that also spent the tap.
+                                    onCollect = { if (state.isSignedIn) onCollect() else onSignIn() },
+                                    voteContent = voteContent,
+                                    stardustContent = stardustContent,
+                                    onTitleBottom = { collapsedTitleThreshold = it },
+                                    modifier =
+                                    Modifier.floatingToolbarVerticalNestedScroll(
+                                        expanded = toolbarExpanded,
+                                        onExpand = { pageToolbarExpanded = true },
+                                        onCollapse = { pageToolbarExpanded = false },
+                                    ),
+                                )
+                            }
                         }
                     }
             }
@@ -797,6 +844,7 @@ fun PostDetailScreen(
                 floorActions = null
                 reactTo(live, action)
             },
+            onShareImage = if (shareImage != null && shareImageOf == null) ({ shareImageOf = live }) else null,
         )
     }
     // The 投喂 tile says whether today's feed is free, which only the site knows. Asked for as the
@@ -1571,15 +1619,17 @@ private fun ThreadOpeningPost(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            PostRichContent(
-                nodes = body.nodes,
-                onLinkClick = onOpenBrowser,
-                onImageClick = onImageClick,
-                onQuoteRefClick = { onJumpToFloor(it.floor) },
-                textStyle = MaterialTheme.typography.bodyMedium,
-                voteContent = voteContent,
-                stardustContent = stardustContent,
-            )
+            ReportOriginFloor(body.floor) {
+                PostRichContent(
+                    nodes = body.nodes,
+                    onLinkClick = onOpenBrowser,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = { onJumpToFloor(it.floor) },
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    voteContent = voteContent,
+                    stardustContent = stardustContent,
+                )
+            }
         }
         UserSignature(
             nodes = body.signatureNodes,
@@ -1614,14 +1664,14 @@ private val OpeningPostGap = 10.dp
 
 /** A floor author's name: 13sp, a step under the title roles, heavier than the meta line under it. */
 @Composable
-private fun floorNameStyle(): TextStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+internal fun floorNameStyle(): TextStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
 
 /**
  * A reply's body: a step under the opening post's — the reading size scaled the same way, down to the
  * 14/22 the Lean round's 2b sets replies in.
  */
 @Composable
-private fun replyBodyStyle(): TextStyle =
+internal fun replyBodyStyle(): TextStyle =
     MaterialTheme.typography.bodyMedium.let {
         it.copy(fontSize = it.fontSize * REPLY_BODY_SCALE, lineHeight = it.lineHeight * REPLY_LINE_SCALE)
     }
@@ -1749,15 +1799,17 @@ private fun CommentRow(
                 }
                 FloorTimeLine(comment)
             }
-            PostRichContent(
-                nodes = comment.nodes,
-                onLinkClick = onOpenBrowser,
-                onImageClick = onImageClick,
-                onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
-                textStyle = replyBodyStyle(),
-                voteContent = voteContent,
-                stardustContent = stardustContent,
-            )
+            ReportOriginFloor(comment.floor) {
+                PostRichContent(
+                    nodes = comment.nodes,
+                    onLinkClick = onOpenBrowser,
+                    onImageClick = onImageClick,
+                    onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
+                    textStyle = replyBodyStyle(),
+                    voteContent = voteContent,
+                    stardustContent = stardustContent,
+                )
+            }
             UserSignature(
                 nodes = comment.signatureNodes,
                 bodyStyle = replyBodyStyle(),
@@ -2333,6 +2385,8 @@ private fun FloorActionSheet(
     freeChickenLegs: FreeChickenLegs?,
     onDismiss: () -> Unit,
     onReact: (ReactionAction) -> Unit,
+    /** 分享为图片; null where this platform has no share sheet, or while one is already being drawn. */
+    onShareImage: (() -> Unit)? = null,
 ) {
     val copy = rememberClipboardCopy()
     val copied = stringResource(Res.string.post_body_copied)
@@ -2399,6 +2453,9 @@ private fun FloorActionSheet(
                                 copy("post", bodyText, copied)
                             },
                         )
+                    }
+                    onShareImage?.let {
+                        add(Triple(PlazaIcons.Image, stringResource(Res.string.post_share_image), it))
                     }
                     // 备注 is about other people; a note on yourself has nobody to remind.
                     val uid = content.authorUid
@@ -2662,7 +2719,7 @@ private fun List<InlineNode>.plainText(): String = joinToString("") { inline ->
 
 /** Tabular figures so `#9` and `#127` sit on the same right edge as the list scrolls. */
 @Composable
-private fun FloorLabel(floor: String) {
+internal fun FloorLabel(floor: String) {
     Text(
         text = floor,
         style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = TABULAR_FIGURES),

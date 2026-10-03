@@ -9,8 +9,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object PostListKey : NavKey
 
+/**
+ * 搜索, opened from 首页's app bar with an empty box, or from another app's text selection
+ * (在 NodeSeek 搜索) with [query] already in it — which the screen then searches once.
+ */
 @Serializable
-data object SearchKey : NavKey
+data class SearchKey(val query: String? = null) : NavKey
 
 @Serializable
 data object NotificationsKey : NavKey
@@ -314,6 +318,10 @@ data object InviteKey : NavKey
 
 @Serializable
 data object RulingKey : NavKey
+
+/** 测评对比 — the basket of reports set aside from report cards, and two or three of them side by side. */
+@Serializable
+data object ReportCompareKey : NavKey
 
 /**
  * Full-screen image viewer.

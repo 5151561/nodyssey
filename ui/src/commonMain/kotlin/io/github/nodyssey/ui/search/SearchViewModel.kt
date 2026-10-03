@@ -44,6 +44,12 @@ class SearchViewModel(
     private val searchRepository: SearchRepository,
     private val categoryRepository: CategoryRepository,
     private val settings: SettingsRepository,
+    /**
+     * What another app asked to search for — 在 NodeSeek 搜索 in a text selection — or null for the
+     * empty box the app bar opens. Searched once, here, rather than by the screen: a ViewModel is
+     * built once per entry, so neither a recomposition nor a rotation can run it a second time.
+     */
+    initialQuery: String? = null,
 ) : ViewModel() {
     /**
      * The search box itself.
@@ -100,6 +106,10 @@ class SearchViewModel(
                 }
             }.launchIn(viewModelScope)
         viewModelScope.launch { categoryRepository.refreshIfNeeded() }
+        initialQuery?.takeIf(String::isNotBlank)?.let { initial ->
+            query.setTextAndPlaceCursorAtEnd(initial)
+            submitSearch()
+        }
     }
 
     /**
@@ -291,7 +301,10 @@ class SearchViewModel(
     }
 
     companion object {
-        fun factory(container: AppContainer): ViewModelProvider.Factory =
+        fun factory(
+            container: AppContainer,
+            initialQuery: String? = null,
+        ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     SearchViewModel(
@@ -299,6 +312,7 @@ class SearchViewModel(
                         searchRepository = container.searchRepository,
                         categoryRepository = container.categoryRepository,
                         settings = container.settingsRepository,
+                        initialQuery = initialQuery,
                     )
                 }
             }

@@ -21,6 +21,8 @@ import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.about_community_hint
 import io.github.nodyssey.ui.resources.about_community_title
 import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.report_compare_subtitle
+import io.github.nodyssey.ui.resources.report_compare_title
 import io.github.nodyssey.ui.resources.tools_award
 import io.github.nodyssey.ui.resources.tools_award_subtitle
 import io.github.nodyssey.ui.resources.tools_friends
@@ -67,6 +69,8 @@ fun CommunityToolsScreen(
     onLucky: () -> Unit,
     onInvite: () -> Unit,
     onRuling: () -> Unit,
+    /** 测评对比 — the one entry to the basket that does not need a report card on screen. */
+    onReportCompare: () -> Unit,
     onAboutCommunity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -145,14 +149,22 @@ fun CommunityToolsScreen(
 
             Column {
                 SectionLabel(stringResource(Res.string.tools_group_watch))
-                GroupedRow(
-                    title = stringResource(Res.string.tools_ruling),
-                    subtitle = stringResource(Res.string.tools_ruling_subtitle),
-                    icon = PlazaIcons.Gavel,
-                    first = true,
-                    last = true,
-                    onClick = onRuling,
-                )
+                Column {
+                    GroupedRow(
+                        title = stringResource(Res.string.tools_ruling),
+                        subtitle = stringResource(Res.string.tools_ruling_subtitle),
+                        icon = PlazaIcons.Gavel,
+                        first = true,
+                        onClick = onRuling,
+                    )
+                    GroupedRow(
+                        title = stringResource(Res.string.report_compare_title),
+                        subtitle = stringResource(Res.string.report_compare_subtitle),
+                        icon = PlazaIcons.VerticalSplit,
+                        last = true,
+                        onClick = onReportCompare,
+                    )
+                }
             }
 
             GroupedRow(
@@ -179,6 +191,7 @@ private fun CommunityToolsPreview() {
             onLucky = {},
             onInvite = {},
             onRuling = {},
+            onReportCompare = {},
             onAboutCommunity = {},
         )
     }
@@ -196,6 +209,7 @@ private fun CommunityToolsDarkPreview() {
             onLucky = {},
             onInvite = {},
             onRuling = {},
+            onReportCompare = {},
             onAboutCommunity = {},
         )
     }

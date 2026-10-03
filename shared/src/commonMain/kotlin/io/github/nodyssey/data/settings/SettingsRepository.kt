@@ -48,6 +48,9 @@ class SettingsRepository(
 ) : UpdateCheckStore {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** 测评对比's basket, kept in this same store; see [ReportCompareStore]. */
+    val reportCompare: ReportCompareStore = ReportCompareStore(dataStore)
+
     val settings: Flow<UserSettings> = dataStore.data
         // A corrupt or unreadable store must not take the app down; fall back to defaults.
         .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
@@ -85,6 +88,7 @@ class SettingsRepository(
                     ?.let { runCatching { FeedSort.valueOf(it) }.getOrNull() }
                     ?: FeedSort.LAST_REPLY,
                 homePageBar = preferences[KEY_HOME_PAGE_BAR] ?: true,
+                clipboardPostPrompt = preferences[KEY_CLIPBOARD_POST_PROMPT] ?: true,
                 holidayTheme = preferences[KEY_HOLIDAY_THEME] ?: false,
                 searchHistory = decodeSearchHistory(preferences),
                 recentBoards = decodeValues(preferences[KEY_RECENT_BOARDS]),
@@ -250,6 +254,21 @@ class SettingsRepository(
 
     /** 首页翻页栏; see [UserSettings.homePageBar] for what it adds. */
     suspend fun setHomePageBar(enabled: Boolean) = edit { it[KEY_HOME_PAGE_BAR] = enabled }
+
+    /** 识别剪贴板中的帖子; see [UserSettings.clipboardPostPrompt]. */
+    suspend fun setClipboardPostPrompt(enabled: Boolean) = edit { it[KEY_CLIPBOARD_POST_PROMPT] = enabled }
+
+    /**
+     * The clipboard link 识别剪贴板中的帖子 last asked about, or null before it ever has.
+     *
+     * Bookkeeping rather than a setting, the way [keywordAlertBaseline] is — nothing on screen shows
+     * it. Stored rather than held in memory because the moment the same link is most likely still on
+     * the clipboard is the next cold start, and asking again about a link the reader already opened or
+     * waved away is the nagging the "once per link" rule exists to prevent.
+     */
+    suspend fun lastClipboardPostLink(): String? = preferences()[KEY_LAST_CLIPBOARD_POST_LINK]
+
+    suspend fun setLastClipboardPostLink(url: String) = edit { it[KEY_LAST_CLIPBOARD_POST_LINK] = url }
 
     /**
      * 新手引导 — written true when the guide is finished or skipped, and false by 再看一次引导 on
@@ -639,6 +658,8 @@ class SettingsRepository(
         private val KEY_MESSAGE_TOOLBAR = stringPreferencesKey("message_toolbar_actions")
         private val KEY_FEED_SORT = stringPreferencesKey("feed_sort")
         private val KEY_HOME_PAGE_BAR = booleanPreferencesKey("home_page_bar")
+        private val KEY_CLIPBOARD_POST_PROMPT = booleanPreferencesKey("clipboard_post_prompt")
+        private val KEY_LAST_CLIPBOARD_POST_LINK = stringPreferencesKey("last_clipboard_post_link")
         private val KEY_ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
@@ -821,6 +842,12 @@ data class UserSettings(
      * only adds a way to arrive somewhere, which is the same pairing the comment thread uses.
      */
     val homePageBar: Boolean = true,
+    /**
+     * 识别剪贴板中的帖子 (Android): on coming back to the app, offer to open a thread whose link is
+     * on the clipboard. On by default — the prompt is a snackbar that asks once per link and goes
+     * away on its own, and the reader who copied a thread link elsewhere almost always wants it.
+     */
+    val clipboardPostPrompt: Boolean = true,
     /** Local mirror of the account's Remote 启用节日主题 switch. */
     val holidayTheme: Boolean = false,
     val searchHistory: List<SearchHistoryEntry> = emptyList(),
