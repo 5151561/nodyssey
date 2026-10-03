@@ -75,6 +75,7 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.UpdateDot
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.siteName
+import io.github.nodyssey.ui.common.withoutBottom
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.assets_signed_in
 import io.github.nodyssey.ui.resources.assets_signing_in
@@ -309,10 +310,16 @@ fun ProfileScreen(
         LazyColumn(
             modifier =
             Modifier
-                .padding(padding)
+                // Under the bottom bar rather than stopping at it — see [withoutBottom].
+                .padding(padding.withoutBottom())
                 .fillMaxSize()
                 .readableWidth(),
-            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = Spacing.lg),
+            contentPadding =
+            PaddingValues(
+                start = LayerPageGutter,
+                end = LayerPageGutter,
+                bottom = Spacing.lg + padding.calculateBottomPadding(),
+            ),
             verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         ) {
             item(key = "account") {

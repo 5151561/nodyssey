@@ -66,6 +66,62 @@ fun NodysseyRoot(
     onLaunchRequestHandled: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    NodysseyChrome(container, initialSettings, modifier) { storedSettings ->
+        // Read here rather than inside the guide so that a Compose preview of it stays platform-free,
+        // and so the answer is re-read on resume — which is how coming back from the system settings
+        // with the switch thrown turns the guide's button into its own confirmation.
+        val appLinksEnabled = rememberAppLinkHandlingEnabled()
+        val openAppLinkSettings = rememberAppLinkSettingsLauncher()
+        val scope = rememberCoroutineScope()
+        Box {
+            MainNavigation(
+                container = container,
+                initialTab = initialTab,
+                launchRequest = launchRequest,
+                onLaunchRequestHandled = onLaunchRequestHandled,
+            )
+            /*
+             * 新手引导, over the app rather than instead of it.
+             *
+             * Two reasons it is not an `if/else` around `MainNavigation`. A cold start would otherwise
+             * have to paint something before the store has answered, and the only honest something is
+             * blank — the very white flash 1.2.13 got rid of. And 再看一次引导 on 使用帮助 clears this
+             * flag from two screens deep in the back stack: swapping `MainNavigation` out would take
+             * that stack with it, so finishing the guide would land on 首页 rather than back where it
+             * was asked for.
+             *
+             * The nullable read, not the defaulted `settings`: `onboardingSeen` is false before the
+             * store has been read as well as after, and drawing the guide over that frame would show it
+             * to everyone, once, on every launch.
+             */
+            if (storedSettings?.onboardingSeen == false) {
+                OnboardingScreen(
+                    onFinish = {
+                        scope.launch { container.settingsRepository.setOnboardingSeen(true) }
+                    },
+                    appLinksEnabled = appLinksEnabled,
+                    onOpenAppLinkSettings = openAppLinkSettings,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The theme, the language and the app-wide composition locals, around whatever [content] is.
+ *
+ * Split out of [NodysseyRoot] because the iOS shell gives every screen its own `UIViewController`,
+ * and so its own composition: each of those needs exactly this around it, and nothing of the
+ * navigation [NodysseyRoot] puts inside it. [content] is handed the store's nullable answer for the
+ * reason the comments below give — "not read yet" and "跟随系统" are different things.
+ */
+@Composable
+internal fun NodysseyChrome(
+    container: AppContainer,
+    initialSettings: UserSettings?,
+    modifier: Modifier = Modifier,
+    content: @Composable (storedSettings: UserSettings?) -> Unit,
+) {
     // Theme reads the settings SSOT directly. No copy is kept anywhere, so changing the setting can
     // never leave part of the app on the old value.
     //
@@ -88,13 +144,6 @@ fun NodysseyRoot(
     // Everything Compose draws is answered by `ProvideAppLanguage` below instead, which is why
     // nothing here recreates anything.
     ApplyAppLanguage(storedSettings?.appLanguage)
-
-    // Read here rather than inside the guide so that a Compose preview of it stays platform-free,
-    // and so the answer is re-read on resume — which is how coming back from the system settings
-    // with the switch thrown turns the guide's button into its own confirmation.
-    val appLinksEnabled = rememberAppLinkHandlingEnabled()
-    val openAppLinkSettings = rememberAppLinkSettingsLauncher()
-    val scope = rememberCoroutineScope()
 
     val darkTheme = when {
         // 墨水屏模式 decides this rather than 明暗, and it decides it here rather than inside the theme
@@ -188,40 +237,7 @@ fun NodysseyRoot(
                         modifier = modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background,
                     ) {
-                        Box {
-                            MainNavigation(
-                                container = container,
-                                initialTab = initialTab,
-                                launchRequest = launchRequest,
-                                onLaunchRequestHandled = onLaunchRequestHandled,
-                            )
-                        /*
-                         * 新手引导, over the app rather than instead of it.
-                         *
-                         * Two reasons it is not an `if/else` around `MainNavigation`. A cold start
-                         * would otherwise have to paint something before the store has answered,
-                         * and the only honest something is blank — the very white flash 1.2.13 got
-                         * rid of. And 再看一次引导 on 使用帮助 clears this flag from two screens deep
-                         * in the back stack: swapping `MainNavigation` out would take that stack
-                         * with it, so finishing the guide would land on 首页 rather than back where
-                         * it was asked for.
-                         *
-                         * The nullable read, not the defaulted `settings`: `onboardingSeen` is
-                         * false before the store has been read as well as after, and drawing the
-                         * guide over that frame would show it to everyone, once, on every launch.
-                         */
-                            if (storedSettings?.onboardingSeen == false) {
-                                OnboardingScreen(
-                                    onFinish = {
-                                        scope.launch {
-                                            container.settingsRepository.setOnboardingSeen(true)
-                                        }
-                                    },
-                                    appLinksEnabled = appLinksEnabled,
-                                    onOpenAppLinkSettings = openAppLinkSettings,
-                                )
-                            }
-                        }
+                        content(storedSettings)
                     }
                 }
             }

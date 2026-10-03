@@ -71,6 +71,7 @@ import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.webViewUrl
+import io.github.nodyssey.ui.common.withoutBottom
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.history_section_earlier
@@ -313,8 +314,11 @@ fun NotificationsScreen(
             }
         },
     ) { padding ->
+        // Both lists run on under the bottom bar and take its height as content padding — see
+        // [withoutBottom].
+        val bottomInset = padding.calculateBottomPadding()
         Box(
-            modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
+            modifier = Modifier.padding(padding.withoutBottom()).fillMaxSize().readableWidth(),
         ) {
             when {
                 // Signing in is not one of the groups: with no session there is nothing to swipe
@@ -375,6 +379,7 @@ fun NotificationsScreen(
                                     onNewConversationSearch = onNewConversationSearch,
                                     onNewConversationDismiss = onNewConversationDismiss,
                                     onRecipientClick = onRecipientClick,
+                                    bottomInset = bottomInset,
                                 )
                             }
                         }
@@ -446,6 +451,8 @@ private fun BoxScope.NotificationGroup(
     onNewConversationSearch: () -> Unit,
     onNewConversationDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
+    /** The bottom bar's height, which both lists scroll under rather than stopping at. */
+    bottomInset: Dp,
 ) {
     val isEmpty = state.isEmptyOf(tab)
     val error = state.errors[tab]
@@ -474,6 +481,7 @@ private fun BoxScope.NotificationGroup(
                 onRecipientClick = onRecipientClick,
                 onSignIn = onSignIn,
                 onVerify = onVerify,
+                bottomInset = bottomInset,
             )
 
         isEmpty ->
@@ -495,7 +503,12 @@ private fun BoxScope.NotificationGroup(
                 modifier = Modifier.fillMaxSize(),
                 state = notificationListState,
                 contentPadding =
-                PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = 2.dp, bottom = Spacing.lg),
+                PaddingValues(
+                    start = LayerPageGutter,
+                    end = LayerPageGutter,
+                    top = 2.dp,
+                    bottom = Spacing.lg + bottomInset,
+                ),
             ) {
                 items(rows, key = NotificationListRow::key) { row ->
                     when (row) {

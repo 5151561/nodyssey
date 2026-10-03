@@ -110,8 +110,6 @@ fun MainNavigation(
     launchRequest: LaunchRequest? = null,
     onLaunchRequestHandled: () -> Unit = {},
 ) {
-    val signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH
-
     // Hoisted out of the navigation lambdas below, which are not composable.
     val siteTitle = appName()
     val aboutSiteTitle = stringResource(Res.string.about_site)
@@ -353,6 +351,28 @@ fun MainNavigation(
         onLaunchRequestHandled()
     }
 
+    val dependencies =
+        NavigationDependencies(
+            container = container,
+            siteTitle = siteTitle,
+            aboutSiteTitle = aboutSiteTitle,
+            privacyTitle = privacyTitle,
+            rssLabel = rssLabel,
+            uriHandler = uriHandler,
+            openExternalUrl = openExternalUrl,
+            notificationsViewModel = notificationsViewModel,
+            homeFeedStates = homeFeedStates,
+            homeReselectRequests = { homeReselectRequests },
+            notificationsScrollToTopRequests = { notificationsScrollToTopRequests },
+            isListDetailExpanded = { currentListDetailExpanded },
+            isEinkMode = { currentEinkMode },
+            onTabBarHiddenByScroll = { tabBarHiddenByScroll = it },
+            selectTab = { currentTab = it },
+            scope = scope,
+            pendingComposerShare = pendingComposerShare,
+            pendingAttendance = pendingAttendance,
+        )
+
     /*
      * 识别剪贴板中的帖子: a thread link copied in another app, offered on the way back in.
      *
@@ -395,131 +415,6 @@ fun MainNavigation(
     }
 
     /*
-     * The entries for one tab's stack, with every "open this somewhere" closure bound to that same
-     * stack.
-     *
-     * Built per stack rather than once for the app because an entry's content lambda is created in a
-     * plain (non-composable) function, so whatever it captures is frozen at the moment the entry is
-     * built — and `rememberDecoratedNavEntries` only rebuilds entries when *its own* back stack
-     * changes. A closure over "whichever tab is current" therefore keeps pointing at whichever tab
-     * happened to be current when the entry was made: on a cold start that is the launch tab for all
-     * four stacks, and after a rotation or process death it is the restored tab for all four. 访问网站
-     * in 我的 pushed its web view onto 首页's stack that way, and nothing appeared to happen.
-     *
-     * The parameter shadows nothing now — these three used to be declared beside `backStack` above,
-     * where they read the `when (currentTab)` result.
-     *
-     * The entries themselves live in the region files beside this one — `TabEntries.kt`,
-     * `SettingsEntries.kt`, `AccountEntries.kt`, `SpaceEntries.kt`, `ToolsEntries.kt`,
-     * `ThreadEntries.kt`, `SessionEntries.kt` — assembled here through one [StackEntryScope] per
-     * stack, which is what keeps the per-stack binding this comment is about.
-     */
-    fun destinationProvider(backStack: NavBackStack<NavKey>): (NavKey) -> NavEntry<NavKey> {
-        /*
-         * Opening a web page, routed by host: nodeseek.com stays in the app's own web view,
-         * everything else goes to the browser.
-         *
-         * This is a cookie decision, not a cosmetic one. A Custom Tab is the browser doing the
-         * browsing — its process, and crucially its cookie jar — where this account is not signed
-         * in. A site page opened out there shows the user a logged-out stranger's view of their own
-         * forum, and a Cloudflare pass earned out there lands in a jar the app cannot read, so the
-         * app's own requests keep failing afterwards.
-         *
-         * By host rather than page by page because "does this one need the session" is a judgement
-         * we get wrong: an 内版 thread is an ordinary `/post-` URL right up until it 404s, and the
-         * site's own pages move between public and gated without telling us.
-         *
-         * [WebViewGoal.MANAGE] because there is no cookie to wait for here — the user is done when
-         * they say so. The web view carries its own way back out to a real browser; see
-         * `WebViewScreen`.
-         */
-        val openWebUrl: (String) -> Unit = { url ->
-            if (NodeSeekSite.isTrustedWebViewUrl(url)) {
-                backStack.add(WebKey(url, siteTitle, WebViewGoal.MANAGE))
-            } else {
-                openExternalUrl(url)
-            }
-        }
-
-        // Content links: our own post/space/mention URLs get a native screen, and everything else —
-        // including the rest of nodeseek.com — goes through the routing above.
-        val openSpace: (Long) -> Unit = { uid ->
-            backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid.value))
-        }
-        val openContentUrl: (String) -> Unit = { url ->
-            when (val route = NodeSeekSite.parseInternalRoute(url)) {
-                is NodeSeekSite.InternalRoute.Post ->
-                    backStack.add(PostDetailKey(route.postId, page = route.page))
-
-                is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
-
-                is NodeSeekSite.InternalRoute.Member ->
-                    // A mention carries only the user name; the uid comes from following the site's
-                    // own /member?t= redirect. Any failure (offline, signed out, renamed user) falls
-                    // back to the site itself.
-                    scope.launch {
-                        resolveMemberLink(
-                            name = route.name,
-                            resolveMemberUid = container.searchRepository::resolveMemberUid,
-                            onResolved = openSpace,
-                            onFailure = { openWebUrl(url) },
-                        )
-                    }
-
-                // A link to a notification list is a link to a tab, and a tab is not something a
-                // stack can hold — 通知 is where it already lives.
-                is NodeSeekSite.InternalRoute.Notifications -> {
-                    currentTab = TopLevelDestination.NOTIFICATIONS
-                    route.group?.let { notificationsViewModel.selectTab(it.toTab()) }
-                }
-
-                // The conversation goes on the stack that is open, unlike the tab switch above: a
-                // 私信 link inside a thread should leave the thread underneath it.
-                is NodeSeekSite.InternalRoute.MessageThread ->
-                    backStack.openMessageThread(route.uid)
-
-                null -> openWebUrl(NodeSeekSite.unwrapJumpUrl(url))
-            }
-        }
-
-        val entryScope =
-            StackEntryScope(
-                container = container,
-                backStack = backStack,
-                siteTitle = siteTitle,
-                aboutSiteTitle = aboutSiteTitle,
-                privacyTitle = privacyTitle,
-                rssLabel = rssLabel,
-                signInUrl = signInUrl,
-                uriHandler = uriHandler,
-                notificationsViewModel = notificationsViewModel,
-                homeFeedStates = homeFeedStates,
-                homeReselectRequests = { homeReselectRequests },
-                notificationsScrollToTopRequests = { notificationsScrollToTopRequests },
-                isListDetailExpanded = { currentListDetailExpanded },
-                isEinkMode = { currentEinkMode },
-                onTabBarHiddenByScroll = { tabBarHiddenByScroll = it },
-                openExternalUrl = openExternalUrl,
-                openWebUrl = openWebUrl,
-                openSpace = openSpace,
-                openContentUrl = openContentUrl,
-                openHomeTab = { currentTab = TopLevelDestination.HOME },
-                openProfileTab = { currentTab = TopLevelDestination.PROFILE },
-                pendingComposerShare = pendingComposerShare,
-                pendingAttendance = pendingAttendance,
-            )
-        return entryProvider {
-            tabRootEntries(entryScope)
-            settingsEntries(entryScope)
-            accountEntries(entryScope)
-            spaceEntries(entryScope)
-            toolsEntries(entryScope)
-            threadEntries(entryScope)
-            sessionEntries(entryScope)
-        }
-    }
-
-    /*
      * One provider per stack, built once.
      *
      * `rememberDecoratedNavEntries` only calls its provider when its own back stack changes, so a
@@ -532,16 +427,18 @@ fun MainNavigation(
      * Three `remember` calls rather than a loop, for the same reason the stacks above are written out.
      */
     val homeProvider =
-        remember { stackScopedEntryProvider(TopLevelDestination.HOME, destinationProvider(homeStack)) }
+        remember { stackScopedEntryProvider(TopLevelDestination.HOME, destinationProvider(homeStack, dependencies)) }
     val notificationsProvider =
         remember {
             stackScopedEntryProvider(
                 TopLevelDestination.NOTIFICATIONS,
-                destinationProvider(notificationsStack),
+                destinationProvider(notificationsStack, dependencies),
             )
         }
     val profileProvider =
-        remember { stackScopedEntryProvider(TopLevelDestination.PROFILE, destinationProvider(profileStack)) }
+        remember {
+            stackScopedEntryProvider(TopLevelDestination.PROFILE, destinationProvider(profileStack, dependencies))
+        }
 
     val viewModelDecorator = rememberViewModelStoreNavEntryDecorator<NavKey>()
     val homeEntries =
@@ -723,6 +620,134 @@ fun MainNavigation(
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
             )
         }
+    }
+}
+
+/*
+ * The entries for one tab's stack, with every "open this somewhere" closure bound to that same stack.
+ *
+ * Built per stack rather than once for the app because an entry's content lambda is created in a
+ * plain (non-composable) function, so whatever it captures is frozen at the moment the entry is
+ * built — and `rememberDecoratedNavEntries` only rebuilds entries when *its own* back stack changes.
+ * A closure over "whichever tab is current" therefore keeps pointing at whichever tab happened to be
+ * current when the entry was made: on a cold start that is the launch tab for all four stacks, and
+ * after a rotation or process death it is the restored tab for all four. 访问网站 in 我的 pushed its
+ * web view onto 首页's stack that way, and nothing appeared to happen.
+ *
+ * Top-level rather than local to `MainNavigation` so that the iOS shell, which gives every screen
+ * its own `UIViewController`, builds the very same entries for its own stacks. [NavigationDependencies]
+ * is what the enclosing composition used to provide for free.
+ *
+ * The entries themselves live in the region files beside this one — `TabEntries.kt`,
+ * `SettingsEntries.kt`, `AccountEntries.kt`, `SpaceEntries.kt`, `ToolsEntries.kt`,
+ * `ThreadEntries.kt`, `SessionEntries.kt` — assembled here through one [StackEntryScope] per stack,
+ * which is what keeps the per-stack binding this comment is about.
+ */
+internal fun destinationProvider(
+    backStack: NavBackStack<NavKey>,
+    dependencies: NavigationDependencies,
+): (NavKey) -> NavEntry<NavKey> {
+    val container = dependencies.container
+    /*
+     * Opening a web page, routed by host: nodeseek.com stays in the app's own web view, everything
+     * else goes to the browser.
+     *
+     * This is a cookie decision, not a cosmetic one. A Custom Tab is the browser doing the browsing —
+     * its process, and crucially its cookie jar — where this account is not signed in. A site page
+     * opened out there shows the user a logged-out stranger's view of their own forum, and a
+     * Cloudflare pass earned out there lands in a jar the app cannot read, so the app's own requests
+     * keep failing afterwards.
+     *
+     * By host rather than page by page because "does this one need the session" is a judgement we get
+     * wrong: an 内版 thread is an ordinary `/post-` URL right up until it 404s, and the site's own
+     * pages move between public and gated without telling us.
+     *
+     * [WebViewGoal.MANAGE] because there is no cookie to wait for here — the user is done when they
+     * say so. The web view carries its own way back out to a real browser; see `WebViewScreen`.
+     */
+    val openWebUrl: (String) -> Unit = { url ->
+        if (NodeSeekSite.isTrustedWebViewUrl(url)) {
+            backStack.add(WebKey(url, dependencies.siteTitle, WebViewGoal.MANAGE))
+        } else {
+            dependencies.openExternalUrl(url)
+        }
+    }
+
+    // Content links: our own post/space/mention URLs get a native screen, and everything else —
+    // including the rest of nodeseek.com — goes through the routing above.
+    val openSpace: (Long) -> Unit = { uid ->
+        backStack.add(UserSpaceKey(uid, isSelf = uid == container.profileRepository.selfUid.value))
+    }
+    val openContentUrl: (String) -> Unit = { url ->
+        when (val route = NodeSeekSite.parseInternalRoute(url)) {
+            is NodeSeekSite.InternalRoute.Post ->
+                backStack.add(PostDetailKey(route.postId, page = route.page))
+
+            is NodeSeekSite.InternalRoute.Space -> openSpace(route.uid)
+
+            is NodeSeekSite.InternalRoute.Member ->
+                // A mention carries only the user name; the uid comes from following the site's own
+                // /member?t= redirect. Any failure (offline, signed out, renamed user) falls back to
+                // the site itself.
+                dependencies.scope.launch {
+                    resolveMemberLink(
+                        name = route.name,
+                        resolveMemberUid = container.searchRepository::resolveMemberUid,
+                        onResolved = openSpace,
+                        onFailure = { openWebUrl(url) },
+                    )
+                }
+
+            // A link to a notification list is a link to a tab, and a tab is not something a stack
+            // can hold — 通知 is where it already lives.
+            is NodeSeekSite.InternalRoute.Notifications -> {
+                dependencies.selectTab(TopLevelDestination.NOTIFICATIONS)
+                route.group?.let { dependencies.notificationsViewModel.selectTab(it.toTab()) }
+            }
+
+            // The conversation goes on the stack that is open, unlike the tab switch above: a 私信
+            // link inside a thread should leave the thread underneath it.
+            is NodeSeekSite.InternalRoute.MessageThread ->
+                backStack.openMessageThread(route.uid)
+
+            null -> openWebUrl(NodeSeekSite.unwrapJumpUrl(url))
+        }
+    }
+
+    val entryScope =
+        StackEntryScope(
+            container = container,
+            backStack = backStack,
+            siteTitle = dependencies.siteTitle,
+            aboutSiteTitle = dependencies.aboutSiteTitle,
+            privacyTitle = dependencies.privacyTitle,
+            rssLabel = dependencies.rssLabel,
+            signInUrl = NodeSeekSite.BASE_URL + NodeSeekSite.SIGN_IN_PATH,
+            uriHandler = dependencies.uriHandler,
+            notificationsViewModel = dependencies.notificationsViewModel,
+            homeFeedStates = dependencies.homeFeedStates,
+            homeReselectRequests = dependencies.homeReselectRequests,
+            notificationsScrollToTopRequests = dependencies.notificationsScrollToTopRequests,
+            isListDetailExpanded = dependencies.isListDetailExpanded,
+            isEinkMode = dependencies.isEinkMode,
+            onTabBarHiddenByScroll = dependencies.onTabBarHiddenByScroll,
+            openExternalUrl = dependencies.openExternalUrl,
+            openWebUrl = openWebUrl,
+            openSpace = openSpace,
+            openContentUrl = openContentUrl,
+            openHomeTab = { dependencies.selectTab(TopLevelDestination.HOME) },
+            openProfileTab = { dependencies.selectTab(TopLevelDestination.PROFILE) },
+            pendingComposerShare = dependencies.pendingComposerShare,
+            pendingAttendance = dependencies.pendingAttendance,
+        )
+    return entryProvider {
+        tabRootEntries(entryScope)
+        settingsEntries(entryScope)
+        accountEntries(entryScope)
+        spaceEntries(entryScope)
+        toolsEntries(entryScope)
+        threadEntries(entryScope)
+        sessionEntries(entryScope)
     }
 }
 

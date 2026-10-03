@@ -6,8 +6,44 @@ import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.di.AppContainer
 import io.github.nodyssey.ui.assets.PendingAttendance
 import io.github.nodyssey.ui.composer.PendingComposerShare
+import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.notifications.NotificationsViewModel
 import io.github.nodyssey.ui.postlist.HomeFeedStates
+import kotlinx.coroutines.CoroutineScope
+
+/**
+ * What every stack's [StackEntryScope] shares: the app-wide half, as opposed to the per-stack lambdas
+ * [destinationProvider] binds on top of it.
+ *
+ * Its own type because two hosts build it. `MainNavigation` fills it from its composition; the iOS
+ * shell fills it from plain objects, since there each screen is its own `UIViewController` and no
+ * composition outlives them all. Everything that changes while the app runs crosses as a function,
+ * for the reason [StackEntryScope] gives.
+ */
+internal class NavigationDependencies(
+    val container: AppContainer,
+    val siteTitle: String,
+    val aboutSiteTitle: String,
+    val privacyTitle: String,
+    val rssLabel: String,
+    val uriHandler: UriHandler,
+    val openExternalUrl: (String) -> Unit,
+    val notificationsViewModel: NotificationsViewModel,
+    val homeFeedStates: HomeFeedStates,
+    val homeReselectRequests: () -> Int,
+    val notificationsScrollToTopRequests: () -> Int,
+    val isListDetailExpanded: () -> Boolean,
+    val isEinkMode: () -> Boolean,
+    val onTabBarHiddenByScroll: (Boolean) -> Unit,
+    /** Brings a tab to the front. The host owns which tab is current, so it owns the switch too. */
+    val selectTab: (TopLevelDestination) -> Unit,
+    /** Where a link that has to be resolved over the network waits for its answer. */
+    val scope: CoroutineScope,
+    /** What another app shared into a new post, waiting for the editor; one for the whole app. */
+    val pendingComposerShare: PendingComposerShare,
+    /** A launcher 签到 waiting for 账户与成长; one for the whole app. */
+    val pendingAttendance: PendingAttendance,
+)
 
 /**
  * Everything an entry file needs from `MainNavigation`, bound to one tab's stack.

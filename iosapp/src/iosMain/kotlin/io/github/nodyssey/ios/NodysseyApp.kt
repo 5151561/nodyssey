@@ -1,12 +1,10 @@
 package io.github.nodyssey.ios
 
-import androidx.compose.ui.window.ComposeUIViewController
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import io.github.nodyssey.NodysseyRoot
 import io.github.nodyssey.core.NodeSeekSite
-import io.github.nodyssey.ui.navigation.TopLevelDestination
+import io.github.nodyssey.nativeShellViewController
 import io.github.nodyssey.ui.settings.IosActiveSite
 import io.github.plaza.core.net.resolveWebKitUserAgent
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +12,6 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import platform.UIKit.UIViewController
 
@@ -132,26 +129,15 @@ object NodysseyApp {
 
     private suspend fun buildController(): UIViewController {
         val graph = ensureContainer()
-        // Before the composition rather than inside it: the store is read asynchronously, and a
-        // composition that starts without an answer paints its first frame in the factory settings —
-        // 石墨青 under whatever theme the reader chose, and 字体大小, 单手模式 and 墨水屏模式 at
-        // their defaults with it. This is already a suspending function called while the launch
-        // screen is up, so awaiting the answer costs nothing on screen and blocks nothing.
-        val storedSettings = graph.settingsRepository.settings.first()
-        val controller =
-            ComposeUIViewController {
-                NodysseyRoot(
-                    container = graph,
-                    initialSettings = storedSettings,
-                    // No notification extra and no deep link to read yet: both arrive through
-                    // `UIApplicationDelegate`, and neither has an iOS half — the poll worker has no
-                    // iOS counterpart and Universal Links have no association file. See
-                    // `AppLinkHandling.ios.kt`.
-                    initialTab = TopLevelDestination.HOME,
-                    launchRequest = null,
-                    onLaunchRequestHandled = {},
-                )
-            }
+        // The system tab bar and navigation stacks, with a Compose screen in each pushed controller —
+        // see `nativeShellViewController`. It reads the settings store before drawing anything, for
+        // the reason `NodysseyRoot` takes `initialSettings`; this is already a suspending function
+        // called while the launch screen is up, so that costs nothing on screen.
+        //
+        // No notification extra and no deep link to hand it yet: both arrive through
+        // `UIApplicationDelegate`, and neither has an iOS half — the poll worker has no iOS
+        // counterpart and Universal Links have no association file. See `AppLinkHandling.ios.kt`.
+        val controller = nativeShellViewController(graph)
         root = controller
         // Nothing left to await; the fast path above answers from here on.
         controllerBuild = null
