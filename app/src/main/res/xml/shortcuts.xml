@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  搜索 / 发帖 / 通知 on the launcher icon's long press, read by MainActivity's `requestOf`.
+  搜索 / 发帖 / 通知 / 随机签到 / 固定签到 on the launcher icon's long press, read by MainActivity's `requestOf`.
 
   `targetPackage` has to be a literal — manifest placeholders do not reach resource files — so the
   debug build, whose applicationId carries `.debug`, has its own copy of this file under
@@ -51,6 +51,36 @@
             <extra
                 android:name="io.github.nodyssey.OPEN_TAB"
                 android:value="notifications" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sign_in_random"
+        android:shortcutId="sign_in_random"
+        android:shortcutLongLabel="@string/shortcut_sign_in_random_long"
+        android:shortcutShortLabel="@string/shortcut_sign_in_random">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="sign_in_random" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sign_in_fixed"
+        android:shortcutId="sign_in_fixed"
+        android:shortcutLongLabel="@string/shortcut_sign_in_fixed_long"
+        android:shortcutShortLabel="@string/shortcut_sign_in_fixed">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="sign_in_fixed" />
         </intent>
     </shortcut>
 </shortcuts>

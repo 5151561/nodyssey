@@ -2,6 +2,7 @@ package io.github.nodyssey
 
 import android.content.Intent
 import android.net.Uri
+import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.ui.composer.MAX_IMAGES_PER_PICK
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import org.junit.Assert.assertEquals
@@ -165,6 +166,18 @@ class LaunchRequestTest {
             Intent(Intent.ACTION_VIEW).putExtra(MainActivity.EXTRA_OPEN_TAB, MainActivity.TAB_NOTIFICATIONS)
 
         assertEquals(LaunchRequest.OpenTab(TopLevelDestination.NOTIFICATIONS), requestOf(notifications))
+    }
+
+    @Test
+    fun `the two sign-in shortcuts each name their own mode`() {
+        assertEquals(
+            LaunchRequest.SignInForToday(AttendanceMode.RANDOM),
+            requestOf(shortcut(MainActivity.SHORTCUT_SIGN_IN_RANDOM)),
+        )
+        assertEquals(
+            LaunchRequest.SignInForToday(AttendanceMode.FIXED_FIVE),
+            requestOf(shortcut(MainActivity.SHORTCUT_SIGN_IN_FIXED)),
+        )
     }
 
     @Test

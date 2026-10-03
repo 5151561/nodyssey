@@ -56,4 +56,9 @@
     <string name="shortcut_compose_long">发一个新帖</string>
     <string name="shortcut_notifications">通知</string>
     <string name="shortcut_notifications_long">查看通知</string>
+    <!-- 长按图标的两个签到快捷方式：随机鸡腿、固定 5 个 -->
+    <string name="shortcut_sign_in_random">随机签到</string>
+    <string name="shortcut_sign_in_random_long">今日签到：随机鸡腿</string>
+    <string name="shortcut_sign_in_fixed">固定签到</string>
+    <string name="shortcut_sign_in_fixed_long">今日签到：固定 5 个鸡腿</string>
 </resources>

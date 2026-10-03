@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.IntentCompat
+import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.settings.UserSettings
@@ -100,6 +101,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SHORTCUT = "io.github.nodyssey.SHORTCUT"
         const val SHORTCUT_SEARCH = "search"
         const val SHORTCUT_COMPOSE = "compose"
+        const val SHORTCUT_SIGN_IN_RANDOM = "sign_in_random"
+        const val SHORTCUT_SIGN_IN_FIXED = "sign_in_fixed"
     }
 }
 
@@ -153,11 +156,13 @@ internal fun deepLinkOf(intent: Intent): LaunchRequest.OpenLink? =
         ?.toString()
         ?.let(LaunchRequest::OpenLink)
 
-/** 搜索 or 发帖 from the launcher's long-press menu. 通知 rides [MainActivity.EXTRA_OPEN_TAB] instead. */
+/** 搜索, 发帖 or 签到 from the launcher's long-press menu. 通知 rides [MainActivity.EXTRA_OPEN_TAB] instead. */
 private fun shortcutOf(intent: Intent): LaunchRequest? =
     when (intent.getStringExtra(MainActivity.EXTRA_SHORTCUT)) {
         MainActivity.SHORTCUT_SEARCH -> LaunchRequest.Search(query = null)
         MainActivity.SHORTCUT_COMPOSE -> LaunchRequest.OpenComposer
+        MainActivity.SHORTCUT_SIGN_IN_RANDOM -> LaunchRequest.SignInForToday(AttendanceMode.RANDOM)
+        MainActivity.SHORTCUT_SIGN_IN_FIXED -> LaunchRequest.SignInForToday(AttendanceMode.FIXED_FIVE)
         else -> null
     }
 

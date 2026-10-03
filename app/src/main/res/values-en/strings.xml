@@ -34,4 +34,8 @@
     <string name="shortcut_compose_long">Write a new post</string>
     <string name="shortcut_notifications">Notifications</string>
     <string name="shortcut_notifications_long">Open notifications</string>
+    <string name="shortcut_sign_in_random">Random check-in</string>
+    <string name="shortcut_sign_in_random_long">Check in for a random reward</string>
+    <string name="shortcut_sign_in_fixed">Fixed check-in</string>
+    <string name="shortcut_sign_in_fixed_long">Check in for a fixed 5 drumsticks</string>
 </resources>

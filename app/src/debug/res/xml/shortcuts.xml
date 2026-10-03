@@ -49,4 +49,34 @@
                 android:value="notifications" />
         </intent>
     </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sign_in_random"
+        android:shortcutId="sign_in_random"
+        android:shortcutLongLabel="@string/shortcut_sign_in_random_long"
+        android:shortcutShortLabel="@string/shortcut_sign_in_random">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="sign_in_random" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_sign_in_fixed"
+        android:shortcutId="sign_in_fixed"
+        android:shortcutLongLabel="@string/shortcut_sign_in_fixed_long"
+        android:shortcutShortLabel="@string/shortcut_sign_in_fixed">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="io.github.nodyssey.MainActivity"
+            android:targetPackage="io.github.nodyssey.debug">
+            <extra
+                android:name="io.github.nodyssey.SHORTCUT"
+                android:value="sign_in_fixed" />
+        </intent>
+    </shortcut>
 </shortcuts>

@@ -1,5 +1,6 @@
 package io.github.nodyssey
 
+import io.github.nodyssey.data.AttendanceMode
 import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 
@@ -28,6 +29,9 @@ sealed interface LaunchRequest {
 
     /** The 发帖 launcher shortcut: an empty new-post editor, or the one already open. */
     data object OpenComposer : LaunchRequest
+
+    /** 随机签到 / 固定签到 from the launcher: 账户与成长, signing in for today in [mode] on arrival. */
+    data class SignInForToday(val mode: AttendanceMode) : LaunchRequest
 
     /**
      * Text and pictures another app shared into a new post.

@@ -32,4 +32,8 @@
     <string name="shortcut_compose_long">發一個新帖</string>
     <string name="shortcut_notifications">通知</string>
     <string name="shortcut_notifications_long">查看通知</string>
+    <string name="shortcut_sign_in_random">隨機簽到</string>
+    <string name="shortcut_sign_in_random_long">今日簽到：隨機雞腿</string>
+    <string name="shortcut_sign_in_fixed">固定簽到</string>
+    <string name="shortcut_sign_in_fixed_long">今日簽到：固定 5 個雞腿</string>
 </resources>

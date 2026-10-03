@@ -63,6 +63,7 @@ import androidx.navigation3.ui.defaultTransitionSpec
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.di.AppContainer
+import io.github.nodyssey.ui.assets.PendingAttendance
 import io.github.nodyssey.ui.common.LocalOpenNetworkCheck
 import io.github.nodyssey.ui.common.LocalThreadTransition
 import io.github.nodyssey.ui.common.appName
@@ -181,6 +182,7 @@ fun MainNavigation(
 
     /** A share from another app, on its way to the new-post editor — see [PendingComposerShare]. */
     val pendingComposerShare = remember { PendingComposerShare() }
+    val pendingAttendance = remember { PendingAttendance() }
 
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
 
@@ -283,6 +285,13 @@ fun MainNavigation(
             LaunchRequest.OpenComposer -> {
                 currentTab = TopLevelDestination.HOME
                 homeStack.bringToTop(PostComposerKey())
+            }
+
+            // 账户与成长 lives on 我的's stack; the sign-in itself waits there for the screen.
+            is LaunchRequest.SignInForToday -> {
+                currentTab = TopLevelDestination.PROFILE
+                pendingAttendance.offer(request.mode)
+                profileStack.bringToTop(AssetsKey)
             }
 
             is LaunchRequest.ShareToComposer -> {
@@ -497,6 +506,7 @@ fun MainNavigation(
                 openHomeTab = { currentTab = TopLevelDestination.HOME },
                 openProfileTab = { currentTab = TopLevelDestination.PROFILE },
                 pendingComposerShare = pendingComposerShare,
+                pendingAttendance = pendingAttendance,
             )
         return entryProvider {
             tabRootEntries(entryScope)
