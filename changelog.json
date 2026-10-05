@@ -2,12 +2,12 @@
   "schema": 1,
   "versions": [
     {
-      "versionName": "1.2.22-dev.4",
-      "tag": "v1.2.22-dev.4",
-      "publishedOn": "2026-10-03",
+      "versionName": "1.2.22-dev.5",
+      "tag": "v1.2.22-dev.5",
+      "publishedOn": "2026-10-05",
       "preRelease": true,
-      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.22-dev.4",
-      "notes": "测试版，由 tag `v1.2.22-dev.4` 构建。不是正式版本，可能不稳定。\n\n### 新增\n\n- 长按图标可随机或固定签到（Android）。\n- 再进帖子直达新回复，并标出分界线。\n- 可给用户写备注，名字旁显示。\n- 可按标题关键词屏蔽帖子。\n- 新帖标题含关键词时通知（Android）。\n- 可追踪帖子，有新回复时通知（Android）。\n- 测评报告可加入对比，并排比较。\n- 选中文字可在 NodeSeek 搜索（Android）。\n- 长按图标可直达搜索、发帖、通知（Android）。\n- 其他 App 可分享文字图片来发帖（Android）。\n- 剪贴板有帖子链接时提示打开（Android）。\n- 楼层可分享为图片。\n\n### 改进\n\n- iOS 改用原生底栏，液态玻璃效果。\n- 互动通知按今天、昨天、本周分组。\n\n### 变更\n\n- 收藏自动补新回复改为每 6 小时一次。\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.22-dev.3...v1.2.22-dev.4"
+      "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.22-dev.5",
+      "notes": "测试版，由 tag `v1.2.22-dev.5` 构建。不是正式版本，可能不稳定。\n\n### 新增\n\n- 可按标题关键词或正则屏蔽帖子。\n\n### 改进\n\n- 正文选中点任意处取消，不再闪全选。\n\n### 变更\n\n- 楼层只点头像和名字才进个人主页。\n\n### 修复\n\n- 测评报告表格行高与对齐错乱。\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.22-dev.4...v1.2.22-dev.5"
     },
     {
       "versionName": "1.2.21",
