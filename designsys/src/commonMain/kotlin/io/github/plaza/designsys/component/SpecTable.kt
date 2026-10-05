@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -127,8 +129,7 @@ fun SpecTable(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .width(widths.label)
-                            .height(heights.rows[rowIndex])
-                            .wrapContentHeight()
+                            .onBaseline(heights.rows[rowIndex])
                             .padding(horizontal = Spacing.sm),
                     )
                 }
@@ -162,8 +163,7 @@ fun SpecTable(
                                     onTextLayout = { layout = it },
                                     modifier = Modifier
                                         .width(widths.cells[index])
-                                        .height(heights.rows[rowIndex])
-                                        .wrapContentHeight()
+                                        .onBaseline(heights.rows[rowIndex])
                                         .padding(horizontal = Spacing.sm)
                                         .prefetchLinksOnPress(cell) { layout },
                                 )
@@ -299,19 +299,28 @@ private fun columnWidths(
     return ColumnWidths(label, cells.map { it + slack * (it.value / sum.value) })
 }
 
+private class RowMetrics(
+    /** Where every cell in the row puts its first baseline, from the row's top. */
+    val baseline: Dp,
+    val height: Dp,
+)
+
 private class RowHeights(
-    val header: Dp,
-    val rows: List<Dp>,
+    val header: RowMetrics,
+    val rows: List<RowMetrics>,
 )
 
 /**
- * One height per row, shared by the pinned column and the scrolling one.
+ * One baseline and one height per row, shared by the pinned column and the scrolling one.
  *
  * The two halves of the table are separate columns — that is what lets one scroll under the
  * other — so nothing in the layout ties row 5 on the left to row 5 on the right. Left to size
  * themselves, they drift: a CJK label and a Latin value fall back to fonts with different line
  * metrics, a pixel or two apart per row, and by the eighth row the value sits half a line above
- * its label. Measuring every cell of a row and giving both halves the tallest is the tie.
+ * its label. A shared height alone is not enough either: centring two line boxes of different
+ * heights still leaves their baselines apart. So each row is measured cell by cell, every cell
+ * sits its first baseline on the row's lowest one, and the row is as tall as the deepest
+ * descent below it — what a browser's `vertical-align: baseline` does for a table row.
  */
 private fun rowHeights(
     columns: List<AnnotatedString>,
@@ -322,28 +331,41 @@ private fun rowHeights(
     headerStyle: TextStyle,
     cellStyle: TextStyle,
 ): RowHeights {
-    fun height(
-        text: AnnotatedString,
-        style: TextStyle,
-    ): Dp = with(density) {
-        measurer.measure(text = text, style = style, softWrap = false, maxLines = 1).size.height.toDp()
+    fun metrics(
+        texts: List<Pair<AnnotatedString, TextStyle>>,
+        padding: Dp,
+    ): RowMetrics = with(density) {
+        val layouts =
+            texts.map { (text, style) ->
+                measurer.measure(text = text, style = style, softWrap = false, maxLines = 1)
+            }
+        val ascent = layouts.maxOf { it.firstBaseline }
+        val descent = layouts.maxOf { it.size.height - it.firstBaseline }
+        RowMetrics(baseline = padding + ascent.toDp(), height = padding * 2 + (ascent + descent).toDp())
     }
 
-    val header =
-        (listOf(AnnotatedString("")) + columns).maxOf { height(it, headerStyle) } + HEADER_PADDING * 2
+    val header = metrics((listOf(AnnotatedString("")) + columns).map { it to headerStyle }, HEADER_PADDING)
     val body =
         rows.map { row ->
-            row.cells.fold(height(row.label, labelStyle)) { acc, cell -> maxOf(acc, height(cell, cellStyle)) } +
-                ROW_PADDING * 2
+            metrics(listOf(row.label to labelStyle) + row.cells.map { it to cellStyle }, ROW_PADDING)
         }
     return RowHeights(header, body)
+}
+
+/** Sizes a cell to its row and places its text so the first baseline lands on the row's. */
+private fun Modifier.onBaseline(row: RowMetrics): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+    val baseline = placeable[FirstBaseline].takeIf { it != AlignmentLine.Unspecified } ?: 0
+    layout(placeable.width, row.height.roundToPx()) {
+        placeable.place(0, row.baseline.roundToPx() - baseline)
+    }
 }
 
 @Composable
 private fun SpecHeaderCell(
     text: AnnotatedString,
     width: Dp,
-    height: Dp,
+    height: RowMetrics,
 ) {
     Text(
         text = text,
@@ -354,8 +376,7 @@ private fun SpecHeaderCell(
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .width(width)
-            .height(height)
-            .wrapContentHeight()
+            .onBaseline(height)
             .padding(horizontal = Spacing.sm),
     )
 }

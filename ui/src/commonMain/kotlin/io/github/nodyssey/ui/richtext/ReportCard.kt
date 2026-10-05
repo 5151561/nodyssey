@@ -247,16 +247,21 @@ private fun NoteLine(note: QualityReport.Block.Note) {
 @Composable
 private fun FieldRow(field: QualityReport.Block.Field) {
     Row(modifier = Modifier.fillMaxWidth()) {
+        // Baseline, not top: the label is set a size under the value, so tops in line put the
+        // label's text visibly lower than the value's first line.
         Text(
             text = field.label,
             style = ReportLabel,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
+                .alignByBaseline()
                 .widthIn(min = LABEL_WIDTH)
                 .padding(end = Spacing.sm),
         )
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .alignByBaseline(),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             field.values.forEach { value ->
