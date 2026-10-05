@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -216,7 +215,7 @@ fun RichContent(
     // The container is what a selection needs, so it goes away entirely rather than being told to
     // select nothing — `DisableSelection` inside one would still leave the gesture detector there.
     if (selectable) {
-        SelectionContainer(modifier = modifier) { blocks(Modifier) }
+        RichSelectionContainer(modifier = modifier) { blocks(Modifier) }
     } else {
         blocks(modifier)
     }

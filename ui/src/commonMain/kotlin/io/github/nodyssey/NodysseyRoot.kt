@@ -38,6 +38,7 @@ import io.github.nodyssey.ui.settings.theme.activeCharacterPalette
 import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
 import io.github.nodyssey.ui.settings.theme.toPlaza
 import io.github.plaza.designsys.component.LocalLinkPrefetcher
+import io.github.plaza.designsys.richtext.DismissTextSelectionOnTap
 import io.github.plaza.designsys.richtext.LocalStickerSizing
 import io.github.plaza.designsys.richtext.StickerSizing
 import io.github.plaza.designsys.theme.PlazaTheme
@@ -237,7 +238,11 @@ internal fun NodysseyChrome(
                         modifier = modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background,
                     ) {
-                        content(storedSettings)
+                        // A post body turns up on six screens, and a selection in any of them should go
+                        // when the reader taps somewhere else — not only somewhere inside that body.
+                        DismissTextSelectionOnTap {
+                            content(storedSettings)
+                        }
                     }
                 }
             }
