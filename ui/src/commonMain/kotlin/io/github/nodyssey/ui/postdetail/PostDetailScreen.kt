@@ -1463,6 +1463,8 @@ private fun ThreadAuthorRow(
     avatarUrl: String?,
     authorName: String,
     modifier: Modifier = Modifier,
+    /** Put on the avatar and the name only — the badges, note and time beside them are not a way in. */
+    identity: Modifier = Modifier,
     badges: @Composable RowScope.() -> Unit = {},
     subtitle: @Composable () -> Unit = {},
 ) {
@@ -1478,7 +1480,11 @@ private fun ThreadAuthorRow(
             url = avatarUrl,
             name = authorName,
             size = Sizes.avatarOriginalPost,
-            modifier = Modifier.sharedThreadAvatar(postId),
+            modifier = Modifier
+                .sharedThreadAvatar(postId)
+                .then(identity)
+                // The name beside it is the same way in, and the one a screen reader is told about.
+                .clearAndSetSemantics {},
         )
         Column(Modifier.weight(1f)) {
             Row(
@@ -1492,7 +1498,8 @@ private fun ThreadAuthorRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .sharedThreadAuthor(postId),
+                        .sharedThreadAuthor(postId)
+                        .then(identity),
                 )
                 badges()
             }
@@ -1584,14 +1591,13 @@ private fun ThreadOpeningPost(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
-            // The identity block opens the author's space; the floor label stays outside it.
+            // The avatar and the name open the author's space; the rest of the row does not.
             ThreadAuthorRow(
                 postId = postId,
                 avatarUrl = body?.avatarUrl ?: preview?.avatarUrl,
                 authorName = body?.authorName ?: preview?.authorName.orEmpty(),
-                modifier = Modifier
-                    .weight(1f)
-                    .authorClickable(body?.authorUid, onAuthorClick),
+                modifier = Modifier.weight(1f),
+                identity = Modifier.authorClickable(body?.authorUid, onAuthorClick),
                 badges = {
                     if (body != null) {
                         FloorBadges(body)
@@ -1775,13 +1781,11 @@ private fun CommentRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    // The identity block opens the author's space; the floor label stays outside it.
-                    // Wrapping rather than squeezing: whatever does not fit after the name moves to
+                    // The avatar and the name open the author's space; the badges and the note
+                    // beside them do not. Wrapping rather than squeezing: whatever does not fit after the name moves to
                     // a second line, and a single line stays exactly as it was.
                     FlowRow(
-                        modifier = Modifier
-                            .weight(1f)
-                            .authorClickable(comment.authorUid, onAuthorClick),
+                        modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                         itemVerticalAlignment = Alignment.CenterVertically,
@@ -1791,6 +1795,7 @@ private fun CommentRow(
                             style = floorNameStyle(),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.authorClickable(comment.authorUid, onAuthorClick),
                         )
                         FloorBadges(comment)
                         UserNoteTag(comment.authorUid)
