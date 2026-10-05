@@ -9,10 +9,12 @@ import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.data.account.TelegramBinding
 import io.github.nodyssey.ui.account.BlockListScreen
 import io.github.nodyssey.ui.account.BlockListUiState
+import io.github.nodyssey.ui.account.BlockTab
 import io.github.nodyssey.ui.account.ContactScreen
 import io.github.nodyssey.ui.account.ContactUiState
 import io.github.nodyssey.ui.account.SecurityScreen
 import io.github.nodyssey.ui.account.SecurityUiState
+import io.github.nodyssey.ui.account.TitleBlockUiState
 import io.github.plaza.designsys.theme.PlazaTheme
 import org.junit.Before
 import org.junit.Rule
@@ -67,6 +69,9 @@ class AccountScreensRenderTest {
                         isLoading = false,
                         blocked = listOf(BlockedUser(uid = 1, name = "机场信仰充值中"), BlockedUser(uid = 2, name = "vps_matthew")),
                     ),
+                    titleState = TitleBlockUiState(),
+                    selectedTab = BlockTab.USERS,
+                    onSelectTab = {},
                     snackbarHostState = remember { SnackbarHostState() },
                     onBack = {},
                     onShowBlockedChange = {},
@@ -76,6 +81,10 @@ class AccountScreensRenderTest {
                     onDismissUnblock = {},
                     onConfirmUnblock = {},
                     onOpenUser = {},
+                    onRuleInputChange = {},
+                    onRegexChange = {},
+                    onAddRule = {},
+                    onRemoveRule = {},
                 )
             }
         }

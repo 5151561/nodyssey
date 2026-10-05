@@ -8,6 +8,8 @@ import io.github.nodyssey.data.local.FeedPositionEntity
 import io.github.nodyssey.data.local.FeedPostRow
 import io.github.nodyssey.data.local.FeedRemoteKeyEntity
 import io.github.nodyssey.data.local.NodeSeekDatabase
+import io.github.nodyssey.data.local.PostTitle
+import io.github.nodyssey.data.local.matchRegexHits
 import io.github.nodyssey.data.local.toEntity
 import io.github.nodyssey.data.local.writeTransaction
 import io.github.nodyssey.model.FeedSort
@@ -112,6 +114,7 @@ class FeedRemoteMediator(
 
                 val baseSortIndex = feedDao.nextSortIndex(feedKey)
                 feedDao.upsertPosts(result.posts.map { it.toEntity(now) })
+                database.titleKeywordDao().matchRegexHits(result.posts.map { PostTitle(it.postId, it.title) })
                 feedDao.insertPositions(
                     result.posts.mapIndexed { offset, post ->
                         FeedPositionEntity(

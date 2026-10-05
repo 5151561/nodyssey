@@ -15,7 +15,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +31,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -37,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.nodyssey.data.TitleBlockRule
 import io.github.nodyssey.data.account.BlockedUser
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_block_add_action
@@ -48,13 +56,24 @@ import io.github.nodyssey.ui.resources.account_block_row_hint
 import io.github.nodyssey.ui.resources.account_block_section
 import io.github.nodyssey.ui.resources.account_block_show_temporarily
 import io.github.nodyssey.ui.resources.account_block_show_temporarily_hint
-import io.github.nodyssey.ui.resources.account_block_title
 import io.github.nodyssey.ui.resources.account_block_unblock
 import io.github.nodyssey.ui.resources.account_blocked_count
 import io.github.nodyssey.ui.resources.account_confirm_unblock_action
 import io.github.nodyssey.ui.resources.account_confirm_unblock_body
 import io.github.nodyssey.ui.resources.account_confirm_unblock_title
 import io.github.nodyssey.ui.resources.action_back
+import io.github.nodyssey.ui.resources.block_tab_titles
+import io.github.nodyssey.ui.resources.block_tab_users
+import io.github.nodyssey.ui.resources.block_title
+import io.github.nodyssey.ui.resources.block_titles_footer
+import io.github.nodyssey.ui.resources.keywords_add_action
+import io.github.nodyssey.ui.resources.keywords_add_placeholder
+import io.github.nodyssey.ui.resources.keywords_empty
+import io.github.nodyssey.ui.resources.keywords_regex_invalid
+import io.github.nodyssey.ui.resources.keywords_regex_placeholder
+import io.github.nodyssey.ui.resources.keywords_regex_toggle
+import io.github.nodyssey.ui.resources.keywords_remove
+import io.github.nodyssey.ui.resources.keywords_rule_regex
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.LayerCard
@@ -63,6 +82,8 @@ import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaFieldDefaults
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.SectionLabel
+import io.github.plaza.designsys.component.TabLabel
+import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.listAvatarSize
 import io.github.plaza.designsys.component.rememberOneHandAppBarState
@@ -74,6 +95,9 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun BlockListRoute(
     viewModel: BlockListViewModel,
+    titleViewModel: TitleBlockViewModel,
+    /** Which tab the page opens on — 设置's 标题屏蔽 row lands on 标题, everything else on 用户. */
+    initialTab: BlockTab,
     onBack: () -> Unit,
     onSignIn: () -> Unit,
     /** Clears a Cloudflare challenge, then comes back to this page. */
@@ -82,6 +106,8 @@ fun BlockListRoute(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val titleState by titleViewModel.uiState.collectAsStateWithLifecycle()
+    var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
     val snackbarHostState = remember { SnackbarHostState() }
     AccountMessageSnackbar(
         message = state.message,
@@ -93,6 +119,9 @@ fun BlockListRoute(
 
     BlockListScreen(
         state = state,
+        titleState = titleState,
+        selectedTab = selectedTab,
+        onSelectTab = { selectedTab = it },
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onShowBlockedChange = viewModel::setShowBlockedContent,
@@ -102,23 +131,35 @@ fun BlockListRoute(
         onDismissUnblock = viewModel::dismissUnblock,
         onConfirmUnblock = viewModel::confirmUnblock,
         onOpenUser = onOpenUser,
+        onRuleInputChange = titleViewModel::onInputChange,
+        onRegexChange = titleViewModel::setRegex,
+        onAddRule = titleViewModel::add,
+        onRemoveRule = titleViewModel::remove,
         modifier = modifier,
     )
 }
 
+/** The two things 屏蔽 hides by: who wrote a thread, and what its title says. */
+enum class BlockTab { USERS, TITLES }
+
 /**
- * 屏蔽用户 (d6 4/5): the reveal switch on top, then the account's blocked list.
+ * 屏蔽: two tabs over one reveal switch — 用户 (d6 4/5), the account's blocked list, and 标题, the
+ * reader's own title rules.
  *
- * The list is Remote and badged as such — blocking is account state, and it is the *server* that
- * decides which posts and comments arrive marked. The switch below it is the one device-side control
- * on the page: it unhides what is already downloaded, and its subtitle says out loud that the reveal
- * ends with the app. That promise is what makes it safe to flip out of curiosity, and it keeps the
- * site's own wording for the feature rather than inventing a scarier or softer version.
+ * The user list is Remote and badged as such — blocking is account state, and it is the *server* that
+ * decides which posts and comments arrive marked. The title rules are the opposite: they never leave
+ * the phone. 临时显示被屏蔽内容 heads both tabs because it waives both: it unhides what is already
+ * downloaded, and its subtitle says out loud that the reveal ends with the app. That promise is what
+ * makes it safe to flip out of curiosity, and it keeps the site's own wording for the feature rather
+ * than inventing a scarier or softer version.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BlockListScreen(
     state: BlockListUiState,
+    titleState: TitleBlockUiState,
+    selectedTab: BlockTab,
+    onSelectTab: (BlockTab) -> Unit,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShowBlockedChange: (Boolean) -> Unit,
@@ -128,15 +169,20 @@ fun BlockListScreen(
     onDismissUnblock: () -> Unit,
     onConfirmUnblock: () -> Unit,
     onOpenUser: (Long) -> Unit,
+    onRuleInputChange: (String) -> Unit,
+    onRegexChange: (Boolean) -> Unit,
+    onAddRule: () -> Unit,
+    onRemoveRule: (TitleBlockRule) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appBarState = rememberOneHandAppBarState()
+    val tabs = BlockTab.entries
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             OneHandTopAppBar(
-                title = stringResource(Res.string.account_block_title),
+                title = stringResource(Res.string.block_title),
                 state = appBarState,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -149,68 +195,53 @@ fun BlockListScreen(
             )
         },
     ) { padding ->
-        Column(
-            modifier =
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .readableWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = LayerPageGutter, vertical = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            ShowBlockedSwitchCard(
-                checked = state.showBlockedContent,
-                onCheckedChange = onShowBlockedChange,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                SectionLabel(
-                    text = stringResource(Res.string.account_block_section),
-                    contentPadding = PaddingValues(start = Spacing.md),
-                )
-                StorageBadge(local = false)
-                Spacer(Modifier.weight(1f))
-                if (state.blocked.isNotEmpty()) {
-                    Text(
-                        stringResource(Res.string.account_blocked_count, state.blocked.size),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(Modifier.padding(padding).fillMaxSize().readableWidth()) {
+            UnderlineTabRow(
+                selectedTabIndex = tabs.indexOf(selectedTab),
+                tabs =
+                tabs.map {
+                    TabLabel(
+                        stringResource(
+                            when (it) {
+                                BlockTab.USERS -> Res.string.block_tab_users
+                                BlockTab.TITLES -> Res.string.block_tab_titles
+                            },
+                        ),
                     )
-                }
-            }
-
-            AddBlockField(
-                name = state.nameInput,
-                isBlocking = state.isBlocking,
-                onNameChange = onNameChange,
-                onBlock = onBlock,
+                },
+                onSelect = { onSelectTab(tabs[it]) },
             )
-
-            if (!state.isLoading && state.blocked.isEmpty()) {
-                BlockedEmptyState()
-            } else {
-                Column {
-                    state.blocked.forEachIndexed { index, user ->
-                        BlockedRow(
-                            user = user,
-                            first = index == 0,
-                            last = index == state.blocked.lastIndex,
-                            onOpen = { onOpenUser(user.uid) },
-                            onUnblock = { onRequestUnblock(user) },
-                        )
-                    }
-                }
-                Text(
-                    stringResource(Res.string.account_block_footer),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = Spacing.xs),
+            Column(
+                modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = LayerPageGutter, vertical = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                ShowBlockedSwitchCard(
+                    checked = state.showBlockedContent,
+                    onCheckedChange = onShowBlockedChange,
                 )
+                when (selectedTab) {
+                    BlockTab.USERS ->
+                        BlockedUsersContent(
+                            state = state,
+                            onNameChange = onNameChange,
+                            onBlock = onBlock,
+                            onRequestUnblock = onRequestUnblock,
+                            onOpenUser = onOpenUser,
+                        )
+
+                    BlockTab.TITLES ->
+                        TitleRulesContent(
+                            state = titleState,
+                            onInputChange = onRuleInputChange,
+                            onRegexChange = onRegexChange,
+                            onAdd = onAddRule,
+                            onRemove = onRemoveRule,
+                        )
+                }
             }
         }
     }
@@ -225,6 +256,157 @@ fun BlockListScreen(
             onDismiss = onDismissUnblock,
         )
     }
+}
+
+@Composable
+private fun BlockedUsersContent(
+    state: BlockListUiState,
+    onNameChange: (String) -> Unit,
+    onBlock: () -> Unit,
+    onRequestUnblock: (BlockedUser) -> Unit,
+    onOpenUser: (Long) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        SectionLabel(
+            text = stringResource(Res.string.account_block_section),
+            contentPadding = PaddingValues(start = Spacing.md),
+        )
+        StorageBadge(local = false)
+        Spacer(Modifier.weight(1f))
+        if (state.blocked.isNotEmpty()) {
+            Text(
+                stringResource(Res.string.account_blocked_count, state.blocked.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    AddBlockField(
+        name = state.nameInput,
+        isBlocking = state.isBlocking,
+        onNameChange = onNameChange,
+        onBlock = onBlock,
+    )
+
+    if (!state.isLoading && state.blocked.isEmpty()) {
+        BlockedEmptyState(stringResource(Res.string.account_block_empty))
+    } else {
+        Column {
+            state.blocked.forEachIndexed { index, user ->
+                BlockedRow(
+                    user = user,
+                    first = index == 0,
+                    last = index == state.blocked.lastIndex,
+                    onOpen = { onOpenUser(user.uid) },
+                    onUnblock = { onRequestUnblock(user) },
+                )
+            }
+        }
+        FooterText(stringResource(Res.string.account_block_footer))
+    }
+}
+
+/**
+ * 标题: one field for both kinds of rule, with 正则表达式 as a chip under it rather than a second
+ * field — a rule is a word or a pattern, and the chip says which the next one will be. A pattern that
+ * does not compile is caught while it is typed, so 添加 never stores a rule that cannot match.
+ */
+@Composable
+private fun TitleRulesContent(
+    state: TitleBlockUiState,
+    onInputChange: (String) -> Unit,
+    onRegexChange: (Boolean) -> Unit,
+    onAdd: () -> Unit,
+    onRemove: (TitleBlockRule) -> Unit,
+) {
+    val canAdd = state.input.isNotBlank() && !state.invalidPattern
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        SectionLabel(
+            text = stringResource(Res.string.block_tab_titles),
+            contentPadding = PaddingValues(start = Spacing.md),
+        )
+        StorageBadge(local = true)
+    }
+    Column {
+        OutlinedTextField(
+            value = state.input,
+            onValueChange = onInputChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = state.invalidPattern,
+            placeholder = {
+                Text(stringResource(if (state.isRegex) Res.string.keywords_regex_placeholder else Res.string.keywords_add_placeholder))
+            },
+            supportingText = if (state.invalidPattern) {
+                { Text(stringResource(Res.string.keywords_regex_invalid)) }
+            } else {
+                null
+            },
+            shape = PlazaFieldDefaults.shape,
+            colors = PlazaFieldDefaults.colors(),
+            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (canAdd) onAdd() }),
+            trailingIcon = {
+                TextButton(onClick = onAdd, enabled = canAdd) {
+                    Text(stringResource(Res.string.keywords_add_action))
+                }
+            },
+        )
+        FilterChip(
+            selected = state.isRegex,
+            onClick = { onRegexChange(!state.isRegex) },
+            label = { Text(stringResource(Res.string.keywords_regex_toggle)) },
+            leadingIcon = if (state.isRegex) {
+                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
+            } else {
+                null
+            },
+        )
+    }
+
+    if (state.rules.isEmpty()) {
+        BlockedEmptyState(stringResource(Res.string.keywords_empty))
+    } else {
+        Column {
+            state.rules.forEachIndexed { index, rule ->
+                GroupedListItem(
+                    first = index == 0,
+                    last = index == state.rules.lastIndex,
+                    headlineContent = { Text(rule.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    supportingContent = if (rule.isRegex) {
+                        { Text(stringResource(Res.string.keywords_rule_regex)) }
+                    } else {
+                        null
+                    },
+                    trailingContent = {
+                        IconButton(onClick = { onRemove(rule) }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.keywords_remove, rule.text))
+                        }
+                    },
+                )
+            }
+        }
+    }
+    FooterText(stringResource(Res.string.block_titles_footer))
+}
+
+@Composable
+private fun FooterText(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = Spacing.xs),
+    )
 }
 
 @Composable
@@ -315,7 +497,7 @@ private fun BlockedRow(
 }
 
 @Composable
-private fun BlockedEmptyState() {
+private fun BlockedEmptyState(text: String) {
     LayerCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -329,7 +511,7 @@ private fun BlockedEmptyState() {
                 modifier = Modifier.size(18.dp),
             )
             Text(
-                stringResource(Res.string.account_block_empty),
+                text,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -352,6 +534,9 @@ private fun BlockListPreview() {
                     BlockedUser(uid = 3, name = "白嫖失败选手"),
                 ),
             ),
+            titleState = TitleBlockUiState(),
+            selectedTab = BlockTab.USERS,
+            onSelectTab = {},
             snackbarHostState = remember { SnackbarHostState() },
             onBack = {},
             onShowBlockedChange = {},
@@ -361,6 +546,10 @@ private fun BlockListPreview() {
             onDismissUnblock = {},
             onConfirmUnblock = {},
             onOpenUser = {},
+            onRuleInputChange = {},
+            onRegexChange = {},
+            onAddRule = {},
+            onRemoveRule = {},
         )
     }
 }

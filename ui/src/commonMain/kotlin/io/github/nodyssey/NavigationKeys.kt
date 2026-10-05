@@ -106,7 +106,7 @@ data object HelpKey : NavKey
 @Serializable
 data object OpenSourceLicensesKey : NavKey
 
-/** 屏蔽关键词, or 提醒关键词 when [alerts] — one screen over the two uses of a title keyword. */
+/** 提醒关键词. 屏蔽关键词 moved to 屏蔽 › 标题 ([AccountBlockListKey]); [alerts] false still opens the plain-keyword list. */
 @Serializable
 data class TitleKeywordsKey(val alerts: Boolean = false) : NavKey
 
@@ -134,9 +134,9 @@ data object AccountSecurityKey : NavKey
 @Serializable
 data object AccountContactKey : NavKey
 
-/** 屏蔽用户 (d6 4/5). */
+/** 屏蔽: 用户 (d6 4/5), or 标题 when [titles] — the reader's own title rules. */
 @Serializable
-data object AccountBlockListKey : NavKey
+data class AccountBlockListKey(val titles: Boolean = false) : NavKey
 
 /** 偏好与首页版块 (d6 5/5). */
 @Serializable

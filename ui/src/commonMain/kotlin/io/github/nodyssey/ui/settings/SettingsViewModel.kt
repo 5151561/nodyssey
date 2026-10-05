@@ -25,7 +25,6 @@ import io.github.nodyssey.data.settings.ThemeMode
 import io.github.nodyssey.data.settings.UserSettings
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
-import io.github.nodyssey.model.TitleKeywordKind
 import io.github.plaza.core.AppVersion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -69,7 +68,7 @@ class SettingsViewModel(
             imageHost.current,
             proxy.config,
             doh?.settings?.config ?: flowOf(null),
-            titleKeywords.keywords(TitleKeywordKind.BLOCK),
+            titleKeywords.blockRules,
         ) { host, proxy, doh, blockKeywords ->
             SettingsEntries(
                 imageHostProvider = host.provider,

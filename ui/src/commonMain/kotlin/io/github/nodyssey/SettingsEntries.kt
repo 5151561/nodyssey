@@ -59,7 +59,7 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(nav: StackEntryScope) = 
             onOpenImageHost = { backStack.add(ImageHostKey) },
             onOpenAbout = { backStack.add(AboutAppKey) },
             onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
-            onOpenBlockKeywords = { backStack.add(TitleKeywordsKey()) },
+            onOpenBlockKeywords = { backStack.add(AccountBlockListKey(titles = true)) },
         )
     }
 

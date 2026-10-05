@@ -2,6 +2,7 @@ package io.github.nodyssey.data
 
 import io.github.nodyssey.data.local.TitleKeywordDao
 import io.github.nodyssey.data.local.TitleKeywordEntity
+import io.github.nodyssey.data.local.TitleRegexRules
 import io.github.nodyssey.data.local.TrackedThreadDao
 import io.github.nodyssey.data.local.TrackedThreadEntity
 import io.github.nodyssey.data.local.UserNoteDao
@@ -73,13 +74,54 @@ class TitleKeywordStore(
         keyword: String,
     ) = dao.delete(kind, keyword)
 
+    /** 屏蔽 › 标题: the plain keywords and the patterns together, in the order they were added. */
+    val blockRules: Flow<List<TitleBlockRule>> =
+        dao.observeBlockRules().map { rows ->
+            rows.map { TitleBlockRule(text = it.keyword, isRegex = it.kind == TitleKeywordKind.BLOCK_REGEX) }
+        }
+
+    /**
+     * Adds a 标题屏蔽 rule. False when there is nothing to add or, for a pattern, when it does not
+     * compile — the caller says so rather than storing a rule that can never match.
+     */
+    suspend fun addBlockRule(
+        text: String,
+        isRegex: Boolean,
+    ): Boolean {
+        if (!isRegex) return add(TitleKeywordKind.BLOCK, text)
+        val pattern = normalizePattern(text) ?: return false
+        dao.insert(TitleKeywordEntity(kind = TitleKeywordKind.BLOCK_REGEX, keyword = pattern, addedAtMillis = clock.nowMillis()))
+        rebuildRegexHits()
+        return true
+    }
+
+    suspend fun removeBlockRule(rule: TitleBlockRule) {
+        if (!rule.isRegex) return remove(TitleKeywordKind.BLOCK, rule.text)
+        dao.delete(TitleKeywordKind.BLOCK_REGEX, rule.text)
+        rebuildRegexHits()
+    }
+
+    private suspend fun rebuildRegexHits() =
+        dao.rebuildRegexHits(TitleRegexRules(current(TitleKeywordKind.BLOCK_REGEX)))
+
     companion object {
         const val MAX_KEYWORD_LENGTH = 30
+        const val MAX_PATTERN_LENGTH = 200
+
+        /** The stored form of a pattern, or null when it is blank or does not compile. */
+        fun normalizePattern(pattern: String): String? =
+            pattern.trim().take(MAX_PATTERN_LENGTH).takeIf { it.isNotEmpty() && TitleRegexRules.compileOrNull(it) != null }
 
         /** The stored form of [keyword], or null when there is nothing left of it to match. */
         fun normalizeKeyword(keyword: String): String? = keyword.trim().lowercase().take(MAX_KEYWORD_LENGTH).ifEmpty { null }
     }
 }
+
+/** One 标题屏蔽 rule: a word a title must contain, or a pattern it must match. */
+data class TitleBlockRule(
+    val text: String,
+    val isRegex: Boolean,
+)
 
 /**
  * A followed thread. [lastKnownCount] is the reply count the reader has been told about; negative

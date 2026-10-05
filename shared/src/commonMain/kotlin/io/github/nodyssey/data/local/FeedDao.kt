@@ -28,13 +28,14 @@ data class FeedPostRow(
 
 /**
  * The one visibility rule every feed query shares: the site's block mark, then the reader's own
- * title keywords, both waived by 临时显示被屏蔽内容. One constant because the queries that count rows
+ * title keywords and the posts their title patterns matched (`title_regex_hits`), all waived by 临时显示被屏蔽内容. One constant because the queries that count rows
  * for 首页翻页栏 must hide exactly what the list hides, or every index they return is off by the
  * difference.
  */
 private const val VISIBLE_UNLESS_REVEALED =
     "(:includeBlocked OR (p.isBlocked = 0 AND NOT EXISTS (" +
-        "SELECT 1 FROM title_keywords k WHERE k.kind = 'BLOCK' AND instr(lower(p.title), k.keyword) > 0)))"
+        "SELECT 1 FROM title_keywords k WHERE k.kind = 'BLOCK' AND instr(lower(p.title), k.keyword) > 0) " +
+        "AND p.postId NOT IN (SELECT postId FROM title_regex_hits)))"
 
 @Dao
 interface FeedDao {

@@ -36,6 +36,20 @@ data class TitleKeywordEntity(
 )
 
 /**
+ * A cached post whose title one of the reader's [TitleKeywordKind.BLOCK_REGEX] rules matches.
+ *
+ * Derived, not decided: SQLite has no `REGEXP` function on either driver this app opens it with, so the
+ * feed query cannot run a pattern itself. The matches are worked out in Kotlin instead — for every
+ * cached post when the rules change, for each page as it is written — and the feed query hides
+ * whatever is listed here, the way it hides `isBlocked`. A row for a post that has since been pruned
+ * is harmless; the next rebuild drops it.
+ */
+@Entity(tableName = "title_regex_hits")
+data class TitleRegexHitEntity(
+    @PrimaryKey val postId: Long,
+)
+
+/**
  * 追踪新回复 — a thread the reader asked to hear about when somebody replies.
  *
  * [lastKnownCount] is the reply count the reader has already been told about, by a notification or

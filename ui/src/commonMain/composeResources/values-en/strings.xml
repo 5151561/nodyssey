@@ -1393,7 +1393,7 @@
     <string name="profile_tile_ruling">Moderation log</string>
     <string name="profile_tile_providers">Providers</string>
     <string name="profile_tile_friends">Friend sites</string>
-    <string name="profile_tile_block">Blocked users</string>
+    <string name="profile_tile_block">Block</string>
     <string name="profile_tile_about_community">About the forum</string>
     <string name="profile_tile_account">Account</string>
     <string name="profile_tile_notifications">Notifications</string>
@@ -1415,7 +1415,7 @@
     <string name="user_note_dialog_hint">Kept on this device only. Clear to delete.</string>
     <string name="user_note_save">Save</string>
     <string name="user_note_action">Note</string>
-    <string name="keywords_block_title">Muted keywords</string>
+    <string name="keywords_block_title">Muted titles</string>
     <string name="keywords_alert_title">Keyword alerts</string>
     <string name="keywords_summary_none">None</string>
     <string name="keywords_summary_count">%1$d set</string>
@@ -1425,6 +1425,14 @@
     <string name="keywords_remove">Remove %1$s</string>
     <string name="keywords_block_footer">Threads whose titles contain these words are hidden from the home feed, boards and search. Kept on this device only, not on your account. Show blocked content reveals them too.</string>
     <string name="keywords_alert_footer">Each background check also looks at the newest threads and notifies you when a title contains one of these words. Kept on this device only.</string>
+    <string name="block_title">Block</string>
+    <string name="block_tab_users">Users</string>
+    <string name="block_tab_titles">Titles</string>
+    <string name="keywords_regex_toggle">Regular expression</string>
+    <string name="keywords_regex_placeholder">A pattern to match in titles</string>
+    <string name="keywords_regex_invalid">This is not a valid regular expression</string>
+    <string name="keywords_rule_regex">Regular expression</string>
+    <string name="block_titles_footer">Threads whose titles contain one of these words, or match one of these patterns, are hidden from the home feed, boards and search. Matching ignores case. Kept on this device only, not on your account. Show blocked content reveals them too.</string>
     <string name="notify_app_alerts_section">App alerts</string>
     <string name="notify_keyword_alerts">Keyword alerts</string>
     <string name="notify_tracked_threads">Followed threads</string>

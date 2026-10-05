@@ -37,6 +37,9 @@ class BlockListScreenTest {
             PlazaTheme {
                 BlockListScreen(
                     state = state.copy(nameInput = nameInput),
+                    titleState = TitleBlockUiState(),
+                    selectedTab = BlockTab.USERS,
+                    onSelectTab = {},
                     snackbarHostState = SnackbarHostState(),
                     onBack = {},
                     onShowBlockedChange = {},
@@ -46,6 +49,10 @@ class BlockListScreenTest {
                     onDismissUnblock = {},
                     onConfirmUnblock = {},
                     onOpenUser = {},
+                    onRuleInputChange = {},
+                    onRegexChange = {},
+                    onAddRule = {},
+                    onRemoveRule = {},
                 )
             }
         }

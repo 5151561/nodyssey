@@ -35,8 +35,9 @@ import androidx.sqlite.execSQL
         UserNoteEntity::class,
         TitleKeywordEntity::class,
         TrackedThreadEntity::class,
+        TitleRegexHitEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -423,6 +424,19 @@ val MIGRATION_16_17 =
     }
 
 /**
+ * Adds the table 标题屏蔽's regular-expression rules are matched into. Empty on arrival, which is
+ * right: no build before this one could store such a rule.
+ */
+val MIGRATION_17_18 =
+    object : Migration(17, 18) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `title_regex_hits` (`postId` INTEGER NOT NULL, PRIMARY KEY(`postId`))",
+            )
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -449,4 +463,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_14_15,
     MIGRATION_15_16,
     MIGRATION_16_17,
+    MIGRATION_17_18,
 )

@@ -7,6 +7,7 @@ import io.github.nodyssey.ui.account.AccountSettingsRoute
 import io.github.nodyssey.ui.account.AccountSettingsViewModel
 import io.github.nodyssey.ui.account.BlockListRoute
 import io.github.nodyssey.ui.account.BlockListViewModel
+import io.github.nodyssey.ui.account.BlockTab
 import io.github.nodyssey.ui.account.ContactRoute
 import io.github.nodyssey.ui.account.ContactViewModel
 import io.github.nodyssey.ui.account.ImageHostRoute
@@ -17,6 +18,7 @@ import io.github.nodyssey.ui.account.ProfileFieldsRoute
 import io.github.nodyssey.ui.account.ProfileFieldsViewModel
 import io.github.nodyssey.ui.account.SecurityRoute
 import io.github.nodyssey.ui.account.SecurityViewModel
+import io.github.nodyssey.ui.account.TitleBlockViewModel
 import io.github.nodyssey.ui.login.WebViewGoal
 
 /**
@@ -35,7 +37,7 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             onOpenProfileFields = { backStack.add(AccountProfileFieldsKey) },
             onOpenSecurity = { backStack.add(AccountSecurityKey) },
             onOpenContact = { backStack.add(AccountContactKey) },
-            onOpenBlockList = { backStack.add(AccountBlockListKey) },
+            onOpenBlockList = { backStack.add(AccountBlockListKey()) },
             // 常用偏好 and 首页版块 share one page (d6 5/5): three of their rows are the
             // same account-side switches, and splitting them would leave two stub screens.
             onOpenPreferences = { backStack.add(AccountPreferencesKey) },
@@ -112,11 +114,15 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
         )
     }
 
-    entry<AccountBlockListKey> {
+    entry<AccountBlockListKey> { key ->
         val viewModel: BlockListViewModel =
             viewModel(factory = BlockListViewModel.factory(container))
+        val titleViewModel: TitleBlockViewModel =
+            viewModel(factory = TitleBlockViewModel.factory(container))
         BlockListRoute(
             viewModel = viewModel,
+            titleViewModel = titleViewModel,
+            initialTab = if (key.titles) BlockTab.TITLES else BlockTab.USERS,
             onBack = { backStack.removeLastOrNull() },
             onSignIn = { backStack.add(SignInKey) },
             onOpenUser = openSpace,

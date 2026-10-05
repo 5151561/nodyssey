@@ -149,7 +149,7 @@ private val EVERY_KEY: List<NavKey> =
         AccountProfileFieldsKey,
         AccountSecurityKey,
         AccountContactKey,
-        AccountBlockListKey,
+        AccountBlockListKey(titles = true),
         AccountPreferencesKey,
         FollowKey(showFollowers = true),
         BookmarksKey,

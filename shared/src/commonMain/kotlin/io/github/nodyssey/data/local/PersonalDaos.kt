@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import io.github.nodyssey.model.TitleKeywordKind
 import kotlinx.coroutines.flow.Flow
@@ -37,7 +38,39 @@ interface TitleKeywordDao {
         kind: TitleKeywordKind,
         keyword: String,
     )
+
+    /** Both kinds of 标题屏蔽 rule, oldest first — the one list the 屏蔽 › 标题 tab draws. */
+    @Query("SELECT * FROM title_keywords WHERE kind IN ('BLOCK', 'BLOCK_REGEX') ORDER BY addedAtMillis ASC")
+    fun observeBlockRules(): Flow<List<TitleKeywordEntity>>
+
+    @Query("SELECT postId, title FROM posts")
+    suspend fun postTitles(): List<PostTitle>
+
+    @Query("DELETE FROM title_regex_hits")
+    suspend fun clearRegexHits()
+
+    @Query("DELETE FROM title_regex_hits WHERE postId IN (:postIds)")
+    suspend fun deleteRegexHits(postIds: List<Long>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRegexHits(hits: List<TitleRegexHitEntity>)
+
+    /**
+     * Re-matches every cached title against [rules] in one transaction, so the feed never re-queries
+     * between the old hits going and the new ones landing — that would flash every hidden row.
+     */
+    @Transaction
+    suspend fun rebuildRegexHits(rules: TitleRegexRules) {
+        clearRegexHits()
+        if (rules.isEmpty) return
+        insertRegexHits(postTitles().filter { rules.matches(it.title) }.map { TitleRegexHitEntity(it.postId) })
+    }
 }
+
+data class PostTitle(
+    val postId: Long,
+    val title: String,
+)
 
 @Dao
 interface TrackedThreadDao {

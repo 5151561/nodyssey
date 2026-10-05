@@ -113,6 +113,23 @@ class FeedRemoteMediatorTest {
         }
 
     /**
+     * A title pattern added before a page arrives hides its matches as the page is written — the
+     * mediator is the only writer of `posts`, so this is the one place a new title gets matched.
+     */
+    @Test
+    fun `a page written after a title pattern exists hides its matches`() =
+        runTest {
+            TitleKeywordStore(database.titleKeywordDao(), clock).addBlockRule("^post 10[1-2]$", isRegex = true)
+            remote.listResult = { slug, page ->
+                FakePostRemoteDataSource.page(slug, page, firstId = 100L * page, count = 4)
+            }
+
+            load(LoadType.REFRESH)
+
+            assertEquals(listOf(100L, 103L), storedFeed())
+        }
+
+    /**
      * NodeSeek sorts by last activity, so a post from page 1 routinely reappears on page 2 seconds
      * later. If the append moved it, it would jump out from under the reader's finger.
      */

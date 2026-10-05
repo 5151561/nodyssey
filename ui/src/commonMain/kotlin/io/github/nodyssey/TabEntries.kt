@@ -174,7 +174,7 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
                 // around someone else's HTML.
                 providers = { openWebUrl(NodeSeekSite.BASE_URL + NodeSeekSite.PROVIDERS_PATH) },
                 friends = { openWebUrl(NodeSeekSite.BASE_URL + NodeSeekSite.FRIENDS_PATH) },
-                blockList = { backStack.add(AccountBlockListKey) },
+                blockList = { backStack.add(AccountBlockListKey()) },
                 aboutCommunity = { backStack.add(AboutCommunityKey) },
                 accountSettings = { backStack.add(AccountSettingsKey) },
                 notificationSettings = { backStack.add(NotificationSettingsKey) },

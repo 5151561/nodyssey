@@ -461,6 +461,20 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /** The table pattern matches are written to arrives empty and is one the feed query can read. */
+    @Test
+    fun `migration 17 to 18 adds an empty title pattern hit table`() {
+        helper.createDatabase(DATABASE_NAME, 17).close()
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 18, true, MIGRATION_17_18)
+
+        migrated.query("SELECT COUNT(*) FROM title_regex_hits").use {
+            it.moveToFirst()
+            assertEquals(0, it.getInt(0))
+        }
+        migrated.close()
+    }
+
     /**
      * The whole ladder at once, which is the only test that runs it the way a device does.
      *
@@ -499,7 +513,7 @@ class NodeSeekDatabaseMigrationTest {
             close()
         }
 
-        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 17, true, *NODESEEK_MIGRATIONS)
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 18, true, *NODESEEK_MIGRATIONS)
 
         migrated.query("SELECT title, isBlocked, isAwarded FROM posts WHERE postId = 42").use {
             it.moveToFirst()

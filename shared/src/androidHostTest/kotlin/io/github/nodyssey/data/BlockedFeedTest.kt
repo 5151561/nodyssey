@@ -150,4 +150,39 @@ class BlockedFeedTest {
 
             assertEquals(listOf(2L), feedIds())
         }
+
+    /**
+     * A pattern rule hides what is already cached the moment it is added, and lets it back when it
+     * is removed. `\\d{2}` is the case a word cannot express: it must leave `post 2` alone.
+     */
+    @Test
+    fun `a title pattern hides cached matches until revealed or removed`() =
+        runTest {
+            givenFeed()
+            database.feedDao().upsertPosts(listOf(summary(22, blocked = false).toEntity(clock.nowMillis())))
+            database.feedDao().insertPositions(listOf(FeedPositionEntity(FRONT_PAGE_FEED_KEY, 22, 2)))
+            val keywords = TitleKeywordStore(database.titleKeywordDao(), clock)
+
+            keywords.addBlockRule("POST \\d{2}", isRegex = true)
+
+            assertEquals(listOf(2L), feedIds())
+            assertEquals(listOf(2L), repository.search("post").first().map { it.summary.postId })
+
+            showBlocked.value = true
+            assertEquals(listOf(1L, 2L, 22L), feedIds())
+            showBlocked.value = false
+
+            keywords.removeBlockRule(TitleBlockRule("POST \\d{2}", isRegex = true))
+
+            assertEquals(listOf(2L, 22L), feedIds())
+        }
+
+    @Test
+    fun `a pattern that does not compile is refused`() =
+        runTest {
+            val keywords = TitleKeywordStore(database.titleKeywordDao(), clock)
+
+            assertEquals(false, keywords.addBlockRule("post (", isRegex = true))
+            assertEquals(emptyList<TitleBlockRule>(), keywords.blockRules.first())
+        }
 }
