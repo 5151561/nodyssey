@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -101,10 +103,22 @@ fun SpecTable(
                     cellStyle = cellStyle,
                 )
             }
+        val heights =
+            remember(columns, rows, density, labelStyle, headerStyle, cellStyle) {
+                rowHeights(
+                    columns = columns,
+                    rows = rows,
+                    density = density,
+                    measurer = measurer,
+                    labelStyle = labelStyle,
+                    headerStyle = headerStyle,
+                    cellStyle = cellStyle,
+                )
+            }
         Row {
             Column {
-                SpecHeaderCell(text = AnnotatedString(""), width = widths.label)
-                rows.forEach { row ->
+                SpecHeaderCell(text = AnnotatedString(""), width = widths.label, height = heights.header)
+                rows.forEachIndexed { rowIndex, row ->
                     Text(
                         text = row.label,
                         style = labelStyle,
@@ -113,17 +127,19 @@ fun SpecTable(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .width(widths.label)
-                            .padding(horizontal = Spacing.sm, vertical = 5.dp),
+                            .height(heights.rows[rowIndex])
+                            .wrapContentHeight()
+                            .padding(horizontal = Spacing.sm),
                     )
                 }
             }
             Column(modifier = Modifier.horizontalScroll(cells)) {
                 Row {
                     columns.forEachIndexed { index, column ->
-                        SpecHeaderCell(text = column, width = widths.cells[index])
+                        SpecHeaderCell(text = column, width = widths.cells[index], height = heights.header)
                     }
                 }
-                rows.forEach { row ->
+                rows.forEachIndexed { rowIndex, row ->
                     Row {
                         // Padded to the header's length: a row that is short is short at a known column,
                         // and a blank there is the finding.
@@ -146,7 +162,9 @@ fun SpecTable(
                                     onTextLayout = { layout = it },
                                     modifier = Modifier
                                         .width(widths.cells[index])
-                                        .padding(horizontal = Spacing.sm, vertical = 5.dp)
+                                        .height(heights.rows[rowIndex])
+                                        .wrapContentHeight()
+                                        .padding(horizontal = Spacing.sm)
                                         .prefetchLinksOnPress(cell) { layout },
                                 )
                             }
@@ -281,10 +299,51 @@ private fun columnWidths(
     return ColumnWidths(label, cells.map { it + slack * (it.value / sum.value) })
 }
 
+private class RowHeights(
+    val header: Dp,
+    val rows: List<Dp>,
+)
+
+/**
+ * One height per row, shared by the pinned column and the scrolling one.
+ *
+ * The two halves of the table are separate columns — that is what lets one scroll under the
+ * other — so nothing in the layout ties row 5 on the left to row 5 on the right. Left to size
+ * themselves, they drift: a CJK label and a Latin value fall back to fonts with different line
+ * metrics, a pixel or two apart per row, and by the eighth row the value sits half a line above
+ * its label. Measuring every cell of a row and giving both halves the tallest is the tie.
+ */
+private fun rowHeights(
+    columns: List<AnnotatedString>,
+    rows: List<SpecRow>,
+    density: Density,
+    measurer: TextMeasurer,
+    labelStyle: TextStyle,
+    headerStyle: TextStyle,
+    cellStyle: TextStyle,
+): RowHeights {
+    fun height(
+        text: AnnotatedString,
+        style: TextStyle,
+    ): Dp = with(density) {
+        measurer.measure(text = text, style = style, softWrap = false, maxLines = 1).size.height.toDp()
+    }
+
+    val header =
+        (listOf(AnnotatedString("")) + columns).maxOf { height(it, headerStyle) } + HEADER_PADDING * 2
+    val body =
+        rows.map { row ->
+            row.cells.fold(height(row.label, labelStyle)) { acc, cell -> maxOf(acc, height(cell, cellStyle)) } +
+                ROW_PADDING * 2
+        }
+    return RowHeights(header, body)
+}
+
 @Composable
 private fun SpecHeaderCell(
     text: AnnotatedString,
     width: Dp,
+    height: Dp,
 ) {
     Text(
         text = text,
@@ -295,9 +354,15 @@ private fun SpecHeaderCell(
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .width(width)
-            .padding(horizontal = Spacing.sm, vertical = 6.dp),
+            .height(height)
+            .wrapContentHeight()
+            .padding(horizontal = Spacing.sm),
     )
 }
+
+private val ROW_PADDING = 5.dp
+
+private val HEADER_PADDING = 6.dp
 
 /** The floor: a column of blanks still has to be visibly a column. */
 private val MIN_COLUMN_WIDTH = 48.dp
