@@ -70,8 +70,12 @@ class StickerAddViewModelTest {
             advanceUntilIdle()
 
             assertEquals(setOf("a", "b"), viewModel.folderSelection.value)
-            // A subscribed branch is asked for by name; the repository's default branch is not consulted.
-            assertEquals(listOf("/repos/o/r/commits/dev", "/repos/o/r/git/trees/$OLD_SHA"), http.githubPaths())
+            // The repository is asked for its canonical name, but the head is the subscribed branch's,
+            // not the default branch's (the fake answers `main` there).
+            assertEquals(
+                listOf("/repos/o/r", "/repos/o/r/commits/dev", "/repos/o/r/git/trees/$OLD_SHA"),
+                http.githubPaths(),
+            )
         }
 
     @Test

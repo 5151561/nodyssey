@@ -10,13 +10,16 @@ import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.settings.SettingsRepository
 import io.github.nodyssey.data.sticker.GitHubStickerSource
 import io.github.nodyssey.data.sticker.StickerLibrary
+import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpRequest
 import io.github.plaza.core.net.HttpResponse
 import io.github.plaza.core.net.HttpTransport
 import io.github.plaza.core.net.UploadProgress
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlin.coroutines.ContinuationInterceptor
 
 internal const val OLD_SHA = "1111111111111111111111111111111111111111"
 internal const val NEW_SHA = "2222222222222222222222222222222222222222"
@@ -63,16 +66,22 @@ internal fun testStickerLibrary(
     settings: SettingsRepository,
     http: FakeStickerHttp,
     scope: CoroutineScope,
-) = StickerLibrary(
-    dao = database.stickerDao(),
-    github = GitHubStickerSource(http),
-    cdnStore = settings.stickerCdn,
-    imageHost = NoImageHost,
-    preparer = NoPreparer,
-    http = http,
-    clock = { 1_000_000L },
-    scope = scope,
-)
+): StickerLibrary {
+    // The test's own dispatcher for "io" too, so a request is still driven by the test scheduler.
+    val testDispatcher = scope.coroutineContext[ContinuationInterceptor] as CoroutineDispatcher
+    val dispatchers = AppDispatchers(io = testDispatcher, default = testDispatcher)
+    return StickerLibrary(
+        dao = database.stickerDao(),
+        github = GitHubStickerSource(http, dispatchers),
+        cdnStore = settings.stickerCdn,
+        imageHost = NoImageHost,
+        preparer = NoPreparer,
+        http = http,
+        clock = { 1_000_000L },
+        scope = scope,
+        dispatchers = dispatchers,
+    )
+}
 
 private object NoImageHost : ImageHostRepository {
     override val current: Flow<ImageHostConfig> = flowOf(ImageHostConfig(ImageHostProvider.NODE_IMAGE))
