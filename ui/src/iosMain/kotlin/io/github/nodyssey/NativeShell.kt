@@ -436,8 +436,16 @@ private class NativeShell(
         private val destination: TopLevelDestination,
     ) : NSObject(),
         UIGestureRecognizerDelegateProtocol {
-        override fun gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer): Boolean =
-            navigationControllers.getValue(destination).viewControllers.size > 1
+        /*
+         * The two conditions UIKit's own delegate checks, which this one replaces: a screen to go
+         * back to, and no push or pop still animating — a swipe is not let start a pop on top of a
+         * transition that has not finished.
+         */
+        override fun gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer): Boolean {
+            val navigationController = navigationControllers.getValue(destination)
+            return navigationController.viewControllers.size > 1 &&
+                navigationController.transitionCoordinator == null
+        }
     }
 }
 
