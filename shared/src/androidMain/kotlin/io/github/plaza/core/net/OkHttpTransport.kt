@@ -1,5 +1,7 @@
 package io.github.plaza.core.net
 
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -27,31 +29,54 @@ class OkHttpTransport(
 ) : HttpTransport {
 
     override suspend fun execute(request: HttpRequest, onUploadProgress: UploadProgress?): HttpResponse {
+        // A link OkHttp cannot parse is a request that never completes, which is how
+        // `NSUrlSessionTransport` answers one too; left alone it would be an IllegalArgumentException
+        // escaping a contract that promises SiteException.
+        val url = request.url.toHttpUrlOrNull() ?: throw SiteException(SiteError.Network, detail = request.url)
         val call =
-            Request
-                .Builder()
-                .url(request.url)
-                .apply { request.headers.forEach { (name, value) -> header(name, value) } }
-                .method(request.method, request.body?.toRequestBody(onUploadProgress))
-                .build()
+            okHttpClient.newCall(
+                Request
+                    .Builder()
+                    .url(url)
+                    .apply { request.headers.forEach { (name, value) -> header(name, value) } }
+                    .method(request.method, request.body?.toRequestBody(onUploadProgress))
+                    .build(),
+            )
 
-        return try {
-            okHttpClient.newCall(call).execute().use { response ->
-                HttpResponse(
-                    code = response.code,
-                    // The URL the answer came from: OkHttp follows redirects itself and rewrites the
-                    // request as it goes, so this is the last hop rather than the one asked for.
-                    url = response.request.url.toString(),
-                    headers =
-                    response.headers
-                        .toMultimap()
-                        .entries
-                        .associate { (name, values) -> name.lowercase() to values.joinToString(",") },
-                    body = response.body.string(),
-                )
-            }
-        } catch (e: IOException) {
-            throw SiteException(SiteError.Network, e)
+        // Still the blocking `execute` on the caller's thread, but cancellable: `execute` never looks
+        // at the coroutine, so without the hook a `withTimeout` around this waited out OkHttp's own
+        // timeouts instead. The block runs synchronously and resumes before returning, so nothing
+        // actually suspends; what `suspendCancellableCoroutine` adds is a parent-cancellation handler
+        // that runs on the cancelling thread and can reach the `Call` while this one is blocked in it.
+        // `enqueue` would also do it, but would move every forum request under OkHttp's
+        // five-per-host async limit, which Coil's image loads on the same client already share.
+        return suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { call.cancel() }
+            val result =
+                try {
+                    Result.success(
+                        call.execute().use { response ->
+                            HttpResponse(
+                                code = response.code,
+                                // The URL the answer came from: OkHttp follows redirects itself and
+                                // rewrites the request as it goes, so this is the last hop rather than
+                                // the one asked for.
+                                url = response.request.url.toString(),
+                                headers =
+                                response.headers
+                                    .toMultimap()
+                                    .entries
+                                    .associate { (name, values) -> name.lowercase() to values.joinToString(",") },
+                                body = response.body.string(),
+                            )
+                        },
+                    )
+                } catch (e: IOException) {
+                    Result.failure(SiteException(SiteError.Network, e))
+                }
+            // Ignored when the coroutine was cancelled meanwhile: the caller gets its
+            // CancellationException rather than the "Canceled" IOException the hook caused.
+            continuation.resumeWith(result)
         }
     }
 }
