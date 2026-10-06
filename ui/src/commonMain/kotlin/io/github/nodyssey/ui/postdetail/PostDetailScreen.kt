@@ -196,6 +196,10 @@ import io.github.nodyssey.ui.resources.post_tracked
 import io.github.nodyssey.ui.resources.post_untrack_thread
 import io.github.nodyssey.ui.resources.user_note_action
 import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.nodyssey.ui.sticker.ImageActionsFrom
+import io.github.nodyssey.ui.sticker.ImageActionsSheet
+import io.github.nodyssey.ui.sticker.LocalImageActions
+import io.github.nodyssey.ui.sticker.rememberImageActionsState
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
@@ -649,6 +653,9 @@ fun PostDetailScreen(
         }
     }
 
+    val imageActions = rememberImageActionsState()
+    ImageActionsSheet(imageActions, snackbarHostState)
+
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -743,6 +750,8 @@ fun PostDetailScreen(
                             // each floor adds its own number on top. See [LocalReportOrigin].
                             CompositionLocalProvider(
                                 LocalReportOrigin provides ReportOrigin(state.postId, state.title),
+                                // 1a: a long press on a picture in any floor opens the sheet above.
+                                LocalImageActions provides imageActions.open,
                             ) {
                                 ThreadList(
                                     state = state,
@@ -1627,15 +1636,17 @@ private fun ThreadOpeningPost(
             )
         } else {
             ReportOriginFloor(body.floor) {
-                PostRichContent(
-                    nodes = body.nodes,
-                    onLinkClick = onOpenBrowser,
-                    onImageClick = onImageClick,
-                    onQuoteRefClick = { onJumpToFloor(it.floor) },
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    voteContent = voteContent,
-                    stardustContent = stardustContent,
-                )
+                ImageActionsFrom(body.authorName, body.floor) {
+                    PostRichContent(
+                        nodes = body.nodes,
+                        onLinkClick = onOpenBrowser,
+                        onImageClick = onImageClick,
+                        onQuoteRefClick = { onJumpToFloor(it.floor) },
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        voteContent = voteContent,
+                        stardustContent = stardustContent,
+                    )
+                }
             }
         }
         UserSignature(
@@ -1806,15 +1817,17 @@ private fun CommentRow(
                 FloorTimeLine(comment)
             }
             ReportOriginFloor(comment.floor) {
-                PostRichContent(
-                    nodes = comment.nodes,
-                    onLinkClick = onOpenBrowser,
-                    onImageClick = onImageClick,
-                    onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
-                    textStyle = replyBodyStyle(),
-                    voteContent = voteContent,
-                    stardustContent = stardustContent,
-                )
+                ImageActionsFrom(comment.authorName, comment.floor) {
+                    PostRichContent(
+                        nodes = comment.nodes,
+                        onLinkClick = onOpenBrowser,
+                        onImageClick = onImageClick,
+                        onQuoteRefClick = { ref -> onJumpToFloor(ref.floor) },
+                        textStyle = replyBodyStyle(),
+                        voteContent = voteContent,
+                        stardustContent = stardustContent,
+                    )
+                }
             }
             UserSignature(
                 nodes = comment.signatureNodes,
