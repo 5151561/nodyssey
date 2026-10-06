@@ -9,8 +9,40 @@ import io.github.nodyssey.data.imagehost.ImageHostUpload
  * business: the implementation that reads a `content://` URI lives in `platform/`, and everything
  * from here to the upload only needs bytes, a name and a type.
  */
-fun interface ImagePreparer {
+interface ImagePreparer {
     suspend fun prepare(source: String, displayName: String): ImageHostUpload
+
+    /**
+     * The picked file's own bytes, untouched — 表情's 保留原图. [prepare] re-encodes a still to WebP
+     * (JPEG on iOS) and only spares a GIF, so an animated WebP would go out as its first frame; a
+     * sticker is a few kilobytes and is worth sending as it is.
+     */
+    suspend fun original(source: String, displayName: String): ImageHostUpload
+}
+
+/**
+ * [bytes] read as whatever their magic number says, with [displayName] given the matching
+ * extension. A file that is none of the four keeps its name and goes out as an octet stream.
+ */
+fun originalUpload(bytes: ByteArray, displayName: String): ImageHostUpload {
+    val (mime, extension) = sniffImageType(bytes) ?: return ImageHostUpload(bytes, displayName, "application/octet-stream")
+    return ImageHostUpload(bytes, displayName.withExtension(extension), mime)
+}
+
+private fun sniffImageType(bytes: ByteArray): Pair<String, String>? {
+    fun at(index: Int) = bytes.getOrNull(index)?.toInt()?.and(0xFF) ?: -1
+    return when {
+        at(0) == 0x47 && at(1) == 0x49 && at(2) == 0x46 -> "image/gif" to "gif"
+
+        at(0) == 0x89 && at(1) == 0x50 && at(2) == 0x4E && at(3) == 0x47 -> "image/png" to "png"
+
+        at(0) == 0xFF && at(1) == 0xD8 -> "image/jpeg" to "jpg"
+
+        at(0) == 0x52 && at(1) == 0x49 && at(2) == 0x46 && at(3) == 0x46 &&
+            at(8) == 0x57 && at(9) == 0x45 && at(10) == 0x42 && at(11) == 0x50 -> "image/webp" to "webp"
+
+        else -> null
+    }
 }
 
 /** `IMG_0421.HEIC` → `IMG_0421.webp`; a name with no extension just gains one. */

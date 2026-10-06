@@ -475,6 +475,22 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /** The sticker tables arrive empty: no build before v19 could save a sticker. */
+    @Test
+    fun `migration 18 to 19 adds empty sticker tables`() {
+        helper.createDatabase(DATABASE_NAME, 18).close()
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 19, true, MIGRATION_18_19)
+
+        listOf("my_stickers", "sticker_repos", "sticker_folders").forEach { table ->
+            migrated.query("SELECT COUNT(*) FROM $table").use {
+                it.moveToFirst()
+                assertEquals(table, 0, it.getInt(0))
+            }
+        }
+        migrated.close()
+    }
+
     /**
      * The whole ladder at once, which is the only test that runs it the way a device does.
      *
@@ -513,7 +529,7 @@ class NodeSeekDatabaseMigrationTest {
             close()
         }
 
-        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 18, true, *NODESEEK_MIGRATIONS)
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 19, true, *NODESEEK_MIGRATIONS)
 
         migrated.query("SELECT title, isBlocked, isAwarded FROM posts WHERE postId = 42").use {
             it.moveToFirst()

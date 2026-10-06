@@ -1,6 +1,7 @@
 package io.github.nodyssey.ios
 
 import io.github.nodyssey.data.composer.ImagePreparer
+import io.github.nodyssey.data.composer.originalUpload
 import io.github.nodyssey.data.composer.withExtension
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostException
@@ -52,6 +53,17 @@ class IosImagePreparer(
             } else {
                 ImageHostUpload(bounded.toByteArray(), displayName.withExtension("jpg"), MIME_JPEG)
             }
+        }
+
+    override suspend fun original(source: String, displayName: String): ImageHostUpload =
+        withContext(dispatchers.io) {
+            val url =
+                NSURL.URLWithString(source)
+                    ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
+            val data: NSData =
+                NSData.dataWithContentsOfURL(url)
+                    ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
+            originalUpload(data.toByteArray(), displayName)
         }
 
     /**

@@ -36,8 +36,11 @@ import androidx.sqlite.execSQL
         TitleKeywordEntity::class,
         TrackedThreadEntity::class,
         TitleRegexHitEntity::class,
+        MyStickerEntity::class,
+        StickerRepoEntity::class,
+        StickerFolderEntity::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -66,6 +69,8 @@ abstract class NodeSeekDatabase : RoomDatabase() {
     abstract fun titleKeywordDao(): TitleKeywordDao
 
     abstract fun trackedThreadDao(): TrackedThreadDao
+
+    abstract fun stickerDao(): StickerDao
 }
 
 /**
@@ -437,6 +442,30 @@ val MIGRATION_17_18 =
     }
 
 /**
+ * Adds 我的表情 and the GitHub sticker packs. All three tables arrive empty, which is right: no
+ * build before this one could save a sticker.
+ */
+val MIGRATION_18_19 =
+    object : Migration(18, 19) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `my_stickers` (`url` TEXT NOT NULL, `name` TEXT NOT NULL, " +
+                    "`position` INTEGER NOT NULL, `addedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`url`))",
+            )
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `sticker_repos` (`slug` TEXT NOT NULL, `ref` TEXT NOT NULL, " +
+                    "`pinnedSha` TEXT NOT NULL, `latestSha` TEXT, `checkedAtMillis` INTEGER NOT NULL, " +
+                    "`position` INTEGER NOT NULL, PRIMARY KEY(`slug`))",
+            )
+            connection.execSQL(
+                "CREATE TABLE IF NOT EXISTS `sticker_folders` (`repoSlug` TEXT NOT NULL, `path` TEXT NOT NULL, " +
+                    "`files` TEXT NOT NULL, `pendingFiles` TEXT, `hidden` INTEGER NOT NULL, " +
+                    "`position` INTEGER NOT NULL, PRIMARY KEY(`repoSlug`, `path`))",
+            )
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -464,4 +493,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_15_16,
     MIGRATION_16_17,
     MIGRATION_17_18,
+    MIGRATION_18_19,
 )

@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import io.github.nodyssey.data.composer.ImagePreparer
+import io.github.nodyssey.data.composer.originalUpload
 import io.github.nodyssey.data.composer.withExtension
 import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostException
@@ -58,6 +59,13 @@ class DefaultImagePreparer(
                 fileName = displayName.withExtension("webp"),
                 mimeType = MIME_WEBP,
             )
+        }
+
+    override suspend fun original(source: String, displayName: String): ImageHostUpload =
+        withContext(dispatchers.io) {
+            val uri = runCatching { source.toUri() }.getOrNull()
+                ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
+            originalUpload(readAll(uri, displayName), displayName)
         }
 
     private fun readAll(uri: Uri, displayName: String): ByteArray =
