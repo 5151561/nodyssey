@@ -66,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -138,7 +139,6 @@ import io.github.plaza.designsys.component.LayerCard
 import io.github.plaza.designsys.component.LayerCardGap
 import io.github.plaza.designsys.component.LayerPageGutter
 import io.github.plaza.designsys.component.MetaStat
-import io.github.plaza.designsys.component.MetaText
 import io.github.plaza.designsys.component.PlazaExtendedFab
 import io.github.plaza.designsys.component.PlazaFabHeight
 import io.github.plaza.designsys.component.PlazaIcons
@@ -1325,17 +1325,24 @@ private fun LastReply(
 ) {
     val time = summary.lastActiveText ?: return
     val name = summary.lastCommenterName
-    MetaText(
-        text = if (name != null) "$name $time" else time,
-        singleLine = true,
-        modifier =
+    val spoken = if (name != null) stringResource(Res.string.post_last_reply_by, name, time) else time
+    // Each half wears its own glyph, the way the counts beside them do; the name gives way first
+    // so the time is never the part that gets cut.
+    Row(
+        modifier = modifier.clearAndSetSemantics { contentDescription = spoken },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         if (name != null) {
-            val spoken = stringResource(Res.string.post_last_reply_by, name, time)
-            modifier.semantics { contentDescription = spoken }
-        } else {
-            modifier
-        },
-    )
+            MetaStat(
+                icon = Icons.Outlined.Person,
+                value = name,
+                contentDescription = name,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+        }
+        MetaStat(icon = PlazaIcons.Schedule, value = time, contentDescription = time)
+    }
 }
 
 /** The card's inset: 14dp at the sides and a little less below than above, where the counts sit low. */
