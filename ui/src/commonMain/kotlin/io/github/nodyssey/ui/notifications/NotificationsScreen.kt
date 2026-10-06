@@ -18,7 +18,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MailOutline
@@ -189,7 +191,14 @@ private fun OneHandTip(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                modifier = Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 52.dp, bottom = 28.dp),
+                // The bar holds the bubble to its open blank, which on a short window or at a large
+                // font scale is less than the bubble — so the words scroll, and the close button,
+                // pinned outside the scroll, stays on screen.
+                modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 28.dp, end = 28.dp, top = 52.dp, bottom = 28.dp),
             ) {
                 Text(
                     text = stringResource(Res.string.notifications_one_hand_tip),

@@ -29,7 +29,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * 通知 in both themes, against boards 5a and 5b: 互动 under its day headings with the unread marks,
- * the same list scrolled under the lifted header, and 私信 with 系统通知 in its own card. See
+ * the same list scrolled under the header, which stays flush with the page, and 私信 with 系统通知 in its own card. See
  * [PostListScreenRenderTest] on the null avatars.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -84,7 +84,7 @@ class NotificationsScreenRenderTest {
         composeRule.onRoot().captureRender("notifications-dark")
     }
 
-    /** 5a's own state: the list run up under the header, which lifts and fades the rows into it. */
+    /** The list run up under the header, which stays flush with the page rather than lifting. */
     @Test
     fun `the interactions tab scrolled, in light`() {
         composeRule.setContent { Screen(darkTheme = false) }

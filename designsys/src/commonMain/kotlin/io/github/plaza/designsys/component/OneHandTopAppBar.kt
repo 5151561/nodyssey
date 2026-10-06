@@ -112,6 +112,7 @@ fun OneHandTopAppBar(
      * Drawn in the blank *instead of* the big title, fading as it would — a one-off note about the
      * blank itself, the way One UI puts a tip where its settings title would be. Gone with the
      * blank: nothing of it reaches the collapsed toolbar, which stays the screen's spoken name.
+     * Measured no taller than the fully open blank, so content that might not fit has to scroll.
      */
     blankAccessory: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
@@ -139,9 +140,13 @@ fun OneHandTopAppBar(
     // The title exists twice and only one of them may be readable, or a screen reader announces the
     // screen's name twice. The handover is a plain threshold rather than the alpha curves below,
     // which cross over gradually and would leave a band where both or neither are the live one.
-    val expandedTitleIsLive by remember(blankAccessory != null) {
-        derivedStateOf { blankAccessory == null && state.fraction >= SEMANTICS_HANDOVER }
-    }
+    //
+    // An accessory takes the big title's place but not its name: the collapsed title stays the live
+    // one throughout, and the accessory gets the same threshold of its own — readable while it is
+    // what the blank shows, gone from the tree once it has faded under the toolbar.
+    val hasAccessory = blankAccessory != null
+    val blankIsOpen by remember { derivedStateOf { state.fraction >= SEMANTICS_HANDOVER } }
+    val expandedTitleIsLive = !hasAccessory && blankIsOpen
 
     Surface(
         color = containerColor,
@@ -157,9 +162,18 @@ fun OneHandTopAppBar(
                     // without recomposing: the bar changes every frame the finger moves.
                     .layout { measurable, constraints ->
                         val blank = state.heightPx.roundToInt().coerceAtLeast(0)
+                        // The title is measured whole and clipped as the blank folds. An accessory
+                        // is held to the fully open blank instead, so on a short window it scrolls
+                        // inside itself rather than losing its top and bottom to the clip.
+                        val maxContent =
+                            if (hasAccessory) {
+                                state.maxHeightPx.roundToInt().coerceAtLeast(0)
+                            } else {
+                                Constraints.Infinity
+                            }
                         val placeable =
                             measurable.measure(
-                                constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
+                                constraints.copy(minHeight = 0, maxHeight = maxContent),
                             )
                         layout(constraints.maxWidth, blank) {
                             placeable.place(0, (blank - placeable.height) / 2)
@@ -176,7 +190,7 @@ fun OneHandTopAppBar(
                         // composition one.
                         .graphicsLayer { alpha = expandedTitleAlpha(state.fraction) }
                         .then(
-                            if (expandedTitleIsLive) Modifier else Modifier.clearAndSetSemantics {},
+                            if (blankIsOpen) Modifier else Modifier.clearAndSetSemantics {},
                         ),
                 ) {
                     if (blankAccessory != null) {
