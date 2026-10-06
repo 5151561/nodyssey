@@ -19,9 +19,13 @@ import io.github.nodyssey.ui.account.ProfileFieldsViewModel
 import io.github.nodyssey.ui.account.SecurityRoute
 import io.github.nodyssey.ui.account.SecurityViewModel
 import io.github.nodyssey.ui.account.TitleBlockViewModel
+import io.github.nodyssey.ui.composer.NodeSeekEmojiGroups
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.sticker.StickerGroupRoute
+import io.github.nodyssey.ui.sticker.StickerGroupViewModel
 import io.github.nodyssey.ui.sticker.StickerManageRoute
 import io.github.nodyssey.ui.sticker.StickerManageViewModel
+import io.github.nodyssey.ui.sticker.StickerSourcesRoute
 
 /**
  * 账号设置 and its sub-pages — the screens that write to the account on nodeseek.com itself.
@@ -61,11 +65,32 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
 
     entry<StickerManageKey> {
         val library = container.stickerLibrary
-        val viewModel: StickerManageViewModel = viewModel { StickerManageViewModel(library) }
+        val viewModel: StickerManageViewModel = viewModel { StickerManageViewModel(library, NodeSeekEmojiGroups) }
         StickerManageRoute(
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
+            onOpenGroup = { key -> backStack.add(StickerGroupKey(key)) },
+            onOpenSources = { backStack.add(StickerSourcesKey) },
+            onOpenImageHost = { backStack.add(ImageHostKey) },
+        )
+    }
+
+    entry<StickerGroupKey> { key ->
+        val library = container.stickerLibrary
+        val viewModel: StickerGroupViewModel = viewModel { StickerGroupViewModel(library, key.key, NodeSeekEmojiGroups) }
+        StickerGroupRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
             onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
+        )
+    }
+
+    entry<StickerSourcesKey> {
+        val library = container.stickerLibrary
+        val viewModel: StickerManageViewModel = viewModel { StickerManageViewModel(library, NodeSeekEmojiGroups) }
+        StickerSourcesRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
         )
     }
 

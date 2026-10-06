@@ -35,10 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.nodyssey.data.sticker.MAX_NAME_LENGTH
+import io.github.nodyssey.data.sticker.MINE_GROUP_KEY
 import io.github.nodyssey.data.sticker.MySticker
 import io.github.nodyssey.data.sticker.StickerCdnSettings
+import io.github.nodyssey.data.sticker.StickerGroupLayout
 import io.github.nodyssey.data.sticker.StickerLibrary
-import io.github.nodyssey.data.sticker.StickerSubscription
+import io.github.nodyssey.data.sticker.SubscribedFolder
 import io.github.nodyssey.data.sticker.stickerNameFromPath
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_cancel
@@ -54,9 +56,6 @@ import io.github.nodyssey.ui.resources.sticker_mine_empty
 import io.github.nodyssey.ui.resources.sticker_name_label
 import io.github.nodyssey.ui.resources.sticker_rename_title
 import io.github.nodyssey.ui.resources.sticker_undo
-import io.github.nodyssey.ui.resources.sticker_update_action
-import io.github.nodyssey.ui.resources.sticker_update_banner
-import io.github.plaza.designsys.component.InlineBanner
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
@@ -80,19 +79,23 @@ internal class StickerNotice(
 )
 
 /**
- * The groups 我的表情 and the subscribed packs add to the panel, in the order 1b and 2b draw them:
- * 我的 first, then each subscribed folder the reader has not hidden, ahead of the site's own packs.
- * Also hosts what those groups open — 添加表情, the rename dialog — and the undo line under the grid.
+ * The panel's groups — 我的, the subscribed folders and [siteGroups] — in the order 表情管理 keeps
+ * (1g), less the ones hidden there. Also hosts what those groups open — 添加表情, the rename dialog —
+ * and the undo line under the grid.
+ *
+ * Whether a pack has an update is said on 表情管理 and not here (1b): the panel is for sending.
  *
  * [content] draws the panel with the groups this hands it.
  */
 @Composable
 internal fun StickerPanelHost(
     library: StickerLibrary,
+    siteGroups: List<EmojiGroup>,
     content: @Composable (groups: List<EmojiGroup>) -> Unit,
 ) {
     val mine by remember(library) { library.mine }.collectAsStateWithLifecycle(emptyList())
     val subscriptions by remember(library) { library.subscriptions }.collectAsStateWithLifecycle(emptyList())
+    val layout by remember(library) { library.groupLayout }.collectAsStateWithLifecycle(StickerGroupLayout())
     val cdn by remember(library) { library.cdn }.collectAsStateWithLifecycle(StickerCdnSettings())
     val addViewModel = viewModel(key = "sticker-add") { StickerAddViewModel(library) }
     val scope = rememberCoroutineScope()
@@ -121,7 +124,7 @@ internal fun StickerPanelHost(
     val mineGroup = EmojiGroup(
         title = { mineTitle },
         entries = mine.map { EmojiEntry.Sticker(name = it.name, shortcode = stickerMarkdown(it.name, it.url), url = it.url) },
-        key = "mine",
+        key = MINE_GROUP_KEY,
         icon = Icons.Default.Favorite,
         leadingCell = { modifier -> AddStickerCell(onClick = openAdd, modifier = modifier) },
         entryMenu = { entry, dismiss ->
@@ -160,9 +163,18 @@ internal fun StickerPanelHost(
             )
         }
     }
-    val groups = listOf(mineGroup) + subscriptionGroups(subscriptions, cdn, saveToMine) { slug ->
-        scope.launch { library.applyUpdate(slug) }
-    }
+    // The default order until the stored one is read — a frame at most. Not an empty list: the panel
+    // picks the tab it opens on from the groups it is first handed, and with none it would open on
+    // an empty 最近使用 for a new reader rather than on the site's stickers.
+    val groups = arrangeGroups(mine, subscriptions, layout, siteGroups)
+        .filterNot { it.hidden }
+        .map { item ->
+            when (item) {
+                is StickerGroupItem.Mine -> mineGroup
+                is StickerGroupItem.Folder -> folderGroup(item, cdn, saveToMine)
+                is StickerGroupItem.Site -> item.group
+            }
+        }
 
     Box {
         content(groups)
@@ -203,49 +215,33 @@ internal fun StickerPanelHost(
 }
 
 @Composable
-private fun subscriptionGroups(
-    subscriptions: List<StickerSubscription>,
+private fun folderGroup(
+    item: StickerGroupItem.Folder,
     cdn: StickerCdnSettings,
     saveToMine: @Composable ColumnScope.(EmojiEntry, () -> Unit) -> Unit,
-    onUpdate: (String) -> Unit,
-): List<EmojiGroup> =
-    subscriptions.flatMap { subscription ->
-        subscription.folders.filterNot { it.hidden }.map { folder ->
-            key(subscription.slug, folder.path) {
-                val updatable = folder.pendingFiles != null && folder.pendingFiles != folder.files
-                val bannerText = stringResource(Res.string.sticker_update_banner, subscription.repo, folder.name, folder.newCount)
-                EmojiGroup(
-                    title = { folder.name },
-                    // Remembered per folder: a pack is a few hundred links, and the panel recomposes on
-                    // every insert, which is when the recents change.
-                    entries = remember(folder, cdn) {
-                        folder.files.map { path ->
-                            val url = cdn.urlFor(folder.owner, folder.repo, folder.pinnedSha, path)
-                            val name = stickerNameFromPath(path)
-                            EmojiEntry.Sticker(name = name, shortcode = stickerMarkdown(name, url), url = url)
-                        }
-                    },
-                    key = "gh:${subscription.slug}/${folder.path}",
-                    badge = updatable,
-                    header = if (updatable) {
-                        {
-                            InlineBanner(
-                                text = bannerText,
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                action = {
-                                    TextButton(onClick = { onUpdate(subscription.slug) }) {
-                                        Text(stringResource(Res.string.sticker_update_action))
-                                    }
-                                },
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                    entryMenu = saveToMine,
-                )
-            }
-        }
+): EmojiGroup {
+    val folder = item.folder
+    return key(item.key) {
+        EmojiGroup(
+            title = { folder.name },
+            // Remembered per folder: a pack is a few hundred links, and the panel recomposes on every
+            // insert, which is when the recents change.
+            entries = remember(folder, cdn) { folderEntries(folder, cdn) },
+            key = item.key,
+            entryMenu = saveToMine,
+        )
+    }
+}
+
+/** A subscribed folder's pictures as the panel and 1h draw them, each linked through [cdn]. */
+internal fun folderEntries(
+    folder: SubscribedFolder,
+    cdn: StickerCdnSettings,
+): List<EmojiEntry.Sticker> =
+    folder.files.map { path ->
+        val url = cdn.urlFor(folder.owner, folder.repo, folder.pinnedSha, path)
+        val name = stickerNameFromPath(path)
+        EmojiEntry.Sticker(name = name, shortcode = stickerMarkdown(name, url), url = url)
     }
 
 @Composable

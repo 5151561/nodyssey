@@ -41,6 +41,8 @@ internal val NavKeySavedStateConfiguration =
                     subclass(NetworkCheckKey::class)
                     subclass(ImageHostKey::class)
                     subclass(StickerManageKey::class)
+                    subclass(StickerGroupKey::class)
+                    subclass(StickerSourcesKey::class)
                     subclass(AboutAppKey::class)
                     subclass(AboutCommunityKey::class)
                     subclass(PrivacyKey::class)

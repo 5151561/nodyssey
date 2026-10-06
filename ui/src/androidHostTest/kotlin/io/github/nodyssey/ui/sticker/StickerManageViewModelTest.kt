@@ -3,6 +3,7 @@ package io.github.nodyssey.ui.sticker
 import io.github.nodyssey.data.inMemoryDatabase
 import io.github.nodyssey.data.local.NodeSeekDatabase
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.sticker.MINE_GROUP_KEY
 import io.github.nodyssey.data.sticker.MySticker
 import io.github.nodyssey.data.sticker.RepoFolder
 import io.github.nodyssey.data.sticker.RepoListing
@@ -67,7 +68,7 @@ class StickerManageViewModelTest {
             library.subscribeOne()
             http.head = NEW_SHA
             http.trees[NEW_SHA] = listOf("a/1.png", "a/2.png")
-            val viewModel = viewModels.track(StickerManageViewModel(library))
+            val viewModel = viewModels.track(StickerManageViewModel(library, emptyList()))
 
             viewModel.checkUpdates(force = true)
             advanceUntilIdle()
@@ -80,7 +81,7 @@ class StickerManageViewModelTest {
         runTest(dispatcher) {
             val library = library()
             library.subscribeOne()
-            val viewModel = viewModels.track(StickerManageViewModel(library))
+            val viewModel = viewModels.track(StickerManageViewModel(library, emptyList()))
 
             viewModel.checkUpdates(force = true)
             advanceUntilIdle()
@@ -92,11 +93,11 @@ class StickerManageViewModelTest {
     fun `the custom CDN is measured when the page opens`() =
         runTest(dispatcher) {
             val settings = testSettingsRepository(backgroundScope)
-            settings.stickerCdn.setCustomBase("https://cdn.example/gh/")
+            settings.stickerSettings.setCustomBase("https://cdn.example/gh/")
             val library = library(settings)
             library.subscribeOne()
             // Nothing collects the ViewModel's flows yet: measuring is the first thing the page does.
-            val viewModel = viewModels.track(StickerManageViewModel(library))
+            val viewModel = viewModels.track(StickerManageViewModel(library, emptyList()))
 
             viewModel.measureCdns()
             advanceUntilIdle()
@@ -110,9 +111,12 @@ class StickerManageViewModelTest {
         runTest(dispatcher) {
             val library = library()
             library.add(listOf("a", "b", "c").map { MySticker("https://h/$it.png", it) })
-            val viewModel = viewModels.track(StickerManageViewModel(library))
+            val viewModel = viewModels.track(StickerGroupViewModel(library, MINE_GROUP_KEY, emptyList()))
             val seen = mutableListOf<List<String>>()
-            backgroundScope.launch { viewModel.mine.collect { list -> seen += list.map { it.name } } }
+            backgroundScope.launch { viewModel.page.collect { page -> if (page != null) seen += page.cells.map { it.name } } }
+            // The page also reads the group layout, which DataStore delivers from its own IO rather
+            // than on the test dispatcher: wait for it instead of advancing past it.
+            viewModel.page.first { it != null }
             advanceUntilIdle()
             assertEquals(listOf("a", "b", "c"), seen.last())
 

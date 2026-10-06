@@ -15,7 +15,7 @@ import io.github.nodyssey.data.local.MyStickerEntity
 import io.github.nodyssey.data.local.StickerDao
 import io.github.nodyssey.data.local.StickerFolderEntity
 import io.github.nodyssey.data.local.StickerRepoEntity
-import io.github.nodyssey.data.settings.StickerCdnStore
+import io.github.nodyssey.data.settings.StickerSettingsStore
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpRequest
 import io.github.plaza.core.net.HttpResponse
@@ -270,6 +270,53 @@ class StickerLibraryTest {
         assertEquals(listOf("https://h/fine.png"), library.mine.first().map { it.url })
     }
 
+    @Test
+    fun `a backup brings back 我的 in its order after what is already here and resubscribes at the pinned commit`() = runTest {
+        val source = library()
+        source.add(listOf("a", "b", "c").map { MySticker("https://h/$it.png", it) })
+        source.subscribe(listing("o", "r", OLD, "x", "y"), setOf("x", "y"))
+        source.setGroupHidden(folderGroupKey("o/r", "y"), hidden = true)
+        val backup = source.exportBackup()
+
+        // The branch has moved on since; the restore must not follow it.
+        val github = FakeGitHub().apply {
+            head = NEW
+            trees[OLD] = listOf("x/1.png", "y/1.png")
+            trees[NEW] = listOf("x/1.png", "x/2.png")
+        }
+        val target = library(github)
+        target.add(listOf(MySticker("https://h/d.png", "d"), MySticker("https://h/b.png", "b")))
+
+        val result = target.importBackup(backup)
+
+        assertEquals(StickerImportResult(stickers = 2, folders = 2, failedRepos = emptyList()), result)
+        assertEquals(listOf("d", "b", "a", "c"), target.mine.first().map { it.name })
+        val subscription = target.subscriptions.first().single()
+        assertEquals(OLD, subscription.pinnedSha)
+        assertEquals(listOf("x" to false, "y" to true), subscription.folders.map { it.path to it.hidden })
+    }
+
+    @Test
+    fun `text that is not a backup imports nothing`() = runTest {
+        val library = library()
+
+        assertNull(library.importBackup("{}"))
+        assertNull(library.importBackup("https://h/a.png"))
+        assertEquals(emptyList(), library.mine.first())
+    }
+
+    @Test
+    fun `hiding a folder group marks that folder and hiding a site group leaves the folders alone`() = runTest {
+        val library = library()
+        library.subscribe(listing("o", "r", OLD, "x", "nested/y"), setOf("x", "nested/y"))
+
+        library.setGroupHidden(folderGroupKey("o/r", "nested/y"), hidden = true)
+        library.setGroupHidden("site:ac", hidden = true)
+
+        assertEquals(listOf(false, true), library.subscriptions.first().single().folders.map { it.hidden })
+        assertEquals(setOf("site:ac"), library.groupLayout.first().hidden)
+    }
+
     private fun TestScope.dispatchers(): AppDispatchers {
         val io = StandardTestDispatcher(testScheduler)
         return AppDispatchers(io = io, default = io)
@@ -288,7 +335,7 @@ class StickerLibraryTest {
     ) = StickerLibrary(
         dao = FakeStickerDao(),
         github = GitHubStickerSource(github, dispatchers),
-        cdnStore = StickerCdnStore(FakePreferences()),
+        settingsStore = StickerSettingsStore(FakePreferences()),
         imageHost = FakeImageHost,
         preparer = FakePreparer,
         http = github,

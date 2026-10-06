@@ -51,8 +51,8 @@ class SettingsRepository(
     /** 测评对比's basket, kept in this same store; see [ReportCompareStore]. */
     val reportCompare: ReportCompareStore = ReportCompareStore(dataStore)
 
-    /** 表情管理's CDN choice, kept in this same store; see [StickerCdnStore]. */
-    val stickerCdn: StickerCdnStore = StickerCdnStore(dataStore)
+    /** 表情管理's settings — CDN choice, group order — kept in this same store; see [StickerSettingsStore]. */
+    val stickerSettings: StickerSettingsStore = StickerSettingsStore(dataStore)
 
     val settings: Flow<UserSettings> = dataStore.data
         // A corrupt or unreadable store must not take the app down; fall back to defaults.

@@ -2,13 +2,15 @@ package io.github.nodyssey.ui.sticker
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.nodyssey.data.imagehost.ImageHostConfig
 import io.github.nodyssey.data.sticker.LinkProbe
-import io.github.nodyssey.data.sticker.MySticker
 import io.github.nodyssey.data.sticker.StickerCdn
 import io.github.nodyssey.data.sticker.StickerCdnSettings
+import io.github.nodyssey.data.sticker.StickerImportResult
 import io.github.nodyssey.data.sticker.StickerLibrary
 import io.github.nodyssey.data.sticker.StickerSourceError
 import io.github.nodyssey.data.sticker.StickerSubscription
+import io.github.plaza.designsys.editor.EmojiGroup
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,16 +22,8 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 
-/** A saved link that did not answer, and how. */
-data class BrokenSticker(
-    val sticker: MySticker,
-    val probe: LinkProbe,
-)
-
-/** One CDN's speed, as 2c shows it beside the choice. */
+/** One CDN's speed, as 加载源 shows it beside the choice. */
 sealed interface CdnLatency {
     data object Measuring : CdnLatency
 
@@ -39,129 +33,101 @@ sealed interface CdnLatency {
     data object Unreachable : CdnLatency
 }
 
-/** 表情管理 (1f, 2c). */
+/** 导入's outcome, for one line under 备份. */
+sealed interface ImportOutcome {
+    data object Running : ImportOutcome
+
+    data object NotABackup : ImportOutcome
+
+    data class Done(val result: StickerImportResult) : ImportOutcome
+}
+
+/** 表情管理's front page (1g) and GitHub 订阅 (1i). */
 class StickerManageViewModel(
     private val library: StickerLibrary,
+    private val siteGroups: List<EmojiGroup>,
 ) : ViewModel() {
-    // ---- 我的 -------------------------------------------------------------------------------------
+    // ---- 面板里的组 --------------------------------------------------------------------------------
 
     /**
      * The order a drag is building, shown in place of the stored one until the finger lifts — so a
-     * drag across twenty cells is one write, not twenty.
+     * drag across eight rows is one write, not eight.
      */
     private val dragOrder = MutableStateFlow<List<String>?>(null)
 
-    /** What Room holds, shared so [dragEnd] waits on the same emissions [mine] is drawn from. */
-    private val stored: SharedFlow<List<MySticker>> =
-        library.mine.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+    /** What is stored, shared so [dragEnd] waits on the same emissions [groups] is drawn from. */
+    private val stored: SharedFlow<List<StickerGroupItem>> =
+        combine(library.mine, library.subscriptions, library.groupLayout) { mine, subscriptions, layout ->
+            arrangeGroups(mine, subscriptions, layout, siteGroups)
+        }.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
 
-    val mine: StateFlow<List<MySticker>> =
+    internal val groups: StateFlow<List<StickerGroupItem>> =
         combine(stored, dragOrder) { stored, order ->
             if (order == null) {
                 stored
             } else {
-                val byUrl = stored.associateBy { it.url }
-                order.mapNotNull { byUrl[it] } + stored.filterNot { it.url in order }
+                val byKey = stored.associateBy { it.key }
+                order.mapNotNull { byKey[it] } + stored.filterNot { it.key in order }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _selection = MutableStateFlow<Set<String>>(emptySet())
-    val selection: StateFlow<Set<String>> = _selection.asStateFlow()
-
-    private val probes = MutableStateFlow<Map<String, LinkProbe>>(emptyMap())
-
-    /** The saved links that did not answer — 2 张加载不出来 — in 我的's order. */
-    val broken: StateFlow<List<BrokenSticker>> =
-        combine(stored, probes) { list, results ->
-            list.mapNotNull { sticker ->
-                results[sticker.url]?.takeIf { it !is LinkProbe.Ok }?.let { BrokenSticker(sticker, it) }
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun toggle(url: String) = _selection.update { if (url in it) it - url else it + url }
-
-    fun clearSelection() {
-        _selection.value = emptySet()
-    }
-
-    fun deleteSelected() {
-        val urls = _selection.value
-        _selection.value = emptySet()
-        viewModelScope.launch { library.remove(urls) }
-    }
-
-    fun moveSelectedToTop() {
-        val urls = _selection.value
-        _selection.value = emptySet()
-        viewModelScope.launch { library.moveToTop(urls) }
-    }
-
-    /** Moves the dragged cell to where [targetUrl] is, in the order being built. */
+    /** Moves the dragged row to where [targetKey] is, in the order being built. */
     fun dragMove(
-        draggedUrl: String,
-        targetUrl: String,
+        draggedKey: String,
+        targetKey: String,
     ) {
-        if (draggedUrl == targetUrl) return
-        val current = (dragOrder.value ?: mine.value.map { it.url }).toMutableList()
-        val from = current.indexOf(draggedUrl)
-        val to = current.indexOf(targetUrl)
-        if (from < 0 || to < 0) return
-        current.add(to, current.removeAt(from))
-        dragOrder.value = current
+        val current = dragOrder.value ?: groups.value.map { it.key }
+        val next = current.moved(draggedKey, targetKey)
+        if (next !== current) dragOrder.value = next
     }
 
     /**
-     * Stores the dragged order, and keeps showing it until Room hands it back: dropping it as soon
-     * as the write returns would draw the stored order from before the drag for the frame or two
-     * before the query re-runs.
+     * Stores the dragged order, and keeps showing it until the store hands it back: dropping it as
+     * soon as the write returns would draw the order from before the drag for a frame.
      */
     fun dragEnd() {
         val order = dragOrder.value ?: return
         viewModelScope.launch {
-            library.reorder(order)
-            stored.first { list -> list.hasOrder(order) }
+            library.reorderGroups(order)
+            stored.first { list -> list.map { it.key }.hasOrder(order) }
             // A drag started meanwhile is building its own order; that one is not ours to drop.
             dragOrder.compareAndSet(order, null)
         }
     }
 
-    /** Whether these stickers stand in [order] — ignoring any added or removed since it was taken. */
-    private fun List<MySticker>.hasOrder(order: List<String>): Boolean {
-        val wanted = order.toSet()
-        val urls = map { it.url }.filter { it in wanted }
-        val present = urls.toSet()
-        return urls == order.filter { it in present }
+    fun setHidden(
+        key: String,
+        hidden: Boolean,
+    ) {
+        viewModelScope.launch { library.setGroupHidden(key, hidden) }
     }
 
-    /**
-     * HEADs every saved link, four at a time. Once per opening: a link that broke an hour ago is the
-     * same news an hour later, and each one is a request to somebody's image host.
-     */
+    /** How many of 我的's links did not answer the last check — 「2 张失效」. */
+    val brokenMine: StateFlow<Int> =
+        combine(library.mine, library.linkProbes) { mine, probes ->
+            mine.count { sticker -> probes[sticker.url]?.let { it !is LinkProbe.Ok } == true }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    private var linksChecked = false
+
+    /** Asks every saved link once per opening of this page; 我的's own page reads the answers. */
     fun checkLinks() {
-        if (probes.value.isNotEmpty()) return
-        viewModelScope.launch {
-            val gate = Semaphore(PROBE_PARALLELISM)
-            library.mine.first().forEach { sticker ->
-                launch {
-                    val result = gate.withPermit { library.probe(sticker.url) }
-                    probes.update { it + (sticker.url to result) }
-                }
-            }
-        }
+        if (linksChecked) return
+        linksChecked = true
+        viewModelScope.launch { library.probeMine() }
     }
 
-    fun removeBroken() {
-        val urls = broken.value.map { it.sticker.url }
-        viewModelScope.launch { library.remove(urls) }
-    }
-
-    /** 导出链接: every link, one per line — what 添加表情 › 链接 takes back in one paste. */
-    fun exportText(): String = mine.value.joinToString("\n") { it.url }
-
-    // ---- 订阅 -------------------------------------------------------------------------------------
+    // ---- 来源 -------------------------------------------------------------------------------------
 
     val subscriptions: StateFlow<List<StickerSubscription>> =
         library.subscriptions.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Each repository the last check could not read, and why — 仓库找不到了 on 1i. */
+    val sourceErrors: StateFlow<Map<String, StickerSourceError>> = library.sourceErrors
+
+    val hostConfig: StateFlow<ImageHostConfig?> =
+        library.imageHostConfig.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     val cdn: StateFlow<StickerCdnSettings> =
         library.cdn.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StickerCdnSettings())
 
@@ -216,27 +182,6 @@ class StickerManageViewModel(
         viewModelScope.launch { library.unsubscribe(slug) }
     }
 
-    fun setHidden(
-        slug: String,
-        path: String,
-        hidden: Boolean,
-    ) {
-        viewModelScope.launch { library.setFolderHidden(slug, path, hidden) }
-    }
-
-    /** Moves the folder at [from] of [slug] to [to] and stores the new order. */
-    fun moveFolder(
-        slug: String,
-        from: Int,
-        to: Int,
-    ) {
-        val folders = subscriptions.value.firstOrNull { it.slug == slug }?.folders ?: return
-        if (from !in folders.indices || to !in folders.indices || from == to) return
-        val paths = folders.map { it.path }.toMutableList()
-        paths.add(to, paths.removeAt(from))
-        viewModelScope.launch { library.reorderFolders(slug, paths) }
-    }
-
     fun selectCdn(choice: StickerCdn) {
         viewModelScope.launch { library.setCdn(choice) }
     }
@@ -249,7 +194,31 @@ class StickerManageViewModel(
         }
     }
 
-    private companion object {
-        const val PROBE_PARALLELISM = 4
+    // ---- 备份 -------------------------------------------------------------------------------------
+
+    suspend fun exportBackup(): String = library.exportBackup()
+
+    private val _import = MutableStateFlow<ImportOutcome?>(null)
+    val import: StateFlow<ImportOutcome?> = _import.asStateFlow()
+
+    /** Forgets the last import, so the dialog opens on an empty field rather than on its result. */
+    fun resetImport() {
+        if (_import.value != ImportOutcome.Running) _import.value = null
     }
+
+    fun importBackup(text: String) {
+        if (_import.value == ImportOutcome.Running) return
+        _import.value = ImportOutcome.Running
+        viewModelScope.launch {
+            _import.value = library.importBackup(text)?.let(ImportOutcome::Done) ?: ImportOutcome.NotABackup
+        }
+    }
+}
+
+/** Whether these keys stand in [order] — ignoring any added or removed since it was taken. */
+internal fun List<String>.hasOrder(order: List<String>): Boolean {
+    val wanted = order.toSet()
+    val kept = filter { it in wanted }
+    val present = kept.toSet()
+    return kept == order.filter { it in present }
 }

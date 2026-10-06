@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -164,6 +166,9 @@ fun EmojiPanel(
     emptyGroupText: String,
     stickerImage: @Composable (sticker: EmojiEntry.Sticker, contentDescription: String?, modifier: Modifier) -> Unit,
     modifier: Modifier = Modifier,
+    /** A gear at the end of the group pills, for wherever the app manages its groups; none when null. */
+    onManage: (() -> Unit)? = null,
+    manageLabel: String = "",
 ) {
     // The recents when there are any to open on; otherwise the first group that has anything in it,
     // so the panel is useful the moment it shows.
@@ -224,6 +229,7 @@ fun EmojiPanel(
                         badge = candidate.badge,
                     )
                 }
+                if (onManage != null) ManagePill(label = manageLabel, onClick = onManage)
             }
             selectedGroup?.header?.invoke()
             BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -298,6 +304,26 @@ private fun GroupPill(
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             )
             if (badge) Badge()
+        }
+    }
+}
+
+@Composable
+private fun ManagePill(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val layers = LocalPlazaLayers.current
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.small,
+        color = layers.raised,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        border = layers.cardBorderStroke,
+        modifier = Modifier.height(28.dp).semantics { contentDescription = label },
+    ) {
+        Box(Modifier.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
         }
     }
 }

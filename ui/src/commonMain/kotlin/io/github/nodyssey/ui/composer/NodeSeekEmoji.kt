@@ -16,7 +16,9 @@ import io.github.nodyssey.ui.resources.composer_emoji_group_chick
 import io.github.nodyssey.ui.resources.composer_emoji_group_fluent
 import io.github.nodyssey.ui.resources.composer_emoji_group_onion
 import io.github.nodyssey.ui.resources.composer_emoji_stickers_pending
+import io.github.nodyssey.ui.resources.sticker_manage_title
 import io.github.nodyssey.ui.sticker.LocalStickerLibrary
+import io.github.nodyssey.ui.sticker.LocalStickerNavigation
 import io.github.nodyssey.ui.sticker.StickerPanelHost
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.editor.EmojiEntry
@@ -127,6 +129,7 @@ fun NodeSeekEmojiPanel(
     onRecentChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val navigation = LocalStickerNavigation.current
     val panel: @Composable (List<EmojiGroup>) -> Unit = { groups ->
         EmojiPanel(
             groups = groups,
@@ -139,14 +142,16 @@ fun NodeSeekEmojiPanel(
                 NodeSeekStickerImage(sticker, description, imageModifier)
             },
             modifier = modifier,
+            onManage = navigation?.openManager,
+            manageLabel = stringResource(Res.string.sticker_manage_title),
         )
     }
-    // 我的 and the subscribed packs go ahead of the site's own; with no library — a preview — the
-    // panel is the site's packs alone.
+    // 我的, the subscribed packs and the site's own, in the order 表情管理 keeps; with no library — a
+    // preview — the panel is the site's packs alone.
     val library = LocalStickerLibrary.current
     if (library == null) {
         panel(NodeSeekEmojiGroups)
     } else {
-        StickerPanelHost(library) { stickerGroups -> panel(stickerGroups + NodeSeekEmojiGroups) }
+        StickerPanelHost(library, NodeSeekEmojiGroups) { groups -> panel(groups) }
     }
 }

@@ -11,7 +11,7 @@ import io.github.nodyssey.data.local.MyStickerEntity
 import io.github.nodyssey.data.local.StickerDao
 import io.github.nodyssey.data.local.StickerFolderEntity
 import io.github.nodyssey.data.local.StickerRepoEntity
-import io.github.nodyssey.data.settings.StickerCdnStore
+import io.github.nodyssey.data.settings.StickerSettingsStore
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpRequest
@@ -22,6 +22,7 @@ import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.TimeSource
@@ -71,7 +74,7 @@ data class StickerUpload(
 class StickerLibrary(
     private val dao: StickerDao,
     private val github: GitHubStickerSource,
-    private val cdnStore: StickerCdnStore,
+    private val settingsStore: StickerSettingsStore,
     private val imageHost: ImageHostRepository,
     private val preparer: ImagePreparer,
     /** Cookie-free and referrer-free — the image host's transport. Probes go out through it. */
@@ -144,6 +147,54 @@ class StickerLibrary(
             response.isSuccessful -> LinkProbe.Ok(response.header("content-length")?.toLongOrNull())
             response.code == 405 || response.code == 501 -> LinkProbe.Ok(null)
             else -> LinkProbe.Broken(response.code)
+        }
+    }
+
+    private val _linkProbes = MutableStateFlow<Map<String, LinkProbe>>(emptyMap())
+
+    /** What the last [probeMine] found, by link. A link not in it has not been asked about. */
+    val linkProbes: StateFlow<Map<String, LinkProbe>> = _linkProbes.asStateFlow()
+
+    /**
+     * HEADs every saved link, four at a time, and keeps the answers in [linkProbes] — where both
+     * 表情管理's front page (「2 张失效」) and 我的's own page read them, so walking from one to the
+     * other asks each image host once. Run when the front page opens: a link that broke an hour ago
+     * is the same news an hour later, and each one is a request to somebody's image host.
+     */
+    suspend fun probeMine() {
+        val urls = mine.first().map { it.url }
+        _linkProbes.value = emptyMap()
+        val gate = Semaphore(PROBE_PARALLELISM)
+        coroutineScope {
+            urls.forEach { url ->
+                launch {
+                    val result = gate.withPermit { probe(url) }
+                    _linkProbes.update { it + (url to result) }
+                }
+            }
+        }
+    }
+
+    // ---- 面板里的组 --------------------------------------------------------------------------------
+
+    val groupLayout: Flow<StickerGroupLayout> = settingsStore.groupLayout
+
+    /** 按住拖动 on 表情管理's front page: every group's key, in the new order. */
+    suspend fun reorderGroups(keys: List<String>) = settingsStore.setGroupOrder(keys)
+
+    /**
+     * 左滑隐藏. A subscribed folder keeps its flag on its own row, where unsubscribing takes it away
+     * with the folder; every other group's is in the settings store.
+     */
+    suspend fun setGroupHidden(
+        key: String,
+        hidden: Boolean,
+    ) {
+        val folder = parseFolderGroupKey(key)
+        if (folder != null) {
+            dao.setHidden(folder.first, folder.second, hidden)
+        } else {
+            settingsStore.setGroupHidden(key, hidden)
         }
     }
 
@@ -239,13 +290,97 @@ class StickerLibrary(
         change: (StickerUpload) -> StickerUpload,
     ) = _uploads.update { list -> list.map { if (it.id == id) change(it) else it } }
 
+    // ---- 备份 -------------------------------------------------------------------------------------
+
+    /** 导出: see [StickerBackup]. */
+    suspend fun exportBackup(): String {
+        val layout = settingsStore.groupLayout.first()
+        val subscriptions = subscriptions.first()
+        return StickerBackup.encode(
+            StickerBackup(
+                version = StickerBackup.VERSION,
+                mine = mine.first().map { StickerBackup.Mine(it.url, it.name) },
+                subscriptions = subscriptions.map { subscription ->
+                    StickerBackup.Subscription(
+                        repo = subscription.slug,
+                        ref = subscription.ref,
+                        sha = subscription.pinnedSha,
+                        folders = subscription.folders.map { it.path },
+                        hiddenFolders = subscription.folders.filter { it.hidden }.map { it.path },
+                    )
+                },
+                order = layout.order,
+                hidden = layout.hidden.toList(),
+            ),
+        )
+    }
+
+    /**
+     * 导入 what [exportBackup] wrote. Adds to what is here rather than replacing it: 我的 keeps every
+     * link it has (the backup's go after them, in the backup's order), a repository already subscribed
+     * is left as it is, and one that is not is read again at the commit the backup pinned — so a pack
+     * comes back exactly as it was, whatever its branch has done since. The group order is taken from
+     * the backup only when this device has none of its own yet.
+     *
+     * @return null when [text] is not a backup at all.
+     */
+    suspend fun importBackup(text: String): StickerImportResult? {
+        val backup = StickerBackup.decode(text) ?: return null
+        val existing = mine.first().map { it.url }.toSet()
+        val fresh = backup.mine.filter { isStickerLink(it.url) && it.url !in existing }
+        if (fresh.isNotEmpty()) {
+            add(fresh.map { MySticker(it.url, it.name) })
+            dao.reorderMine(existing.toList() + fresh.map { it.url }.distinct())
+        }
+
+        val subscribed = dao.listRepos().map { it.slug.lowercase() }.toSet()
+        var folders = 0
+        val failed = mutableListOf<String>()
+        for (subscription in backup.subscriptions) {
+            if (subscription.repo.lowercase() in subscribed) continue
+            val parts = subscription.repo.split('/')
+            if (parts.size != 2 || subscription.folders.isEmpty()) {
+                failed += subscription.repo
+                continue
+            }
+            try {
+                val listing = github.listAt(parts[0], parts[1], subscription.ref, subscription.sha)
+                val paths = subscription.folders.toSet() intersect listing.folders.map { it.path }.toSet()
+                if (paths.isEmpty()) {
+                    failed += subscription.repo
+                    continue
+                }
+                subscribe(listing, paths)
+                subscription.hiddenFolders.filter { it in paths }.forEach { dao.setHidden(listing.slug, it, true) }
+                folders += paths.size
+            } catch (e: StickerSourceException) {
+                failed += subscription.repo
+                if (e.error is StickerSourceError.RateLimited) break
+            }
+        }
+
+        val layout = settingsStore.groupLayout.first()
+        if (layout.order.isEmpty() && backup.order.isNotEmpty()) settingsStore.setGroupOrder(backup.order)
+        backup.hidden.filter { parseFolderGroupKey(it) == null }.forEach { settingsStore.setGroupHidden(it, true) }
+        return StickerImportResult(stickers = fresh.size, folders = folders, failedRepos = failed)
+    }
+
     // ---- GitHub 订阅 ------------------------------------------------------------------------------
 
-    val cdn: Flow<StickerCdnSettings> = cdnStore.settings
+    val cdn: Flow<StickerCdnSettings> = settingsStore.settings
 
-    suspend fun setCdn(cdn: StickerCdn) = cdnStore.setCdn(cdn)
+    private val _sourceErrors = MutableStateFlow<Map<String, StickerSourceError>>(emptyMap())
 
-    suspend fun setCustomCdnBase(base: String) = cdnStore.setCustomBase(base)
+    /**
+     * What the last check said about each repository that failed, by slug — how 1i knows a source is
+     * gone (仓库找不到了) rather than only that some check failed. Cleared for a repository as soon as
+     * one goes through.
+     */
+    val sourceErrors: StateFlow<Map<String, StickerSourceError>> = _sourceErrors.asStateFlow()
+
+    suspend fun setCdn(cdn: StickerCdn) = settingsStore.setCdn(cdn)
+
+    suspend fun setCustomCdnBase(base: String) = settingsStore.setCustomBase(base)
 
     val subscriptions: Flow<List<StickerSubscription>> =
         combine(dao.observeRepos(), dao.observeFolders()) { repos, folders ->
@@ -316,7 +451,10 @@ class StickerLibrary(
         dao.replaceSubscription(repo, folders)
     }
 
-    suspend fun unsubscribe(slug: String) = dao.unsubscribe(slug)
+    suspend fun unsubscribe(slug: String) {
+        dao.unsubscribe(slug)
+        _sourceErrors.update { it - slug }
+    }
 
     suspend fun setFolderHidden(
         slug: String,
@@ -345,6 +483,7 @@ class StickerLibrary(
             val (owner, name) = repo.slug.split('/', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
             try {
                 val head = github.headOf(owner, name, repo.ref)
+                _sourceErrors.update { it - repo.slug }
                 if (head == repo.pinnedSha) {
                     dao.recordCheck(repo.slug, repo.pinnedSha, latestSha = null, now, filesAtLatest = null, truncated = false)
                     continue
@@ -371,6 +510,7 @@ class StickerLibrary(
                 )
             } catch (e: StickerSourceException) {
                 if (firstError == null) firstError = e.error
+                _sourceErrors.update { it + (repo.slug to e.error) }
                 if (e.error is StickerSourceError.RateLimited) break
             }
         }
@@ -406,7 +546,7 @@ class StickerLibrary(
      */
     suspend fun measure(cdn: StickerCdn): Long? {
         val folder = subscriptions.first().flatMap { it.folders }.firstOrNull { it.files.isNotEmpty() } ?: return null
-        val url = cdnStore.settings.first().urlFor(folder.owner, folder.repo, folder.pinnedSha, folder.files.first(), cdn)
+        val url = settingsStore.settings.first().urlFor(folder.owner, folder.repo, folder.pinnedSha, folder.files.first(), cdn)
         val start = TimeSource.Monotonic.markNow()
         val response = try {
             head(url)
@@ -448,6 +588,7 @@ class StickerLibrary(
 
     companion object {
         const val PROBE_TIMEOUT_MS = 8_000L
+        private const val PROBE_PARALLELISM = 4
 
         /** Six hours: a pack gains pictures over weeks, and the check spends shared rate limit. */
         const val UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000L

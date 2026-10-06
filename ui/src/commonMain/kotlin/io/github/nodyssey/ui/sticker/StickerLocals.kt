@@ -13,9 +13,13 @@ import io.github.nodyssey.data.sticker.StickerLibrary
  */
 val LocalStickerLibrary = staticCompositionLocalOf<StickerLibrary?> { null }
 
-/** Where the sticker screens lead: 表情管理, and 图床设置 for a reader with no host connected yet. */
+/**
+ * Where the sticker screens lead: 表情管理 (the panel's gear), its GitHub 订阅 (添加表情's 管理), and
+ * 图床设置 for a reader with no host connected yet.
+ */
 class StickerNavigation(
     val openManager: () -> Unit,
+    val openSources: () -> Unit,
     val openImageHost: () -> Unit,
 )
 

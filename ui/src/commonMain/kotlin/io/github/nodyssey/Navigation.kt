@@ -579,6 +579,7 @@ fun MainNavigation(
                 val stickerNavigation = remember(backStack) {
                     StickerNavigation(
                         openManager = { backStack.add(StickerManageKey) },
+                        openSources = { backStack.add(StickerSourcesKey) },
                         openImageHost = { backStack.add(ImageHostKey) },
                     )
                 }

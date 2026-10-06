@@ -138,6 +138,8 @@ private val EVERY_KEY: List<NavKey> =
         NetworkCheckKey,
         ImageHostKey,
         StickerManageKey,
+        StickerGroupKey("mine"),
+        StickerSourcesKey,
         AboutAppKey,
         AboutCommunityKey,
         PrivacyKey,

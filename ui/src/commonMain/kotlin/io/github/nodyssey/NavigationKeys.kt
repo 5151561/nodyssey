@@ -84,11 +84,19 @@ data object NetworkCheckKey : NavKey
 data object ImageHostKey : NavKey
 
 /**
- * 表情管理 — 我的表情 and the subscribed GitHub packs. This device's, like [ImageHostKey], and so
- * reachable signed out.
+ * 表情管理 — every group of the emoji panel, and where they come from. This device's, like
+ * [ImageHostKey], and so reachable signed out.
  */
 @Serializable
 data object StickerManageKey : NavKey
+
+/** One group of 表情管理 (1h), by the panel's key for it — `mine`, `gh:…`, `site:…`. */
+@Serializable
+data class StickerGroupKey(val key: String) : NavKey
+
+/** 表情管理 › GitHub 订阅 (1i). */
+@Serializable
+data object StickerSourcesKey : NavKey
 
 @Serializable
 data object AboutAppKey : NavKey

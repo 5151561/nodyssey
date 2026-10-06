@@ -151,3 +151,52 @@ fun stickerNameFromUrl(url: String): String =
         .substringBeforeLast('.').take(MAX_NAME_LENGTH).ifEmpty { "sticker" }
 
 const val MAX_NAME_LENGTH = 20
+
+/** The panel's tab for 我的. */
+const val MINE_GROUP_KEY = "mine"
+
+private const val FOLDER_GROUP_PREFIX = "gh:"
+
+/** The panel's tab for one subscribed folder. */
+fun folderGroupKey(
+    slug: String,
+    path: String,
+): String = "$FOLDER_GROUP_PREFIX$slug/$path"
+
+/** The `owner/repo` and path a [folderGroupKey] was made from; null for any other group's key. */
+fun parseFolderGroupKey(key: String): Pair<String, String>? {
+    if (!key.startsWith(FOLDER_GROUP_PREFIX)) return null
+    val parts = key.removePrefix(FOLDER_GROUP_PREFIX).split('/', limit = 3)
+    if (parts.size < 3) return null
+    return "${parts[0]}/${parts[1]}" to parts[2]
+}
+
+/**
+ * The reader's order for the panel's groups — 我的, every subscribed folder and the site's own packs
+ * in one list (1g) — and which of them are hidden. Keys are the panel's group keys. A subscribed
+ * folder's hidden flag is not here: it lives on the folder's row in Room, and the library reads it
+ * from there.
+ */
+data class StickerGroupLayout(
+    val order: List<String> = emptyList(),
+    val hidden: Set<String> = emptySet(),
+) {
+    /**
+     * [defaults] — every group that exists now, in the order a new install shows them — rearranged
+     * into the stored [order].
+     *
+     * A group the stored order has never seen (a folder subscribed since the last drag) goes right
+     * after the group it follows in [defaults], so a new pack lands among the other packs rather than
+     * at either end. Keys stored for groups that no longer exist are dropped.
+     */
+    fun arrange(defaults: List<String>): List<String> {
+        val present = defaults.toSet()
+        val result = order.filter { it in present }.distinct().toMutableList()
+        defaults.forEachIndexed { index, key ->
+            if (key in result) return@forEachIndexed
+            val before = (index - 1 downTo 0).map { defaults[it] }.firstOrNull { it in result }
+            result.add(if (before == null) 0 else result.indexOf(before) + 1, key)
+        }
+        return result
+    }
+}

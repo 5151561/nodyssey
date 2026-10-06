@@ -715,7 +715,7 @@ private fun ColumnScope.GitHubTab(
                 modifier = Modifier.weight(1f),
             )
             if (navigation != null) {
-                TextButton(onClick = navigation.openManager) { Text(stringResource(Res.string.sticker_github_manage)) }
+                TextButton(onClick = navigation.openSources) { Text(stringResource(Res.string.sticker_github_manage)) }
             }
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

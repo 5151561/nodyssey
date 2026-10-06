@@ -73,7 +73,7 @@ internal fun testStickerLibrary(
     return StickerLibrary(
         dao = database.stickerDao(),
         github = GitHubStickerSource(http, dispatchers),
-        cdnStore = settings.stickerCdn,
+        settingsStore = settings.stickerSettings,
         imageHost = NoImageHost,
         preparer = NoPreparer,
         http = http,

@@ -516,7 +516,7 @@ class IosAppContainer(
         StickerLibrary(
             dao = database.stickerDao(),
             github = GitHubStickerSource(thirdParty, dispatchers),
-            cdnStore = settingsRepository.stickerCdn,
+            settingsStore = settingsRepository.stickerSettings,
             imageHost = imageHostRepository,
             preparer = imagePreparer,
             http = thirdParty,

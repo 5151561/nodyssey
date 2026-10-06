@@ -525,6 +525,37 @@ object PlazaIcons {
         )
     }
 
+    /** A subscribed sticker pack — a folder of a repository. */
+    val FolderZip: ImageVector by lazy {
+        materialIcon(
+            name = "FolderZip",
+            pathData =
+            "M20,6h-8l-2,-2H4C2.9,4 2.01,4.9 2.01,6L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8C22,6.9 21.1,6 20,6z" +
+                "M18,12h-2v2h2v2h-2v2h-2v-2h2v-2h-2v-2h2v-2h-2V8h2v2h2V12z",
+        )
+    }
+
+    /** A subscribed pack whose repository is gone. */
+    val FolderOff: ImageVector by lazy {
+        materialIcon(
+            name = "FolderOff",
+            pathData =
+            "M12,6l-2,-2H6.83l14.93,14.93C21.91,18.65 22,18.34 22,18V8c0,-1.1 -0.9,-2 -2,-2H12z" +
+                "M2.1,2.1L0.69,3.51l1.56,1.56C2.1,5.35 2.01,5.66 2.01,6L2,18c0,1.1 0.9,2 2,2h13.17l3.31,3.31 1.41,-1.41L2.1,2.1z",
+        )
+    }
+
+    /** Where pictures load from, and how fast. */
+    val Speed: ImageVector by lazy {
+        materialIcon(
+            name = "Speed",
+            pathData =
+            "M20.38,8.57l-1.23,1.85a8,8 0,0 1,-0.22 7.58H5.07A8,8 0,0 1,15.58 6.85l1.85,-1.23" +
+                "A10,10 0,0 0,3.35 19a2,2 0,0 0,1.72 1h13.85a2,2 0,0 0,1.74 -1a10,10 0,0 0,-0.27 -10.44z" +
+                "M10.59,15.41a2,2 0,0 0,2.83 0l5.66,-8.49 -8.49,5.66a2,2 0,0 0,0 2.83z",
+        )
+    }
+
     /** The grab handle on a reorderable row. */
     val DragHandle: ImageVector by lazy {
         materialIcon(name = "DragHandle", pathData = "M20,9H4v2h16V9zM4,15h16v-2H4V15z")
