@@ -42,6 +42,7 @@ import io.github.nodyssey.ui.resources.credit_level
 import io.github.nodyssey.ui.resources.search_user_comments
 import io.github.nodyssey.ui.resources.search_user_joined
 import io.github.nodyssey.ui.resources.search_user_topics
+import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.GroupedListItem
 import io.github.plaza.designsys.component.GroupedRowTrailing
 import io.github.plaza.designsys.component.LayerCard
@@ -106,7 +107,7 @@ internal fun SearchPostCard(
                 UserNoteTag(summary.authorUid, Modifier.weight(1f, fill = false))
                 summary.lastActiveText?.let {
                     MetaText("·", singleLine = true)
-                    MetaText(it, singleLine = true)
+                    MetaText(TimeFormat.withoutAgo(it), singleLine = true)
                 }
             }
             PostBadges(summary)

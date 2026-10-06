@@ -133,6 +133,7 @@ import io.github.nodyssey.ui.resources.site_switch_signed_in_as
 import io.github.nodyssey.ui.resources.tab_profile
 import io.github.nodyssey.ui.settings.rememberSiteSwitch
 import io.github.nodyssey.ui.settings.siteSwitchRestartsApp
+import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.AppendSpinner
 import io.github.plaza.designsys.component.AvatarShape
 import io.github.plaza.designsys.component.LayerCard
@@ -1323,7 +1324,7 @@ private fun LastReply(
     summary: PostSummary,
     modifier: Modifier = Modifier,
 ) {
-    val time = summary.lastActiveText ?: return
+    val time = summary.lastActiveText?.let(TimeFormat::withoutAgo) ?: return
     val name = summary.lastCommenterName
     val spoken = if (name != null) stringResource(Res.string.post_last_reply_by, name, time) else time
     // Each half wears its own glyph, the way the counts beside them do; the name gives way first

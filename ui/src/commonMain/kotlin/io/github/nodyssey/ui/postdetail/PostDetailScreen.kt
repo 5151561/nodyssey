@@ -196,6 +196,7 @@ import io.github.nodyssey.ui.resources.post_tracked
 import io.github.nodyssey.ui.resources.post_untrack_thread
 import io.github.nodyssey.ui.resources.user_note_action
 import io.github.nodyssey.ui.richtext.PostRichContent
+import io.github.plaza.core.TimeFormat
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.AppendSpinner
@@ -2638,7 +2639,7 @@ private fun FloorTimeLine(
         itemVerticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        content.createdAtText?.let { MetaText(it) }
+        content.createdAtText?.let { MetaText(TimeFormat.withoutAgo(it)) }
         if (content.isEdited) {
             if (content.createdAtText != null) MetaText("·")
             EditedMarker(content)
@@ -2655,7 +2656,7 @@ private fun FloorTimeLine(
 @Composable
 private fun EditedMarker(content: PostContent) {
     val plain = stringResource(Res.string.post_edited)
-    val label = content.editedAtText?.let { stringResource(Res.string.post_edited_at, it) } ?: plain
+    val label = content.editedAtText?.let { stringResource(Res.string.post_edited_at, TimeFormat.withoutAgo(it)) } ?: plain
     // The absolute stamp is the accessible name where the page gave one — a relative label read
     // aloud out of context ("5min ago", from a screen opened ten minutes back) dates itself.
     val spoken = content.editedAtTitle?.let { stringResource(Res.string.post_edited_at, it) } ?: label

@@ -30,6 +30,15 @@ import kotlin.time.Instant
  */
 object TimeFormat {
 
+    /**
+     * The site's own relative stamp without its trailing ` ago` — `5min ago` → `5min`. Beside a
+     * clock glyph or under a floor's author the word adds width and says nothing; anything else
+     * (an absolute date, `edited` with no time) passes through unchanged.
+     */
+    fun withoutAgo(text: String): String = text.replace(TRAILING_AGO, "").ifBlank { text }
+
+    private val TRAILING_AGO = Regex("""\s+ago$""", RegexOption.IGNORE_CASE)
+
     /** Boards 7d/7e/7f pair a relative label with a full timestamp, so both live here. */
     fun parseTimestamp(
         raw: String?,
