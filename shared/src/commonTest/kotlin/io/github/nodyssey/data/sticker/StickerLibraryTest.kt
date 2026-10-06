@@ -4,8 +4,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import io.github.nodyssey.data.composer.ImagePreparer
+import io.github.nodyssey.data.composer.PickedImage
 import io.github.nodyssey.data.imagehost.HostedImage
 import io.github.nodyssey.data.imagehost.ImageHostConfig
+import io.github.nodyssey.data.imagehost.ImageHostError
 import io.github.nodyssey.data.imagehost.ImageHostProvider
 import io.github.nodyssey.data.imagehost.ImageHostRepository
 import io.github.nodyssey.data.imagehost.ImageHostUpload
@@ -14,17 +16,24 @@ import io.github.nodyssey.data.local.StickerDao
 import io.github.nodyssey.data.local.StickerFolderEntity
 import io.github.nodyssey.data.local.StickerRepoEntity
 import io.github.nodyssey.data.settings.StickerCdnStore
+import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpRequest
 import io.github.plaza.core.net.HttpResponse
 import io.github.plaza.core.net.HttpTransport
 import io.github.plaza.core.net.UploadProgress
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -117,7 +126,7 @@ class StickerLibraryTest {
         github.head = NEW
         github.trees[NEW] = listOf("pack/1.gif", "pack/2.png", "README.md")
 
-        val listing = GitHubStickerSource(github).list(GitHubRepoRef("o", "r"))
+        val listing = GitHubStickerSource(github, dispatchers()).list(GitHubRepoRef("o", "r"))
 
         assertEquals("main", listing.ref)
         assertEquals(NEW, listing.sha)
@@ -128,17 +137,165 @@ class StickerLibraryTest {
         )
     }
 
-    private fun TestScope.library(github: HttpTransport = FakeGitHub()) =
-        StickerLibrary(
-            dao = FakeStickerDao(),
-            github = GitHubStickerSource(github),
-            cdnStore = StickerCdnStore(FakePreferences()),
-            imageHost = NoImageHost,
-            preparer = NoPreparer,
-            http = github,
-            clock = { 1_000_000L },
-            scope = backgroundScope,
+    @Test
+    fun `a link typed in another case is keyed by the name GitHub gives`() = runTest {
+        val github = FakeGitHub()
+        github.fullName = "ZhaoOlee/ChineseBQB"
+        github.trees[github.head] = listOf("pack/1.gif")
+
+        val listing = GitHubStickerSource(github, dispatchers()).list(GitHubRepoRef("zhaoolee", "chinesebqb", ref = "master"))
+
+        assertEquals("ZhaoOlee/ChineseBQB", listing.slug)
+        assertEquals("master", listing.ref)
+    }
+
+    @Test
+    fun `GitHub and the link probes are asked on the io dispatcher`() = runTest {
+        val io = StandardTestDispatcher(testScheduler)
+        val github = FakeGitHub()
+        github.trees[github.head] = listOf("pack/1.gif")
+        val library = library(github, AppDispatchers(io = io, default = io))
+
+        library.inspect(GitHubRepoRef("o", "r"))
+        library.probe("https://h/a.png")
+
+        assertEquals(listOf<ContinuationInterceptor?>(io), github.dispatchers.distinct())
+    }
+
+    @Test
+    fun `a check does not write back what changed while it was on the network`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        library.subscribe(listing("o", "r", OLD, "a", "b"), paths = setOf("a", "b"))
+        library.subscribe(listing("o", "s", OLD, "a"), paths = setOf("a"))
+        github.head = NEW
+        github.trees[NEW] = listOf("a/1.png", "a/2.png", "b/1.png")
+        val gate = CompletableDeferred<Unit>()
+        github.treesGate = gate
+
+        val check = async { library.checkForUpdates(force = true) }
+        runCurrent()
+        library.setFolderHidden("o/r", "b", hidden = true)
+        library.reorderFolders("o/r", listOf("b", "a"))
+        library.unsubscribe("o/s")
+        gate.complete(Unit)
+        check.await()
+
+        val after = library.subscriptions.first()
+        assertEquals(listOf("o/r"), after.map { it.slug })
+        assertEquals(listOf("b" to true, "a" to false), after.single().folders.map { it.path to it.hidden })
+        assertTrue(after.single().hasUpdate)
+    }
+
+    @Test
+    fun `an update where every folder vanished can be dismissed and stays dismissed`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        library.subscribe(listing("o", "r", OLD, "a"), paths = setOf("a"))
+        github.head = NEW
+        github.trees[NEW] = listOf("elsewhere/1.png")
+        library.checkForUpdates(force = true)
+        assertTrue(library.subscriptions.first().single().hasUpdate)
+
+        library.applyUpdate("o/r")
+        library.checkForUpdates(force = true)
+
+        val after = library.subscriptions.first().single()
+        assertEquals(false, after.hasUpdate)
+        assertEquals(OLD, after.pinnedSha)
+        assertEquals(listOf("a/1.png"), after.folders.single().files)
+    }
+
+    @Test
+    fun `a truncated tree does not count the folders it left out as vanished`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        library.subscribe(listing("o", "r", OLD, "a", "b"), paths = setOf("a", "b"))
+        github.head = NEW
+        github.trees[NEW] = listOf("a/1.png", "a/2.png")
+        github.truncated = true
+
+        library.checkForUpdates(force = true)
+        library.applyUpdate("o/r")
+
+        val after = library.subscriptions.first().single()
+        assertEquals(NEW, after.pinnedSha)
+        assertEquals(listOf("a", "b"), after.folders.map { it.path })
+    }
+
+    @Test
+    fun `re-subscribing through a folder link keeps the folders outside it`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        library.subscribe(listing("o", "r", OLD, "a", "b/x"), paths = setOf("a", "b/x"))
+        github.head = NEW
+        github.trees[NEW] = listOf("a/1.png", "a/2.png", "b/x/1.png", "b/y/1.png")
+
+        val narrowed = library.inspect(GitHubRepoRef("o", "r", ref = "main", subPath = "b"))
+        assertEquals(listOf("b/x", "b/y"), narrowed.folders.map { it.path })
+        library.subscribe(narrowed, paths = setOf("b/y"))
+
+        val after = library.subscriptions.first().single()
+        assertEquals(NEW, after.pinnedSha)
+        assertEquals(
+            listOf("a" to listOf("a/1.png", "a/2.png"), "b/y" to listOf("b/y/1.png")),
+            after.folders.map { it.path to it.files },
         )
+    }
+
+    @Test
+    fun `a short link to a subscribed repository is read on the branch it follows`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        library.subscribe(listing("o", "r", OLD, "a").copy(ref = "dev"), paths = setOf("a"))
+        github.trees[github.head] = listOf("a/1.png")
+
+        val listing = library.inspect(GitHubRepoRef("O", "R"))
+
+        assertEquals("dev", listing.ref)
+        assertTrue(github.calls.any { it.endsWith("/commits/dev") })
+    }
+
+    @Test
+    fun `an upload the host links over http fails instead of vanishing and the next one still goes`() = runTest {
+        val library = library()
+
+        library.upload(listOf(PickedImage("content://1", "plain.png"), PickedImage("content://2", "fine.png")), keepOriginal = true)
+        runCurrent()
+
+        val (first, second) = library.uploads.value
+        assertEquals(StickerUpload.State.FAILED, first.state)
+        assertEquals(ImageHostError.InsecureLink, first.error?.error)
+        assertEquals(StickerUpload.State.DONE, second.state)
+        assertEquals(listOf("https://h/fine.png"), library.mine.first().map { it.url })
+    }
+
+    private fun TestScope.dispatchers(): AppDispatchers {
+        val io = StandardTestDispatcher(testScheduler)
+        return AppDispatchers(io = io, default = io)
+    }
+
+    private fun listing(
+        owner: String,
+        repo: String,
+        sha: String,
+        vararg folders: String,
+    ) = RepoListing(owner, repo, "main", sha, folders.map { RepoFolder(it, listOf("$it/1.png"), 1) }, truncated = false)
+
+    private fun TestScope.library(
+        github: HttpTransport = FakeGitHub(),
+        dispatchers: AppDispatchers = dispatchers(),
+    ) = StickerLibrary(
+        dao = FakeStickerDao(),
+        github = GitHubStickerSource(github, dispatchers),
+        cdnStore = StickerCdnStore(FakePreferences()),
+        imageHost = FakeImageHost,
+        preparer = FakePreparer,
+        http = github,
+        dispatchers = dispatchers,
+        clock = { 1_000_000L },
+        scope = backgroundScope,
+    )
 
     private companion object {
         const val OLD = "1111111111111111111111111111111111111111"
@@ -150,24 +307,32 @@ class StickerLibraryTest {
 private class FakeGitHub : HttpTransport {
     var head: String = "1111111111111111111111111111111111111111"
     val trees = mutableMapOf<String, List<String>>()
+    var truncated = false
+    var fullName: String? = null
+
+    /** When set, a tree request waits for it — the moment a check is out on the network. */
+    var treesGate: CompletableDeferred<Unit>? = null
     val calls = mutableListOf<String>()
+    val dispatchers = mutableListOf<ContinuationInterceptor?>()
 
     override suspend fun execute(
         request: HttpRequest,
         onUploadProgress: UploadProgress?,
     ): HttpResponse {
         calls += request.url
+        dispatchers += currentCoroutineContext()[ContinuationInterceptor]
         val path = request.url.substringAfter("api.github.com").substringBefore('?')
         val body = when {
             path.contains("/git/trees/") -> {
+                treesGate?.await()
                 val sha = path.substringAfterLast('/')
                 val entries = trees[sha].orEmpty().joinToString(",") { """{"path":"$it","type":"blob","size":1}""" }
-                """{"sha":"$sha","tree":[$entries],"truncated":false}"""
+                """{"sha":"$sha","tree":[$entries],"truncated":$truncated}"""
             }
 
             path.contains("/commits/") -> head
 
-            else -> """{"default_branch":"main"}"""
+            else -> fullName?.let { """{"default_branch":"main","full_name":"$it"}""" } ?: """{"default_branch":"main"}"""
         }
         return HttpResponse(200, request.url, emptyMap(), body)
     }
@@ -181,7 +346,8 @@ private class FakePreferences : DataStore<Preferences> {
         transform(state.value).also { state.value = it }
 }
 
-private object NoImageHost : ImageHostRepository {
+/** Hands back an https link for every upload but one named `plain…`, which it links over http. */
+private object FakeImageHost : ImageHostRepository {
     override val current: Flow<ImageHostConfig> = flowOf(ImageHostConfig(ImageHostProvider.NODE_IMAGE))
     override val selected: Flow<ImageHostProvider> = flowOf(ImageHostProvider.NODE_IMAGE)
 
@@ -196,23 +362,26 @@ private object NoImageHost : ImageHostRepository {
     override suspend fun upload(
         upload: ImageHostUpload,
         onProgress: (Float) -> Unit,
-    ): HostedImage = error("not used")
+    ): HostedImage {
+        val scheme = if (upload.fileName.startsWith("plain")) "http" else "https"
+        return HostedImage(upload.fileName, upload.fileName, "$scheme://h/${upload.fileName}")
+    }
 
     override suspend fun images(): List<HostedImage> = emptyList()
 
     override suspend fun delete(image: HostedImage) = Unit
 }
 
-private object NoPreparer : ImagePreparer {
+private object FakePreparer : ImagePreparer {
     override suspend fun prepare(
         source: String,
         displayName: String,
-    ): ImageHostUpload = error("not used")
+    ): ImageHostUpload = ImageHostUpload(ByteArray(1), displayName, "image/png")
 
     override suspend fun original(
         source: String,
         displayName: String,
-    ): ImageHostUpload = error("not used")
+    ): ImageHostUpload = prepare(source, displayName)
 }
 
 /** The DAO's queries, kept in lists and ordered the way the SQL orders them. */
@@ -297,6 +466,29 @@ private class FakeStickerDao : StickerDao {
         position: Long,
     ) {
         folders.value = folders.value.map { if (it.repoSlug == slug && it.path == path) it.copy(position = position) else it }
+    }
+
+    override suspend fun setLatest(
+        slug: String,
+        pinnedSha: String,
+        latestSha: String?,
+        checkedAtMillis: Long,
+    ): Int {
+        if (repos.value.none { it.slug == slug && it.pinnedSha == pinnedSha }) return 0
+        repos.value = repos.value.map { if (it.slug == slug) it.copy(latestSha = latestSha, checkedAtMillis = checkedAtMillis) else it }
+        return 1
+    }
+
+    override suspend fun setPending(
+        slug: String,
+        path: String,
+        pendingFiles: String?,
+    ) {
+        folders.value = folders.value.map { if (it.repoSlug == slug && it.path == path) it.copy(pendingFiles = pendingFiles) else it }
+    }
+
+    override suspend fun clearPending(slug: String) {
+        folders.value = folders.value.map { if (it.repoSlug == slug) it.copy(pendingFiles = null) else it }
     }
 
     override suspend fun deleteRepoRow(slug: String) {

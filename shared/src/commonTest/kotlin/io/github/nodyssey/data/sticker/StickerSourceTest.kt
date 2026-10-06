@@ -14,6 +14,12 @@ class StickerSourceTest {
     }
 
     @Test
+    fun `a tree link copied from the address bar is decoded once`() {
+        val ref = GitHubRepoRef.parse("https://github.com/o/r/tree/%E5%88%86%E6%94%AF/%E7%86%8A%E7%8C%AB%E5%A4%B4/100%")
+        assertEquals(GitHubRepoRef("o", "r", ref = "分支", subPath = "熊猫头/100%"), ref)
+    }
+
+    @Test
     fun `a bare owner and repo with a git suffix parses to the default branch`() {
         assertEquals(GitHubRepoRef("zhaoolee", "ChineseBQB"), GitHubRepoRef.parse(" zhaoolee/ChineseBQB.git "))
         assertEquals(GitHubRepoRef("a", "b"), GitHubRepoRef.parse("github.com/a/b?tab=readme#top"))

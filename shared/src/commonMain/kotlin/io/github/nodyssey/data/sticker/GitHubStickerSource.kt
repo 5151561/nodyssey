@@ -1,10 +1,12 @@
 package io.github.nodyssey.data.sticker
 
 import io.github.nodyssey.data.text
+import io.github.plaza.core.AppDispatchers
 import io.github.plaza.core.net.HttpRequest
 import io.github.plaza.core.net.HttpResponse
 import io.github.plaza.core.net.HttpTransport
 import io.github.plaza.core.net.SiteException
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
@@ -49,22 +51,58 @@ data class GitHubRepoRef(
             val owner = segments[0]
             val repo = segments[1].removeSuffix(".git")
             if (!OWNER.matches(owner) || !REPO.matches(repo) || repo == "." || repo == "..") return null
-            val ref = if (segments.getOrNull(2) == "tree") segments.getOrNull(3) else null
-            val subPath = if (ref != null) segments.drop(4).joinToString("/") else ""
+            // A link copied out of a browser's address bar arrives percent-encoded — `熊猫头` as
+            // `%E7%86%8A…`. Decoded here once; the branch is encoded again on the way out by
+            // [GitHubStickerSource.headOf], and the folder is compared against tree paths as is.
+            val ref = if (segments.getOrNull(2) == "tree") segments.getOrNull(3)?.let(::decodePercent) else null
+            val subPath = if (ref != null) segments.drop(4).joinToString("/") { decodePercent(it) } else ""
             return GitHubRepoRef(owner, repo, ref, subPath)
         }
     }
 }
 
+/**
+ * `%E7%86%8A` → `熊`: every `%XX` read as a UTF-8 byte. A `%` that does not start a valid escape is
+ * kept as it is, since a hand-typed link has no reason to have been encoded at all.
+ */
+internal fun decodePercent(text: String): String {
+    if ('%' !in text) return text
+    val bytes = ArrayList<Byte>(text.length)
+    var i = 0
+    while (i < text.length) {
+        val c = text[i]
+        val high = text.getOrNull(i + 1)?.digitToIntOrNull(16)
+        val low = text.getOrNull(i + 2)?.digitToIntOrNull(16)
+        if (c == '%' && high != null && low != null) {
+            bytes += (high * 16 + low).toByte()
+            i += 3
+        } else {
+            c.toString().encodeToByteArray().forEach { bytes += it }
+            i++
+        }
+    }
+    return bytes.toByteArray().decodeToString()
+}
+
 /** What a repository holds at one commit, grouped the way the panel will show it. */
 data class RepoListing(
+    /** As GitHub spells it, not as the link did — the subscription is keyed by this. */
     val owner: String,
     val repo: String,
     val ref: String,
     val sha: String,
+    /** The folders under [subPath], or every folder when it is empty. */
     val folders: List<RepoFolder>,
     /** GitHub cut the tree short; some folders may be missing. */
     val truncated: Boolean,
+    /** What the link narrowed the listing to; empty for the whole repository. */
+    val subPath: String = "",
+    /**
+     * The folders at [sha] outside [subPath] — read from the same tree call, so free. Re-subscribing
+     * through a link to one folder moves the whole repository's pin, and the folders it already had
+     * elsewhere need their lists at the new commit too.
+     */
+    val otherFolders: List<RepoFolder> = emptyList(),
 ) {
     val slug: String get() = "$owner/$repo"
 }
@@ -117,13 +155,24 @@ class StickerSourceException(
  */
 class GitHubStickerSource(
     private val http: HttpTransport,
+    /** [HttpTransport.execute] blocks on Android, and the screens call in from the main thread. */
+    private val dispatchers: AppDispatchers,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /**
+     * Asks for the repository first even when the link named a branch, because its `full_name` is
+     * the one spelling of `owner/repo`: GitHub answers a link typed in the wrong case as readily as
+     * the real one, and a subscription keyed by what the reader typed would be a second subscription.
+     */
     suspend fun list(ref: GitHubRepoRef): RepoListing {
-        val branch = ref.ref ?: defaultBranch(ref)
-        val sha = headOf(ref.owner, ref.repo, branch)
-        return listAt(ref.owner, ref.repo, branch, sha, ref.subPath)
+        val repository = parse(get("$API/repos/${ref.owner}/${ref.repo}"))
+        val (owner, repo) = repository.text("full_name")?.split('/')?.takeIf { it.size == 2 }?.let { it[0] to it[1] }
+            ?: (ref.owner to ref.repo)
+        val branch = ref.ref ?: repository.text("default_branch")
+            ?: throw StickerSourceException(StickerSourceError.Unparsable)
+        val sha = headOf(owner, repo, branch)
+        return listAt(owner, repo, branch, sha, ref.subPath)
     }
 
     /** The commit [branch] points at now. */
@@ -154,7 +203,8 @@ class GitHubStickerSource(
             val path = entry.text("path") ?: return@mapNotNull null
             TreeBlob(path, entry["size"]?.jsonPrimitive?.longOrNull ?: 0L)
         }
-        val folders = groupImageFolders(blobs, subPath)
+        val prefix = subPath.trim('/')
+        val (folders, others) = groupImageFolders(blobs, subPath = "").partition { isUnder(it.path, prefix) }
         if (folders.isEmpty()) throw StickerSourceException(StickerSourceError.NoImages)
         return RepoListing(
             owner = owner,
@@ -163,24 +213,24 @@ class GitHubStickerSource(
             sha = sha,
             folders = folders,
             truncated = runCatching { body["truncated"]?.jsonPrimitive?.boolean }.getOrNull() == true,
+            subPath = prefix,
+            otherFolders = others,
         )
     }
-
-    private suspend fun defaultBranch(ref: GitHubRepoRef): String =
-        parse(get("$API/repos/${ref.owner}/${ref.repo}")).text("default_branch")
-            ?: throw StickerSourceException(StickerSourceError.Unparsable)
 
     private suspend fun get(
         url: String,
         accept: String = "application/vnd.github+json",
     ): HttpResponse {
         val response = try {
-            http.execute(
-                HttpRequest(
-                    url = url,
-                    headers = mapOf("Accept" to accept, "X-GitHub-Api-Version" to "2022-11-28"),
-                ),
-            )
+            withContext(dispatchers.io) {
+                http.execute(
+                    HttpRequest(
+                        url = url,
+                        headers = mapOf("Accept" to accept, "X-GitHub-Api-Version" to "2022-11-28"),
+                    ),
+                )
+            }
         } catch (_: SiteException) {
             throw StickerSourceException(StickerSourceError.Network)
         }
@@ -235,6 +285,12 @@ class GitHubStickerSource(
                     )
                 }.sortedBy { it.path }
         }
+
+        /** [path] is the folder [folder] or somewhere below it — `a/bc` is not under `a/b`. */
+        internal fun isUnder(
+            path: String,
+            folder: String,
+        ): Boolean = folder.isEmpty() || path == folder || path.startsWith("$folder/")
 
         private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "webp")
 

@@ -515,11 +515,12 @@ class IosAppContainer(
         val thirdParty = NSUrlSessionTransport { imageHostSession.current }
         StickerLibrary(
             dao = database.stickerDao(),
-            github = GitHubStickerSource(thirdParty),
+            github = GitHubStickerSource(thirdParty, dispatchers),
             cdnStore = settingsRepository.stickerCdn,
             imageHost = imageHostRepository,
             preparer = imagePreparer,
             http = thirdParty,
+            dispatchers = dispatchers,
             clock = clock,
             scope = appScope,
         )
