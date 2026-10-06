@@ -64,7 +64,7 @@ class IosImagePreparer(
                 NSData.dataWithContentsOfURL(url)
                     ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
             originalUpload(data.toByteArray(), displayName)
-        }
+        } ?: prepare(source, displayName)
 
     /**
      * The magic bytes rather than the file name.

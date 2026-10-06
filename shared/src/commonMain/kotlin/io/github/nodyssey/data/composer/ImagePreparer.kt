@@ -15,17 +15,25 @@ interface ImagePreparer {
     /**
      * The picked file's own bytes, untouched — 表情's 保留原图. [prepare] re-encodes a still to WebP
      * (JPEG on iOS) and only spares a GIF, so an animated WebP would go out as its first frame; a
-     * sticker is a few kilobytes and is worth sending as it is.
+     * sticker is a few kilobytes and is worth sending as it is. A file that is not one of the
+     * formats a browser draws — HEIC above all — goes through [prepare] after all; see
+     * [originalUpload].
      */
     suspend fun original(source: String, displayName: String): ImageHostUpload
 }
 
 /**
  * [bytes] read as whatever their magic number says, with [displayName] given the matching
- * extension. A file that is none of the four keeps its name and goes out as an octet stream.
+ * extension — or null when they are none of GIF, PNG, JPEG and WebP, for the caller to re-encode
+ * through [ImagePreparer.prepare] instead.
+ *
+ * Null rather than the bytes as an octet stream because 保留原图 is on by default and the camera's
+ * own format is HEIC on an iPhone and on many Android phones: kept as it is, that is a file the host
+ * stores as `.HEIC` and a browser does not draw, so the sticker is broken in every post that uses
+ * it. Only the four formats a web page shows are worth keeping untouched.
  */
-fun originalUpload(bytes: ByteArray, displayName: String): ImageHostUpload {
-    val (mime, extension) = sniffImageType(bytes) ?: return ImageHostUpload(bytes, displayName, "application/octet-stream")
+fun originalUpload(bytes: ByteArray, displayName: String): ImageHostUpload? {
+    val (mime, extension) = sniffImageType(bytes) ?: return null
     return ImageHostUpload(bytes, displayName.withExtension(extension), mime)
 }
 

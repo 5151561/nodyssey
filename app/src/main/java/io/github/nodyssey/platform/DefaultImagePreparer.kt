@@ -66,7 +66,7 @@ class DefaultImagePreparer(
             val uri = runCatching { source.toUri() }.getOrNull()
                 ?: throw ImageHostException(ImageHostError.Unparsable, detail = displayName)
             originalUpload(readAll(uri, displayName), displayName)
-        }
+        } ?: prepare(source, displayName)
 
     private fun readAll(uri: Uri, displayName: String): ByteArray =
         runCatching { resolver.openInputStream(uri)?.use { it.readBytes() } }
