@@ -1,6 +1,5 @@
 package io.github.nodyssey.ui.notifications
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -44,8 +43,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -105,7 +102,6 @@ import io.github.plaza.designsys.theme.LocalPlazaLayers
 import io.github.plaza.designsys.theme.PlazaTheme
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.StatusShapes
-import io.github.plaza.designsys.theme.cardShadow
 import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -241,29 +237,10 @@ fun NotificationsScreen(
         if (pagerState.currentPage != selectedIndex) pagerState.animateScrollToPage(selectedIndex)
     }
 
-    // The header lifts as one piece — title, 全部已读 and the tabs — once a list runs under it (5a).
-    // [OneHandTopAppBar] lifts itself; the tab row below it has to follow in step, or the shadow
-    // would fall between the two halves of one header instead of under it.
+    // The header stays flush with the page however far a list runs under it — no shadow, no tint.
+    // It used to lift as one piece, title and tabs together, and in dark that repainted the whole
+    // top of the screen a step lighter, which read as the screen changing colour rather than depth.
     val layers = LocalPlazaLayers.current
-    // The lift follows the list on the page in view, not only the scrolls the bar heard: switching
-    // to the other group, or 回顶 from the tab bar, moves no nested scroll, and the header stayed
-    // lifted — its shadow and the fade under it — over a list back at its top.
-    val currentList = if (tabs.getOrNull(pagerState.currentPage) == NotificationTab.MESSAGES) conversationListState else notificationListState
-    LaunchedEffect(currentList) {
-        snapshotFlow { currentList.canScrollBackward }.collect { appBarState.syncContentOverlapped(it) }
-    }
-    val lifted = appBarState.isContentOverlapped
-    val headerColor by animateColorAsState(
-        targetValue =
-        if (lifted && !layers.shadows) {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        } else {
-            layers.page
-        },
-        // A snap under reduced motion and 墨水屏, like the bar's own tint this has to keep pace with.
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-        label = "notificationsHeader",
-    )
 
     Scaffold(
         modifier = modifier,
@@ -275,6 +252,7 @@ fun NotificationsScreen(
                 OneHandTopAppBar(
                     title = stringResource(Res.string.tab_notifications),
                     state = appBarState,
+                    liftOnScroll = false,
                     actions = {
                         TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                             Icon(
@@ -297,13 +275,10 @@ fun NotificationsScreen(
                  * way to draw. Fixed rather than scrollable — there are two of them, and a scrollable
                  * row would huddle both at the start with the rest of the width left over.
                  *
-                 * Drawn over an opaque strip of the header's own colour, which is also what covers the
-                 * bar's shadow where the two halves meet.
+                 * Drawn over an opaque strip of the page's colour, so rows scrolling up under the
+                 * header do not show through between the tabs.
                  */
-                Surface(
-                    color = headerColor,
-                    modifier = Modifier.cardShadow(RectangleShape, enabled = lifted && layers.shadows),
-                ) {
+                Surface(color = layers.page) {
                     GroupTabs(
                         tabs = tabs,
                         currentPage = pagerState.currentPage,
@@ -384,19 +359,6 @@ fun NotificationsScreen(
                             }
                         }
                     }
-            }
-            // 渐隐: once the list runs under the header, its rows fade into the page rather than
-            // being cut off at the header's edge (5a). Only then — at rest there is nothing under
-            // the header, and the fade would only dim the first group's label.
-            if (lifted) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(TOP_FADE)
-                        // From the header's own colour, which is a step lighter than the page once
-                        // lifted in dark: starting from the page drew a dark seam under the header.
-                        .background(Brush.verticalGradient(listOf(headerColor, headerColor.copy(alpha = 0f)))),
-                )
             }
         }
     }
@@ -779,9 +741,6 @@ private val NotificationRowPadding = PaddingValues(horizontal = Spacing.md, vert
  * of the time stamps under the rows.
  */
 internal val ListGroupLabelPadding = PaddingValues(start = 8.dp, top = 14.dp, bottom = 6.dp)
-
-/** How far the page colour reaches down over a list that has scrolled under the header. */
-private val TOP_FADE = 20.dp
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable

@@ -102,6 +102,12 @@ fun OneHandTopAppBar(
     subtitle: String? = null,
     expandedBlank: Dp = oneHandExpandedBlank(),
     navigationIcon: (@Composable () -> Unit)? = null,
+    /**
+     * Whether the bar lifts once content runs under it. Off where the bar is only the top of a
+     * taller header that stays flush with the page — 通知, whose tabs hang under it — and a lift
+     * repainting the whole header read as the screen changing colour rather than as depth.
+     */
+    liftOnScroll: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -111,7 +117,7 @@ fun OneHandTopAppBar(
     // scrolls under it the bar lifts: a shadow where the layers can draw one, a step up in tone where
     // they cannot (dark, 墨水屏).
     val layers = LocalPlazaLayers.current
-    val lifted = state.isContentOverlapped
+    val lifted = liftOnScroll && state.isContentOverlapped
     val containerColor by animateColorAsState(
         targetValue =
         if (lifted && !layers.shadows) {
@@ -281,19 +287,6 @@ class OneHandAppBarState internal constructor(initialHeightPx: Float, initialCon
         get() = contentOffset < -0.5f
 
     private var consumedByBar = 0f
-
-    /**
-     * Puts [isContentOverlapped] right after a change the scroll chain did not carry.
-     *
-     * The overlap is counted from nested scrolls, and some changes of what is under the bar send
-     * none: a pager moving to a list at a different depth, or `animateScrollToItem(0)`. Left alone the
-     * bar kept its lifted look over a list at its top. A screen whose content can change that way
-     * reports it here — from `LazyListState.canScrollBackward`, say — and the next scroll carries on
-     * counting from there.
-     */
-    fun syncContentOverlapped(overlapped: Boolean) {
-        contentOffset = if (overlapped) contentOffset.coerceAtMost(-1f) else 0f
-    }
 
     val nestedScrollConnection: NestedScrollConnection =
         object : NestedScrollConnection {
