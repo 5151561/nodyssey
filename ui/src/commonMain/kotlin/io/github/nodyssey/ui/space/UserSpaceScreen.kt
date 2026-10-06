@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -78,6 +77,7 @@ import io.github.nodyssey.ui.common.MediumButton
 import io.github.nodyssey.ui.common.MediumButtonStyle
 import io.github.nodyssey.ui.common.SiteErrorSnackbar
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.TabPager
 import io.github.nodyssey.ui.common.UserNoteTag
 import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.describedAsLoading
@@ -331,7 +331,7 @@ fun UserSpaceScreen(
                         .onSizeChanged { tabsHeightPx = it.height }
                         .padding(horizontal = LayerPageGutter, vertical = 2.dp),
                 )
-                HorizontalPager(
+                TabPager(
                     state = pagerState,
                     key = { tabs[it].name },
                     modifier = Modifier.height(pagerHeight).nestedScroll(collapseHeaderFirst),

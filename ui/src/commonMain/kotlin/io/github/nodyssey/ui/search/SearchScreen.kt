@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -102,6 +101,7 @@ import io.github.nodyssey.ui.common.NoSearchResultsState
 import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SortMenuItem
+import io.github.nodyssey.ui.common.TabPager
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.labelRes
 import io.github.nodyssey.ui.common.rememberTabPagerState
@@ -361,7 +361,7 @@ fun SearchScreen(
                         .nestedScroll(navigationBarScrollConnection)
                         .nestedScroll(headerScrollBehavior.nestedScrollConnection),
                 ) {
-                    HorizontalPager(
+                    TabPager(
                         state = resultPager,
                         key = { TargetOrder[it].name },
                         modifier = Modifier.fillMaxSize(),

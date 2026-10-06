@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.TitleBlockRule
 import io.github.nodyssey.data.account.BlockedUser
+import io.github.nodyssey.ui.common.TabPager
 import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_block_add_action
@@ -221,7 +221,7 @@ fun BlockListScreen(
             )
             // 左右滑动切换. The reveal switch heads both pages because it waives both, so each page
             // carries it rather than it standing above the pager: it scrolls away with either list.
-            HorizontalPager(
+            TabPager(
                 state = pagerState,
                 key = { tabs[it].name },
                 modifier = Modifier.fillMaxSize(),

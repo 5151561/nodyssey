@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.TabPager
 import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -136,7 +136,7 @@ fun FollowScreen(
 
             // 左右滑动切换. Each page draws its own tab's list, so the neighbour slides in with the
             // finger; one not fetched yet shows as loading until the swipe settles and asks for it.
-            HorizontalPager(
+            TabPager(
                 state = pagerState,
                 key = { tabs[it].name },
                 modifier = Modifier.fillMaxSize(),
