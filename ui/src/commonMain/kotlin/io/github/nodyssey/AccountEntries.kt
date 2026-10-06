@@ -55,6 +55,7 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             // Every image host is a different site with a different session; the in-app web
             // view exists to carry NodeSeek's cookies and has no business holding these.
             onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
+            onOpenImages = { urls, index -> backStack.add(ImageViewerKey(urls = urls, index = index)) },
         )
     }
 

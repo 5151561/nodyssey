@@ -177,6 +177,7 @@ fun ImageHostRoute(
     viewModel: ImageHostViewModel,
     onBack: () -> Unit,
     onOpenUrl: (String) -> Unit,
+    onOpenImages: (urls: List<String>, index: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -209,7 +210,10 @@ fun ImageHostRoute(
         onDismissDelete = viewModel::dismissDelete,
         onConfirmDelete = viewModel::confirmDelete,
         onOpenSite = { onOpenUrl(state.provider.siteUrlFor(state.siteUrlInput)) },
-        onOpenImage = onOpenUrl,
+        onOpenImage = { url ->
+            val urls = state.images.map(HostedImage::url)
+            onOpenImages(urls, urls.indexOf(url).coerceAtLeast(0))
+        },
         modifier = modifier,
     )
 }
