@@ -56,6 +56,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -98,6 +99,8 @@ import io.github.nodyssey.ui.resources.sticker_manage_note
 import io.github.nodyssey.ui.resources.sticker_manage_open_repo
 import io.github.nodyssey.ui.resources.sticker_manage_pinned
 import io.github.nodyssey.ui.resources.sticker_manage_remove_all
+import io.github.nodyssey.ui.resources.sticker_manage_remove_broken_body
+import io.github.nodyssey.ui.resources.sticker_manage_remove_broken_confirm
 import io.github.nodyssey.ui.resources.sticker_manage_selected
 import io.github.nodyssey.ui.resources.sticker_manage_show
 import io.github.nodyssey.ui.resources.sticker_manage_subs_empty
@@ -261,16 +264,29 @@ private fun MineTab(viewModel: StickerManageViewModel) {
     var dragging by remember { mutableStateOf<String?>(null) }
     var moved by remember { mutableStateOf(false) }
 
-    fun keyAt(offset: Offset): String? =
-        gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+    val contentPadding = PaddingValues(horizontal = LayerPageGutter + Spacing.sm, vertical = Spacing.md)
+    val layoutDirection = LocalLayoutDirection.current
+
+    /**
+     * The cell under [position], given in the grid's own coordinates. An item's offset is measured
+     * from inside the content padding, so [padding] — that padding's top-left corner in pixels —
+     * comes off the pointer first; without it every hit lands on the cell up and to the left.
+     */
+    fun keyAt(
+        position: Offset,
+        padding: Offset,
+    ): String? {
+        val offset = position - padding
+        return gridState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
             offset.x >= item.offset.x && offset.x < item.offset.x + item.size.width &&
                 offset.y >= item.offset.y && offset.y < item.offset.y + item.size.height
         }?.key as? String
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(MANAGE_COLUMNS),
         state = gridState,
-        contentPadding = PaddingValues(horizontal = LayerPageGutter + Spacing.sm, vertical = Spacing.md),
+        contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         modifier = Modifier
@@ -278,15 +294,19 @@ private fun MineTab(viewModel: StickerManageViewModel) {
             // Hand-rolled: neither Compose nor Material has a reorderable grid. A long press picks a
             // cell up and each cell the finger crosses swaps in; a long press that never moves is a
             // selection instead. Replace with the platform's when one ships.
-            .pointerInput(mine.size) {
+            .pointerInput(mine.size, layoutDirection) {
+                val padding = Offset(
+                    contentPadding.calculateLeftPadding(layoutDirection).toPx(),
+                    contentPadding.calculateTopPadding().toPx(),
+                )
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset ->
-                        dragging = keyAt(offset)?.takeIf { it.startsWith(URL_KEY) }
+                        dragging = keyAt(offset, padding)?.takeIf { it.startsWith(URL_KEY) }
                         moved = false
                     },
                     onDrag = { change, _ ->
                         val from = dragging ?: return@detectDragGesturesAfterLongPress
-                        val over = keyAt(change.position)?.takeIf { it.startsWith(URL_KEY) } ?: return@detectDragGesturesAfterLongPress
+                        val over = keyAt(change.position, padding)?.takeIf { it.startsWith(URL_KEY) } ?: return@detectDragGesturesAfterLongPress
                         if (over != from) {
                             moved = true
                             viewModel.dragMove(from.removePrefix(URL_KEY), over.removePrefix(URL_KEY))
@@ -384,6 +404,21 @@ private fun BrokenLinksCard(
     broken: List<BrokenSticker>,
     onRemoveAll: () -> Unit,
 ) {
+    var confirming by remember { mutableStateOf(false) }
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(stringResource(Res.string.sticker_manage_remove_broken_confirm, broken.size)) },
+            text = { Text(stringResource(Res.string.sticker_manage_remove_broken_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    onRemoveAll()
+                    confirming = false
+                }) { Text(stringResource(Res.string.sticker_manage_remove_all), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(Res.string.action_cancel)) } },
+        )
+    }
     LayerCard(modifier = Modifier.padding(top = Spacing.sm), contentPadding = PaddingValues(Spacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Icon(PlazaIcons.LinkOff, contentDescription = null, tint = MaterialTheme.colorScheme.error)
@@ -392,7 +427,7 @@ private fun BrokenLinksCard(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onRemoveAll) { Text(stringResource(Res.string.sticker_manage_remove_all)) }
+            TextButton(onClick = { confirming = true }) { Text(stringResource(Res.string.sticker_manage_remove_all)) }
         }
         broken.forEach { item ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

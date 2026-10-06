@@ -1794,6 +1794,9 @@
     <string name="sticker_manage_drag_hint">长按拖动排序，点按选择</string>
     <string name="sticker_manage_broken">%1$d 张加载不出来</string>
     <string name="sticker_manage_remove_all">全部移除</string>
+    <!-- 「全部移除」之前问一句：一碰就删，而有的链接只是一时连不上，删了没法找回。 -->
+    <string name="sticker_manage_remove_broken_confirm">移除 %1$d 张加载不出来的表情？</string>
+    <string name="sticker_manage_remove_broken_body">会从「我的」里删掉。有的可能只是暂时连不上，删了要重新添加。</string>
     <string name="sticker_manage_timeout">超时</string>
     <string name="sticker_manage_export">导出链接</string>
     <string name="sticker_manage_export_desc">复制全部链接，一行一个</string>

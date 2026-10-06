@@ -1519,6 +1519,8 @@
     <string name="sticker_manage_drag_hint">長按拖動排序，點按選擇</string>
     <string name="sticker_manage_broken">%1$d 張載入不出來</string>
     <string name="sticker_manage_remove_all">全部移除</string>
+    <string name="sticker_manage_remove_broken_confirm">移除 %1$d 張載入不出來的表情？</string>
+    <string name="sticker_manage_remove_broken_body">會從「我的」裡刪掉。有的可能只是暫時連不上，刪了要重新新增。</string>
     <string name="sticker_manage_timeout">逾時</string>
     <string name="sticker_manage_export">匯出連結</string>
     <string name="sticker_manage_export_desc">複製全部連結，一行一個</string>

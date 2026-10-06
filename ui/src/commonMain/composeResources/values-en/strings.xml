@@ -1527,6 +1527,8 @@
     <string name="sticker_manage_drag_hint">Long-press and drag to reorder; tap to select</string>
     <string name="sticker_manage_broken">%1$d won\'t load</string>
     <string name="sticker_manage_remove_all">Remove all</string>
+    <string name="sticker_manage_remove_broken_confirm">Remove %1$d stickers that won\'t load?</string>
+    <string name="sticker_manage_remove_broken_body">They leave Mine. Some may only be unreachable for now, and would have to be added again.</string>
     <string name="sticker_manage_timeout">Timed out</string>
     <string name="sticker_manage_export">Export links</string>
     <string name="sticker_manage_export_desc">Copy every link, one per line</string>

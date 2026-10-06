@@ -10,11 +10,13 @@ import io.github.nodyssey.data.sticker.StickerLibrary
 import io.github.nodyssey.data.sticker.StickerSourceError
 import io.github.nodyssey.data.sticker.StickerSubscription
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,8 +51,12 @@ class StickerManageViewModel(
      */
     private val dragOrder = MutableStateFlow<List<String>?>(null)
 
+    /** What Room holds, shared so [dragEnd] waits on the same emissions [mine] is drawn from. */
+    private val stored: SharedFlow<List<MySticker>> =
+        library.mine.shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
+
     val mine: StateFlow<List<MySticker>> =
-        combine(library.mine, dragOrder) { stored, order ->
+        combine(stored, dragOrder) { stored, order ->
             if (order == null) {
                 stored
             } else {
@@ -66,7 +72,7 @@ class StickerManageViewModel(
 
     /** The saved links that did not answer — 2 张加载不出来 — in 我的's order. */
     val broken: StateFlow<List<BrokenSticker>> =
-        combine(library.mine, probes) { list, results ->
+        combine(stored, probes) { list, results ->
             list.mapNotNull { sticker ->
                 results[sticker.url]?.takeIf { it !is LinkProbe.Ok }?.let { BrokenSticker(sticker, it) }
             }
@@ -104,12 +110,27 @@ class StickerManageViewModel(
         dragOrder.value = current
     }
 
+    /**
+     * Stores the dragged order, and keeps showing it until Room hands it back: dropping it as soon
+     * as the write returns would draw the stored order from before the drag for the frame or two
+     * before the query re-runs.
+     */
     fun dragEnd() {
         val order = dragOrder.value ?: return
         viewModelScope.launch {
             library.reorder(order)
-            dragOrder.value = null
+            stored.first { list -> list.hasOrder(order) }
+            // A drag started meanwhile is building its own order; that one is not ours to drop.
+            dragOrder.compareAndSet(order, null)
         }
+    }
+
+    /** Whether these stickers stand in [order] — ignoring any added or removed since it was taken. */
+    private fun List<MySticker>.hasOrder(order: List<String>): Boolean {
+        val wanted = order.toSet()
+        val urls = map { it.url }.filter { it in wanted }
+        val present = urls.toSet()
+        return urls == order.filter { it in present }
     }
 
     /**
@@ -160,7 +181,9 @@ class StickerManageViewModel(
     /** 每次打开这一页会测一下各个源的速度. */
     fun measureCdns() {
         viewModelScope.launch {
-            val targets = StickerCdn.entries.filter { it != StickerCdn.CUSTOM || cdn.value.normalizedCustomBase() != null }
+            // Read rather than [cdn].value: the page measures as it opens, before anything collects that.
+            val settings = library.cdn.first()
+            val targets = StickerCdn.entries.filter { it != StickerCdn.CUSTOM || settings.normalizedCustomBase() != null }
             _latency.value = targets.associateWith { CdnLatency.Measuring }
             targets.forEach { target ->
                 launch {
@@ -175,9 +198,13 @@ class StickerManageViewModel(
         if (_checking.value) return
         viewModelScope.launch {
             _checking.value = true
-            _checkError.value = library.checkForUpdates(force)
+            val error = library.checkForUpdates(force)
+            // Queried afresh: [subscriptions] has not been handed the check's writes yet, and has no
+            // collector at all on the check the page runs as it opens.
+            val upToDate = force && error == null && library.subscriptions.first().none { it.hasUpdate }
+            _checkError.value = error
             _checking.value = false
-            _checkedUpToDate.value = force && _checkError.value == null && subscriptions.value.none { it.hasUpdate }
+            _checkedUpToDate.value = upToDate
         }
     }
 
