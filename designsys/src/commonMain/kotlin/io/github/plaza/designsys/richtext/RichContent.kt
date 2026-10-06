@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -136,6 +138,30 @@ import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.asProse
 import org.jetbrains.compose.resources.stringResource
 import coil3.size.Size as CoilSize
+
+/**
+ * What a long press on a picture in a post body does — 添加到我的表情 and its neighbours, in this app.
+ *
+ * A composition local rather than one more parameter: a picture sits a dozen composables deep in
+ * this file and in [io.github.plaza.designsys.component.WrapTable], every one of which would have to
+ * carry it, and only one screen has anything to say about it. Null — the default — leaves pictures
+ * tap-only.
+ */
+val LocalImageLongPress = staticCompositionLocalOf<((String) -> Unit)?> { null }
+
+/** A tap opens [url]; a long press goes to [LocalImageLongPress] when one is provided. */
+@Composable
+internal fun Modifier.imageClicks(
+    url: String,
+    onImageClick: (String) -> Unit,
+): Modifier {
+    val onLongPress = LocalImageLongPress.current
+    return if (onLongPress == null) {
+        clickable { onImageClick(url) }
+    } else {
+        combinedClickable(onClick = { onImageClick(url) }, onLongClick = { onLongPress(url) })
+    }
+}
 
 /**
  * Renders parsed post markup with real Compose text and images — no WebView.
@@ -749,7 +775,7 @@ private fun BlockImage(
             Modifier
                 .width(displayWidth)
                 .clip(MaterialTheme.shapes.medium)
-                .clickable { onImageClick(node.url) },
+                .imageClicks(node.url, onImageClick),
         ) {
             key(request) {
                 AsyncImage(

@@ -50,6 +50,7 @@ import io.github.plaza.designsys.resources.Res
 import io.github.plaza.designsys.resources.richtext_action_retry
 import io.github.plaza.designsys.resources.richtext_image_load_failed
 import io.github.plaza.designsys.resources.richtext_image_skipped_action
+import io.github.plaza.designsys.richtext.imageClicks
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import org.jetbrains.compose.resources.stringResource
@@ -262,7 +263,7 @@ private fun CellThumbnail(
                 .fillMaxWidth()
                 .height(THUMBNAIL_HEIGHT)
                 .clip(MaterialTheme.shapes.extraSmall)
-                .clickable { onImageClick(image.url) },
+                .imageClicks(image.url, onImageClick),
         )
     }
 }
