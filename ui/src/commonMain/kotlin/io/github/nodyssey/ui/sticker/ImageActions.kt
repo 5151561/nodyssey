@@ -46,6 +46,7 @@ import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.sticker_added
+import io.github.nodyssey.ui.resources.sticker_added_none
 import io.github.nodyssey.ui.resources.sticker_image_add
 import io.github.nodyssey.ui.resources.sticker_image_add_desc
 import io.github.nodyssey.ui.resources.sticker_image_already
@@ -220,7 +221,12 @@ fun ImageActionsSheet(
                             dismiss()
                             scope.launch {
                                 val added = library.add(listOf(MySticker(request.url, stickerNameFromUrl(request.url))))
-                                if (added.isEmpty()) return@launch
+                                if (added.isEmpty()) {
+                                    // The row is disabled for a link already saved, so this is an
+                                    // http picture, which 我的 does not keep.
+                                    snackbarHostState.showSnackbar(getString(Res.string.sticker_added_none))
+                                    return@launch
+                                }
                                 val result = snackbarHostState.showSnackbar(
                                     message = getString(Res.string.sticker_added),
                                     actionLabel = getString(Res.string.sticker_undo),

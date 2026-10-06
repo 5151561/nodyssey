@@ -128,10 +128,17 @@ fun encodeSegment(segment: String): String =
 private const val HEX = "0123456789ABCDEF"
 
 /**
+ * Whether 我的 keeps [url]: `https` only. The app itself cannot draw an `http` picture — Android
+ * refuses cleartext by default at this targetSdk and iOS's App Transport Security does the same, and
+ * neither shell opts out — so a sticker saved from one would be a broken cell in the panel.
+ */
+fun isStickerLink(url: String): Boolean = url.startsWith("https://")
+
+/**
  * The `https` links in whatever was pasted, in order and without repeats.
  *
  * Takes a Markdown image's target too, so a line copied out of a post body works as well as a bare
- * link. `http` links are left out on purpose: a post served over https would not show them.
+ * link. `http` links are left out on purpose, for [isStickerLink]'s reason.
  */
 fun extractStickerLinks(text: String): List<String> =
     LINK.findAll(text).map { it.value.trimEnd('.', ',', ')', '>', '"', '\'') }.distinct().toList()

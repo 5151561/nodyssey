@@ -103,6 +103,7 @@ import io.github.nodyssey.ui.resources.imagehost_delete_title
 import io.github.nodyssey.ui.resources.imagehost_empty
 import io.github.nodyssey.ui.resources.imagehost_error_cloudflare
 import io.github.nodyssey.ui.resources.imagehost_error_http
+import io.github.nodyssey.ui.resources.imagehost_error_insecure_link
 import io.github.nodyssey.ui.resources.imagehost_error_invalid_key
 import io.github.nodyssey.ui.resources.imagehost_error_not_configured
 import io.github.nodyssey.ui.resources.imagehost_error_rejected
@@ -891,6 +892,7 @@ internal fun ImageHostError.messageRes(): StringResource = when (this) {
     ImageHostError.Unsupported -> Res.string.imagehost_error_unsupported
     ImageHostError.Network -> Res.string.status_network_title
     ImageHostError.Unparsable -> Res.string.imagehost_error_unparsable
+    ImageHostError.InsecureLink -> Res.string.imagehost_error_insecure_link
 }
 
 /** `1536` → `1.5 KB`. Binary units, because that is what these hosts report their own sizes in. */

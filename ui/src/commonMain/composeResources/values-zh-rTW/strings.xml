@@ -1199,6 +1199,7 @@
     <string name="imagehost_error_http">圖床暫時無法存取，請稍後重試</string>
     <string name="imagehost_error_unsupported">這個圖床只提供上傳介面，圖片清單和刪除要到它自己的網頁上操作</string>
     <string name="imagehost_error_unparsable">看不懂圖床的回傳內容，自訂圖床請檢查「取值路徑」是否填對</string>
+    <string name="imagehost_error_insecure_link">圖床給的是 http 連結，表情只收 https 連結</string>
 
     <string name="composer_upload_not_configured">尚未連線圖床，請到 我的 › 帳號設定 › 圖床 選一個並填好金鑰</string>
     <string name="composer_upload_invalid_key">圖床金鑰無效，請到 帳號設定 › 圖床 重新填寫</string>
@@ -1448,7 +1449,7 @@
     <string name="sticker_update_action">更新</string>
     <string name="sticker_added">已加入我的表情</string>
     <string name="sticker_added_count">已加入 %1$d 張到我的表情</string>
-    <string name="sticker_added_none">這些都已在我的表情裡</string>
+    <string name="sticker_added_none">沒有新表情可加入：已在我的表情裡，或不是 https 連結</string>
     <string name="sticker_subscribed">已訂閱，表情在面板裡</string>
     <string name="sticker_undo">復原</string>
     <string name="sticker_rename_title">重新命名表情</string>

@@ -92,6 +92,12 @@ sealed interface ImageHostError {
 
     /** This host has no endpoint for what was asked — listing or deleting. See [ImageHostProvider.browsable]. */
     data object Unsupported : ImageHostError
+
+    /**
+     * The upload went through, but the link the host gave back is plain `http`, which 我的表情 does
+     * not keep — see `isStickerLink`. Only the sticker upload raises it.
+     */
+    data object InsecureLink : ImageHostError
 }
 
 class ImageHostException(

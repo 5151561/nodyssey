@@ -1206,6 +1206,7 @@
     <string name="imagehost_error_http">The host cannot be reached right now — try again later</string>
     <string name="imagehost_error_unsupported">This host only offers uploading; listing and deleting have to be done on its own site</string>
     <string name="imagehost_error_unparsable">The host’s answer could not be read; for a custom host, check the path to the URL</string>
+    <string name="imagehost_error_insecure_link">The host returned an http link; stickers need https</string>
 
     <string name="composer_upload_not_configured">No image host connected — pick one and fill in its key under Me › Account settings › Image host</string>
     <string name="composer_upload_invalid_key">The image host key is invalid — enter it again under Account settings › Image host</string>
@@ -1456,7 +1457,7 @@
     <string name="sticker_update_action">Update</string>
     <string name="sticker_added">Added to Mine</string>
     <string name="sticker_added_count">Added %1$d to Mine</string>
-    <string name="sticker_added_none">Those are all in Mine already</string>
+    <string name="sticker_added_none">Nothing new to add: already in Mine, or not an https link</string>
     <string name="sticker_subscribed">Subscribed — the stickers are in the panel</string>
     <string name="sticker_undo">Undo</string>
     <string name="sticker_rename_title">Rename sticker</string>
