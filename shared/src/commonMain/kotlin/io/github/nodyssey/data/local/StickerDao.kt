@@ -176,6 +176,12 @@ interface StickerDao {
         }
     }
 
+    @Query("UPDATE sticker_repos SET folderCount = :count WHERE slug = :slug")
+    suspend fun setFolderCount(
+        slug: String,
+        count: Int,
+    )
+
     @Query("DELETE FROM sticker_repos WHERE slug = :slug")
     suspend fun deleteRepoRow(slug: String)
 

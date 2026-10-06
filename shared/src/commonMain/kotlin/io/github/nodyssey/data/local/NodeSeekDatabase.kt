@@ -40,7 +40,7 @@ import androidx.sqlite.execSQL
         StickerRepoEntity::class,
         StickerFolderEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
 )
 @TypeConverters(RichContentConverters::class)
@@ -466,6 +466,18 @@ val MIGRATION_18_19 =
     }
 
 /**
+ * Adds how many image folders a subscribed repository has. Null on the rows already there, which is
+ * honest — v19 never counted — until the next update check lists the repository and fills it in. A
+ * version of its own rather than a wider v19: debug builds already carry v19.
+ */
+val MIGRATION_19_20 =
+    object : Migration(19, 20) {
+        override fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE `sticker_repos` ADD COLUMN `folderCount` INTEGER")
+        }
+    }
+
+/**
  * Every migration this schema has, in order — the list `createNodeSeekDatabase` opens the file with.
  *
  * Named here, beside the migrations themselves, rather than at the builder: which upgrades are known
@@ -494,4 +506,5 @@ val NODESEEK_MIGRATIONS = arrayOf(
     MIGRATION_16_17,
     MIGRATION_17_18,
     MIGRATION_18_19,
+    MIGRATION_19_20,
 )

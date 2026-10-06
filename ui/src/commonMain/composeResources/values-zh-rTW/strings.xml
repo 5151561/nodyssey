@@ -1576,6 +1576,8 @@
     <string name="sticker_sources_check_all">全部檢查</string>
     <string name="sticker_sources_meta">訂了 %1$d 個資料夾 · %2$s</string>
     <string name="sticker_sources_latest">訂了 %1$d 個資料夾 · 已是最新</string>
+    <string name="sticker_sources_meta_total">訂了 %1$d / %2$d 個資料夾 · %3$s</string>
+    <string name="sticker_sources_latest_total">訂了 %1$d / %2$d 個資料夾 · 已是最新</string>
     <string name="sticker_sources_folder_new">%1$s +%2$d 張</string>
     <string name="sticker_sources_gone">倉庫找不到了（已刪除或改為私有）</string>
     <string name="sticker_sources_gone_body">已快取的圖還能用，新裝置上就拉不到了。</string>

@@ -447,6 +447,8 @@ class StickerLibrary(
             latestSha = null,
             checkedAtMillis = clock.nowMillis(),
             position = existing?.position ?: ((dao.maxRepoPosition() ?: -1L) + 1),
+            // Not from a tree GitHub cut short: a count of what it happened to send would be low.
+            folderCount = (listing.folders.size + listing.otherFolders.size).takeUnless { listing.truncated },
         )
         dao.replaceSubscription(repo, folders)
     }
@@ -484,6 +486,11 @@ class StickerLibrary(
             try {
                 val head = github.headOf(owner, name, repo.ref)
                 _sourceErrors.update { it - repo.slug }
+                // A subscription from before the count was kept: one listing of the pinned commit
+                // fills it in, once — the next check finds it set.
+                if (head == repo.pinnedSha && repo.folderCount == null) {
+                    countFolders(owner, name, repo.ref, head)?.let { dao.setFolderCount(repo.slug, it) }
+                }
                 if (head == repo.pinnedSha) {
                     dao.recordCheck(repo.slug, repo.pinnedSha, latestSha = null, now, filesAtLatest = null, truncated = false)
                     continue
@@ -498,6 +505,7 @@ class StickerLibrary(
                 } else {
                     null
                 }
+                listing?.takeUnless { it.truncated }?.let { dao.setFolderCount(repo.slug, it.folders.size) }
                 // Written against the rows as they are now, not as they were read above: see
                 // [StickerDao.recordCheck].
                 dao.recordCheck(
@@ -516,6 +524,20 @@ class StickerLibrary(
         }
         return firstError
     }
+
+    /** How many image folders [sha] has; null when the tree came back cut short and the count would be low. */
+    private suspend fun countFolders(
+        owner: String,
+        repo: String,
+        ref: String,
+        sha: String,
+    ): Int? =
+        try {
+            github.listAt(owner, repo, ref, sha).takeUnless { it.truncated }?.folders?.size
+        } catch (e: StickerSourceException) {
+            if (e.error != StickerSourceError.NoImages) throw e
+            0
+        }
 
     /**
      * 更新: moves [slug] to the commit the last check found. One pin per repository, so a folder that
@@ -570,6 +592,7 @@ class StickerLibrary(
             ref = ref,
             pinnedSha = pinnedSha,
             checkedAtMillis = checkedAtMillis,
+            folderCount = folderCount,
             folders = folders.sortedBy { it.position }.map { folder ->
                 SubscribedFolder(
                     owner = owner,

@@ -1584,6 +1584,8 @@
     <string name="sticker_sources_check_all">Check all</string>
     <string name="sticker_sources_meta">%1$d folders · %2$s</string>
     <string name="sticker_sources_latest">%1$d folders · up to date</string>
+    <string name="sticker_sources_meta_total">%1$d of %2$d folders · %3$s</string>
+    <string name="sticker_sources_latest_total">%1$d of %2$d folders · up to date</string>
     <string name="sticker_sources_folder_new">%1$s +%2$d</string>
     <string name="sticker_sources_gone">Repository not found (deleted or made private)</string>
     <string name="sticker_sources_gone_body">Pictures already cached still work; a new device cannot fetch them.</string>

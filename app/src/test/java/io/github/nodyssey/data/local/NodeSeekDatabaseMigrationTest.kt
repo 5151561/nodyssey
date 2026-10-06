@@ -491,6 +491,27 @@ class NodeSeekDatabaseMigrationTest {
         migrated.close()
     }
 
+    /** A subscription from v19 keeps everything it had and has no folder count until a check makes one. */
+    @Test
+    fun `migration 19 to 20 adds an empty folder count to subscribed repositories`() {
+        helper.createDatabase(DATABASE_NAME, 19).apply {
+            execSQL(
+                "INSERT INTO sticker_repos(slug, ref, pinnedSha, latestSha, checkedAtMillis, position) " +
+                    "VALUES('o/r', 'main', 'abc', NULL, 1000, 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 20, true, MIGRATION_19_20)
+
+        migrated.query("SELECT pinnedSha, folderCount FROM sticker_repos WHERE slug = 'o/r'").use {
+            it.moveToFirst()
+            assertEquals("abc", it.getString(0))
+            assertTrue(it.isNull(1))
+        }
+        migrated.close()
+    }
+
     /**
      * The whole ladder at once, which is the only test that runs it the way a device does.
      *
@@ -499,10 +520,10 @@ class NodeSeekDatabaseMigrationTest {
      * it, on a file that has actually climbed the versions in between rather than being created at
      * the version under test. A reader on the oldest still-migratable store upgrades through all
      * twelve in one open, so that is what this runs: real v3 rows in, `runMigrationsAndValidate`
-     * against the exported v17 schema out, the oldest data still readable at the top.
+     * against the newest exported schema out, the oldest data still readable at the top.
      */
     @Test
-    fun `a v3 store climbs every migration to v17 with its data intact`() {
+    fun `a v3 store climbs every migration to the newest version with its data intact`() {
         helper.createDatabase(DATABASE_NAME, 3).apply {
             execSQL(
                 """
@@ -529,7 +550,7 @@ class NodeSeekDatabaseMigrationTest {
             close()
         }
 
-        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 19, true, *NODESEEK_MIGRATIONS)
+        val migrated = helper.runMigrationsAndValidate(DATABASE_NAME, 20, true, *NODESEEK_MIGRATIONS)
 
         migrated.query("SELECT title, isBlocked, isAwarded FROM posts WHERE postId = 42").use {
             it.moveToFirst()

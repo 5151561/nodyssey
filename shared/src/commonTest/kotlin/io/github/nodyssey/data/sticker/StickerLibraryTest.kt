@@ -317,6 +317,38 @@ class StickerLibraryTest {
         assertEquals(setOf("site:ac"), library.groupLayout.first().hidden)
     }
 
+    @Test
+    fun `the folder count covers the whole repository and a check that lists a newer commit refreshes it`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        library.subscribe(
+            listing("o", "r", OLD, "x").copy(subPath = "x", otherFolders = listOf(RepoFolder("y", listOf("y/1.png"), 1))),
+            setOf("x"),
+        )
+        assertEquals(2, library.subscriptions.first().single().folderCount)
+
+        github.head = NEW
+        github.trees[NEW] = listOf("x/1.png", "y/1.png", "z/1.png")
+        library.checkForUpdates(force = true)
+
+        assertEquals(3, library.subscriptions.first().single().folderCount)
+    }
+
+    @Test
+    fun `a subscription with no count gets one from the next check even when nothing moved`() = runTest {
+        val github = FakeGitHub()
+        val library = library(github)
+        // Cut short, so the subscription is stored without a count — as every pre-v20 row is.
+        library.subscribe(listing("o", "r", OLD, "x").copy(truncated = true), setOf("x"))
+        assertNull(library.subscriptions.first().single().folderCount)
+
+        github.head = OLD
+        github.trees[OLD] = listOf("x/1.png", "y/1.png")
+        library.checkForUpdates(force = true)
+
+        assertEquals(2, library.subscriptions.first().single().folderCount)
+    }
+
     private fun TestScope.dispatchers(): AppDispatchers {
         val io = StandardTestDispatcher(testScheduler)
         return AppDispatchers(io = io, default = io)
@@ -536,6 +568,13 @@ private class FakeStickerDao : StickerDao {
 
     override suspend fun clearPending(slug: String) {
         folders.value = folders.value.map { if (it.repoSlug == slug) it.copy(pendingFiles = null) else it }
+    }
+
+    override suspend fun setFolderCount(
+        slug: String,
+        count: Int,
+    ) {
+        repos.value = repos.value.map { if (it.slug == slug) it.copy(folderCount = count) else it }
     }
 
     override suspend fun deleteRepoRow(slug: String) {

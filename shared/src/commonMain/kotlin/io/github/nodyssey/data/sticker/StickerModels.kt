@@ -14,6 +14,8 @@ data class StickerSubscription(
     val pinnedSha: String,
     val checkedAtMillis: Long,
     val folders: List<SubscribedFolder>,
+    /** Every image folder the repository has; null until one listing has counted them. */
+    val folderCount: Int? = null,
 ) {
     val slug: String get() = "$owner/$repo"
 

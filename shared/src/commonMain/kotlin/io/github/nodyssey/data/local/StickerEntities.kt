@@ -40,6 +40,12 @@ data class StickerRepoEntity(
     val latestSha: String?,
     val checkedAtMillis: Long,
     val position: Long,
+    /**
+     * How many image folders the repository has — 订了 2 / 46 个文件夹 — at the commit last listed:
+     * the pinned one when subscribing, the branch's newer one once a check has found it. Null on a
+     * row from before v20 until a check fills it in.
+     */
+    val folderCount: Int? = null,
 )
 
 /**

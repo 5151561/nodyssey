@@ -1852,6 +1852,8 @@
     <string name="sticker_sources_check_all">全部检查</string>
     <string name="sticker_sources_meta">订了 %1$d 个文件夹 · %2$s</string>
     <string name="sticker_sources_latest">订了 %1$d 个文件夹 · 已是最新</string>
+    <string name="sticker_sources_meta_total">订了 %1$d / %2$d 个文件夹 · %3$s</string>
+    <string name="sticker_sources_latest_total">订了 %1$d / %2$d 个文件夹 · 已是最新</string>
     <string name="sticker_sources_folder_new">%1$s +%2$d 张</string>
     <string name="sticker_sources_gone">仓库找不到了（已删除或改为私有）</string>
     <string name="sticker_sources_gone_body">已缓存的图还能用，新设备上就拉不到了。</string>

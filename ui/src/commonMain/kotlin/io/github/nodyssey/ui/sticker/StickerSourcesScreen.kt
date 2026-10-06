@@ -57,7 +57,9 @@ import io.github.nodyssey.ui.resources.sticker_sources_folder_new
 import io.github.nodyssey.ui.resources.sticker_sources_gone
 import io.github.nodyssey.ui.resources.sticker_sources_gone_body
 import io.github.nodyssey.ui.resources.sticker_sources_latest
+import io.github.nodyssey.ui.resources.sticker_sources_latest_total
 import io.github.nodyssey.ui.resources.sticker_sources_meta
+import io.github.nodyssey.ui.resources.sticker_sources_meta_total
 import io.github.nodyssey.ui.resources.sticker_sources_subscribe_new
 import io.github.nodyssey.ui.resources.sticker_update_action
 import io.github.plaza.designsys.component.InlineBanner
@@ -210,11 +212,7 @@ private fun SourceCard(
             Column(Modifier.weight(1f)) {
                 Text("${subscription.owner} / ${subscription.repo}", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    when {
-                        gone -> stringResource(Res.string.sticker_sources_gone)
-                        subscription.hasUpdate -> stringResource(Res.string.sticker_sources_meta, subscription.folders.size, subscription.pinnedSha.take(7))
-                        else -> stringResource(Res.string.sticker_sources_latest, subscription.folders.size)
-                    },
+                    sourceMeta(subscription, gone),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (gone) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -247,3 +245,22 @@ private fun SourceCard(
         }
     }
 }
+
+@Composable
+private fun sourceMeta(
+    subscription: StickerSubscription,
+    gone: Boolean,
+): String {
+    val subscribed = subscription.folders.size
+    val total = subscription.folderCount
+    val sha = subscription.pinnedSha.take(SHORT_SHA)
+    return when {
+        gone -> stringResource(Res.string.sticker_sources_gone)
+        subscription.hasUpdate && total != null -> stringResource(Res.string.sticker_sources_meta_total, subscribed, total, sha)
+        subscription.hasUpdate -> stringResource(Res.string.sticker_sources_meta, subscribed, sha)
+        total != null -> stringResource(Res.string.sticker_sources_latest_total, subscribed, total)
+        else -> stringResource(Res.string.sticker_sources_latest, subscribed)
+    }
+}
+
+private const val SHORT_SHA = 7
