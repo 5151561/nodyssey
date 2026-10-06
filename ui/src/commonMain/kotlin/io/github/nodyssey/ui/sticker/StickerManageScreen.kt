@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -32,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -80,14 +83,18 @@ import io.github.nodyssey.data.sticker.StickerCdn
 import io.github.nodyssey.data.sticker.StickerCdnSettings
 import io.github.nodyssey.ui.account.nameRes
 import io.github.nodyssey.ui.common.PlazaSheet
+import io.github.nodyssey.ui.common.rememberTextFilePicker
+import io.github.nodyssey.ui.common.rememberTextFileSaver
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_cancel
 import io.github.nodyssey.ui.resources.action_done
 import io.github.nodyssey.ui.resources.action_save
+import io.github.nodyssey.ui.resources.sticker_backup_copy
 import io.github.nodyssey.ui.resources.sticker_backup_export
 import io.github.nodyssey.ui.resources.sticker_backup_export_desc
 import io.github.nodyssey.ui.resources.sticker_backup_exported
+import io.github.nodyssey.ui.resources.sticker_backup_file_unreadable
 import io.github.nodyssey.ui.resources.sticker_backup_import
 import io.github.nodyssey.ui.resources.sticker_backup_import_desc
 import io.github.nodyssey.ui.resources.sticker_backup_import_failed
@@ -97,6 +104,10 @@ import io.github.nodyssey.ui.resources.sticker_backup_import_title
 import io.github.nodyssey.ui.resources.sticker_backup_imported
 import io.github.nodyssey.ui.resources.sticker_backup_importing
 import io.github.nodyssey.ui.resources.sticker_backup_not_backup
+import io.github.nodyssey.ui.resources.sticker_backup_pick_file
+import io.github.nodyssey.ui.resources.sticker_backup_save_failed
+import io.github.nodyssey.ui.resources.sticker_backup_save_file
+import io.github.nodyssey.ui.resources.sticker_backup_saved
 import io.github.nodyssey.ui.resources.sticker_cdn_custom
 import io.github.nodyssey.ui.resources.sticker_cdn_custom_desc
 import io.github.nodyssey.ui.resources.sticker_cdn_custom_hint
@@ -178,6 +189,13 @@ fun StickerManageRoute(
     val scope = rememberCoroutineScope()
     val copy = rememberClipboardCopy()
     val exported = stringResource(Res.string.sticker_backup_exported)
+    val savedText = stringResource(Res.string.sticker_backup_saved)
+    val saveFailedText = stringResource(Res.string.sticker_backup_save_failed)
+    val saveFile = rememberTextFileSaver(
+        fileName = BACKUP_FILE_NAME,
+        text = { viewModel.exportBackup() },
+        onSaved = { saved -> notice = StickerNotice(if (saved) savedText else saveFailedText) },
+    )
 
     LaunchedEffect(Unit) {
         viewModel.checkLinks()
@@ -280,11 +298,9 @@ fun StickerManageRoute(
 
                 SectionLabel(stringResource(Res.string.sticker_manage_backup), modifier = Modifier.padding(top = Spacing.md))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    BackupTile(
-                        title = stringResource(Res.string.sticker_backup_export),
-                        subtitle = stringResource(Res.string.sticker_backup_export_desc),
-                        icon = { Icon(Icons.Default.Share, contentDescription = null) },
-                        onClick = { scope.launch { copy("stickers", viewModel.exportBackup(), exported) } },
+                    ExportTile(
+                        onCopy = { scope.launch { copy("stickers", viewModel.exportBackup(), exported) } },
+                        onSaveFile = saveFile,
                         modifier = Modifier.weight(1f),
                     )
                     BackupTile(
@@ -788,6 +804,44 @@ private fun CustomCdnDialog(
 
 // ---- 备份 -----------------------------------------------------------------------------------------
 
+/** 导出: straight to the clipboard where there is no file to save to, otherwise a choice of the two. */
+@Composable
+private fun ExportTile(
+    onCopy: () -> Unit,
+    onSaveFile: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box(modifier) {
+        BackupTile(
+            title = stringResource(Res.string.sticker_backup_export),
+            subtitle = stringResource(Res.string.sticker_backup_export_desc),
+            icon = { Icon(Icons.Default.Share, contentDescription = null) },
+            onClick = { if (onSaveFile == null) onCopy() else menu = true },
+        )
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.sticker_backup_copy)) },
+                leadingIcon = { Icon(PlazaIcons.ContentCopy, contentDescription = null) },
+                onClick = {
+                    menu = false
+                    onCopy()
+                },
+            )
+            if (onSaveFile != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(Res.string.sticker_backup_save_file)) },
+                    leadingIcon = { Icon(PlazaIcons.Download, contentDescription = null) },
+                    onClick = {
+                        menu = false
+                        onSaveFile()
+                    },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun BackupTile(
     title: String,
@@ -814,6 +868,11 @@ private fun ImportDialog(
 ) {
     val outcome by viewModel.import.collectAsStateWithLifecycle()
     var text by rememberSaveable { mutableStateOf("") }
+    var unreadable by rememberSaveable { mutableStateOf(false) }
+    val pickFile = rememberTextFilePicker { picked ->
+        unreadable = picked == null
+        if (picked != null) viewModel.importBackup(picked)
+    }
     val done = outcome as? ImportOutcome.Done
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -821,6 +880,24 @@ private fun ImportDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 if (done == null) {
+                    if (pickFile != null) {
+                        OutlinedButton(
+                            onClick = pickFile,
+                            enabled = outcome != ImportOutcome.Running,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(PlazaIcons.FolderZip, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.size(Spacing.sm))
+                            Text(stringResource(Res.string.sticker_backup_pick_file))
+                        }
+                    }
+                    if (unreadable) {
+                        Text(
+                            stringResource(Res.string.sticker_backup_file_unreadable),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                     OutlinedTextField(
                         value = text,
                         onValueChange = { text = it },
@@ -877,3 +954,6 @@ private const val HIDDEN_ALPHA = 0.5f
 
 /** 站点自带: the site's initials, the one mark the design gives a pack that is nobody's upload. */
 private const val SITE_MARK = "NS"
+
+/** Suggested when saving; the same in every language, and 导入 reads the content, never the name. */
+private const val BACKUP_FILE_NAME = "nodyssey-stickers.json"
