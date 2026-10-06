@@ -3,11 +3,13 @@ package io.github.plaza.designsys.editor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -19,19 +21,22 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Badge
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +69,41 @@ import kotlin.math.ceil
 data class EmojiGroup(
     val title: @Composable () -> String,
     val entries: List<EmojiEntry>,
+    /**
+     * What the open tab is remembered by. Blank falls back to the group's position, which is fine
+     * for a fixed list and wrong for one that grows while the panel is open — a group that arrives
+     * from storage a frame late would otherwise shift every tab after it under the reader's finger.
+     */
+    val key: String = "",
+    /** Drawn before [title] in the pill — 我的's heart. */
+    val icon: ImageVector? = null,
+    /** A dot on the pill: something in the group wants looking at, an update for instance. */
+    val badge: Boolean = false,
+    /** Shown above the grid while the group is open — an update notice, say. */
+    val header: (@Composable () -> Unit)? = null,
+    /** A cell before the entries, scrolling with them — where 我的 puts its 添加. */
+    val leadingCell: (@Composable (Modifier) -> Unit)? = null,
+    /**
+     * Long-press menu items for one entry, drawn inside a [DropdownMenu] anchored to its cell; call
+     * the second argument to close it. Null means a long press does nothing.
+     */
+    val entryMenu: (@Composable ColumnScope.(entry: EmojiEntry, dismiss: () -> Unit) -> Unit)? = null,
+    /** What an empty group says instead of the panel's shared `emptyGroupText`. */
+    val emptyText: String? = null,
 )
+
+/**
+ * A recent that was a Markdown image — a saved sticker since deleted, a pack since unsubscribed —
+ * still draws as its picture rather than as a line of Markdown in a cell.
+ */
+private fun markdownImageSticker(insertion: String): EmojiEntry.Sticker? =
+    MARKDOWN_IMAGE.matchEntire(insertion.trim())?.let { match ->
+        EmojiEntry.Sticker(name = match.groupValues[1], shortcode = insertion, url = match.groupValues[2])
+    }
+
+private val MARKDOWN_IMAGE = Regex("""!\[([^\]]*)]\((https://[^)\s]+)\)""")
+
+private fun EmojiGroup.selectionKey(index: Int): String = key.ifEmpty { "#$index" }
 
 sealed interface EmojiEntry {
     /** Inserted as-is. Plain Unicode, which is why it needs nothing from the site. */
@@ -128,20 +167,31 @@ fun EmojiPanel(
 ) {
     // The recents when there are any to open on; otherwise the first group that has anything in it,
     // so the panel is useful the moment it shows.
-    var selectedIndex by rememberSaveable {
-        mutableIntStateOf(
-            if (recent.isNotEmpty()) RECENT else groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0),
+    var selectedKey by rememberSaveable {
+        mutableStateOf(
+            if (recent.isNotEmpty()) {
+                RECENT_KEY
+            } else {
+                val first = groups.indexOfFirst { it.entries.isNotEmpty() }.coerceAtLeast(0)
+                groups.getOrNull(first)?.selectionKey(first) ?: RECENT_KEY
+            },
         )
     }
+    val selectedIndex = if (selectedKey == RECENT_KEY) {
+        RECENT
+    } else {
+        groups.indices.firstOrNull { groups[it].selectionKey(it) == selectedKey } ?: 0
+    }
+    val selectedGroup = groups.getOrNull(selectedIndex).takeIf { selectedIndex != RECENT }
     val entriesByInsertion = remember(groups) {
         groups.flatMap(EmojiGroup::entries).associateBy(EmojiEntry::insertion)
     }
     // A recent no group knows any more — a pack the site dropped — is still text that can be
     // inserted, so it stays in the tab as what it inserts.
     val entries = if (selectedIndex == RECENT) {
-        recent.map { entriesByInsertion[it] ?: EmojiEntry.Unicode(it) }
+        recent.map { entriesByInsertion[it] ?: markdownImageSticker(it) ?: EmojiEntry.Unicode(it) }
     } else {
-        (groups.getOrNull(selectedIndex) ?: groups.first()).entries
+        selectedGroup?.entries.orEmpty()
     }
 
     fun insert(text: String) {
@@ -163,16 +213,19 @@ fun EmojiPanel(
                 GroupPill(
                     title = stringResource(Res.string.composer_emoji_recent),
                     selected = selectedIndex == RECENT,
-                    onClick = { selectedIndex = RECENT },
+                    onClick = { selectedKey = RECENT_KEY },
                 )
                 groups.forEachIndexed { index, candidate ->
                     GroupPill(
                         title = candidate.title(),
                         selected = index == selectedIndex,
-                        onClick = { selectedIndex = index },
+                        onClick = { selectedKey = candidate.selectionKey(index) },
+                        icon = candidate.icon,
+                        badge = candidate.badge,
                     )
                 }
             }
+            selectedGroup?.header?.invoke()
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 // The panel is sized from its cells rather than the other way round: square cells
                 // under a fixed height showed a different number of rows on every width and left the
@@ -180,26 +233,30 @@ fun EmojiPanel(
                 val columns = maxOf(COLUMNS, ceil((maxWidth + CELL_GAP) / (MAX_CELL + CELL_GAP)).toInt())
                 val cell = (maxWidth - CELL_GAP * (columns - 1)) / columns
                 Box(Modifier.fillMaxWidth().height(cell * VISIBLE_ROWS + CELL_GAP * (VISIBLE_ROWS - 1))) {
-                    if (entries.isEmpty()) {
-                        Text(
-                            text = if (selectedIndex == RECENT) {
-                                stringResource(Res.string.composer_emoji_recent_empty)
-                            } else {
-                                emptyGroupText
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.Center).padding(horizontal = Spacing.xl),
-                        )
-                    } else {
+                    val leadingCell = selectedGroup?.leadingCell
+                    if (entries.isNotEmpty() || leadingCell != null) {
                         EmojiGrid(
                             entries = entries,
                             columns = columns,
                             onSelect = { insert(it.insertion) },
                             stickerImage = stickerImage,
                             bottomClearance = cell + CELL_GAP,
+                            leadingCell = leadingCell,
+                            entryMenu = selectedGroup?.entryMenu,
                             modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (entries.isEmpty()) {
+                        Text(
+                            text = if (selectedIndex == RECENT) {
+                                stringResource(Res.string.composer_emoji_recent_empty)
+                            } else {
+                                selectedGroup?.emptyText ?: emptyGroupText
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center).padding(horizontal = Spacing.xl),
                         )
                     }
                     BackspaceKey(onClick = onBackspace, modifier = Modifier.align(Alignment.BottomEnd).size(cell))
@@ -214,6 +271,8 @@ private fun GroupPill(
     title: String,
     selected: Boolean,
     onClick: () -> Unit,
+    icon: ImageVector? = null,
+    badge: Boolean = false,
 ) {
     val layers = LocalPlazaLayers.current
     // The selectable overload, so a screen reader hears which group is open.
@@ -227,12 +286,18 @@ private fun GroupPill(
         // 28dp drawn; Material still hit-tests the pill at 48.
         modifier = Modifier.height(28.dp),
     ) {
-        Box(Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             )
+            if (badge) Badge()
         }
     }
 }
@@ -244,6 +309,8 @@ private fun EmojiGrid(
     onSelect: (EmojiEntry) -> Unit,
     stickerImage: @Composable (EmojiEntry.Sticker, String?, Modifier) -> Unit,
     bottomClearance: Dp,
+    leadingCell: (@Composable (Modifier) -> Unit)?,
+    entryMenu: (@Composable ColumnScope.(EmojiEntry, () -> Unit) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
@@ -253,8 +320,11 @@ private fun EmojiGrid(
         horizontalArrangement = Arrangement.spacedBy(CELL_GAP),
         verticalArrangement = Arrangement.spacedBy(CELL_GAP),
     ) {
+        if (leadingCell != null) {
+            item(key = LEADING_KEY) { leadingCell(Modifier.aspectRatio(1f)) }
+        }
         items(entries, key = { it.insertion }) { entry ->
-            EmojiCell(entry = entry, onClick = { onSelect(entry) }, stickerImage = stickerImage)
+            EmojiCell(entry = entry, onClick = { onSelect(entry) }, stickerImage = stickerImage, menu = entryMenu)
         }
     }
 }
@@ -264,24 +334,37 @@ private fun EmojiCell(
     entry: EmojiEntry,
     onClick: () -> Unit,
     stickerImage: @Composable (EmojiEntry.Sticker, String?, Modifier) -> Unit,
+    menu: (@Composable ColumnScope.(EmojiEntry, () -> Unit) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val description = when (entry) {
         is EmojiEntry.Unicode -> entry.character
         is EmojiEntry.Sticker -> entry.name
     }
+    var menuOpen by remember { mutableStateOf(false) }
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = description },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = if (menu != null) {
+                    { menuOpen = true }
+                } else {
+                    null
+                },
+            ).semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
         when (entry) {
             is EmojiEntry.Unicode -> Text(entry.character, fontSize = 24.sp)
             is EmojiEntry.Sticker -> stickerImage(entry, null, Modifier.size(STICKER_SIZE))
+        }
+        if (menu != null) {
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                menu(entry) { menuOpen = false }
+            }
         }
     }
 }
@@ -316,6 +399,8 @@ private fun BackspaceKey(
 
 private const val COLUMNS = 6
 private const val RECENT = -1
+private const val RECENT_KEY = "recent"
+private const val LEADING_KEY = "\u0000leading"
 
 /** Every sticker ever inserted is not a useful tab; three rows of the grid is. */
 private const val RECENT_LIMIT = 18
