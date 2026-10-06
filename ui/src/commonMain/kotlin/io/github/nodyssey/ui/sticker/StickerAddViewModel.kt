@@ -19,10 +19,12 @@ import io.github.nodyssey.data.sticker.extractStickerLinks
 import io.github.nodyssey.data.sticker.stickerNameFromUrl
 import io.github.plaza.core.runCatchingExceptCancellation
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -36,9 +38,17 @@ data class LinkPreview(
     val name: String,
     /** Null until the picture has loaded or failed — decided by drawing it, not by asking. */
     val loads: Boolean? = null,
+    /** Whether its server answered the probe; null while that is out. */
+    val answered: Boolean? = null,
     val sizeBytes: Long? = null,
 ) {
     val tooLarge: Boolean get() = (sizeBytes ?: 0L) > LARGE_STICKER_BYTES
+
+    /**
+     * Goes in with 添加. Drawing it decides when it has been drawn; a tile the row never scrolled to
+     * has not, and stands on its server's answer instead.
+     */
+    val ready: Boolean get() = loads ?: (answered == true)
 }
 
 /** Past this a sticker is slow to appear in a thread; said, not refused. */
@@ -102,15 +112,26 @@ class StickerAddViewModel(
     private val _previews = MutableStateFlow<List<LinkPreview>>(emptyList())
     val previews: StateFlow<List<LinkPreview>> = _previews.asStateFlow()
 
+    private var probeJob: Job? = null
+
     fun setLinkText(text: String) {
         _linkText.value = text
         val links = extractStickerLinks(text).take(MAX_LINKS)
         val previous = _previews.value.associateBy { it.url }
         _previews.value = links.map { url -> previous[url] ?: LinkPreview(url, stickerNameFromUrl(url)) }
-        links.filterNot { it in previous }.forEach { url ->
-            viewModelScope.launch {
-                val probe = library.probe(url)
-                if (probe is LinkProbe.Ok) updatePreview(url) { it.copy(sizeBytes = probe.sizeBytes) }
+        // Asked once the text stops changing: typed out by hand, every prefix of a link is a link,
+        // and each would be a request to somebody's server. A probe still out for a link edited
+        // away is dropped with it; one for a link still there is asked again.
+        probeJob?.cancel()
+        probeJob = viewModelScope.launch {
+            delay(PROBE_DEBOUNCE_MS)
+            _previews.value.filter { it.answered == null }.forEach { preview ->
+                launch {
+                    val probe = library.probe(preview.url)
+                    updatePreview(preview.url) {
+                        it.copy(answered = probe is LinkProbe.Ok, sizeBytes = (probe as? LinkProbe.Ok)?.sizeBytes)
+                    }
+                }
             }
         }
     }
@@ -136,9 +157,9 @@ class StickerAddViewModel(
         change: (LinkPreview) -> LinkPreview,
     ) = _previews.update { list -> list.map { if (it.url == url) change(it) else it } }
 
-    /** The previews that drew; the ones still loading wait, the broken ones are left out. */
+    /** The [LinkPreview.ready] previews; the ones still loading wait, the broken ones are left out. */
     suspend fun addLinks(): List<String> {
-        val ready = _previews.value.filter { it.loads == true }
+        val ready = _previews.value.filter { it.ready }
         return library.add(ready.map { MySticker(it.url, it.name) })
     }
 
@@ -233,14 +254,16 @@ class StickerAddViewModel(
         _folderSelection.value = emptySet()
     }
 
-    /** Opens the GitHub tab on [slug] with its current folders ticked — 换文件夹. */
+    /** Opens the GitHub tab on [slug] with its current folders ticked, on its own branch — 换文件夹. */
     fun editSource(slug: String) {
-        val subscription = subscriptions.value.firstOrNull { it.slug == slug }
         _tab.value = StickerAddTab.GITHUB
         _source.value = slug
         _repoUrl.value = "github.com/$slug"
-        val ref = GitHubRepoRef.parse(slug)?.copy(ref = subscription?.ref) ?: return
-        load(ref, preselect = subscription?.folders?.mapTo(HashSet()) { it.path })
+        val base = GitHubRepoRef.parse(slug) ?: return
+        load {
+            val subscription = subscribed { it == slug }
+            base.copy(ref = subscription?.ref) to subscription
+        }
     }
 
     fun loadRepo() {
@@ -249,20 +272,32 @@ class StickerAddViewModel(
             _repo.value = RepoState.BadUrl
             return
         }
-        val existing = subscriptions.value.firstOrNull { it.slug.equals(ref.slug, ignoreCase = true) }
-        _source.value = existing?.slug
-        load(ref, preselect = existing?.folders?.mapTo(HashSet()) { it.path })
+        load {
+            val existing = subscribed { it.equals(ref.slug, ignoreCase = true) }
+            _source.value = existing?.slug
+            ref to existing
+        }
     }
 
-    private fun load(
-        ref: GitHubRepoRef,
-        preselect: Set<String>?,
-    ) {
+    /**
+     * Read from the store rather than [subscriptions].value, which holds anything only while
+     * something collects it — and 表情管理 calls [editSource] before the sheet that does is composed.
+     */
+    private suspend fun subscribed(slugMatches: (String) -> Boolean): StickerSubscription? =
+        library.subscriptions.first().firstOrNull { slugMatches(it.slug) }
+
+    /**
+     * Lists the repository [resolve] names, ticking whichever of its folders the subscription it
+     * also returns already holds.
+     */
+    private fun load(resolve: suspend () -> Pair<GitHubRepoRef, StickerSubscription?>) {
         repoJob?.cancel()
         _repo.value = RepoState.Loading
         _folderSelection.value = emptySet()
         repoJob = viewModelScope.launch {
             _repo.value = try {
+                val (ref, subscription) = resolve()
+                val preselect = subscription?.folders?.mapTo(HashSet()) { it.path }
                 val listing = library.inspect(ref)
                 val available = listing.folders.mapTo(HashSet()) { it.path }
                 _folderSelection.value = preselect?.intersect(available).orEmpty()
@@ -297,5 +332,8 @@ class StickerAddViewModel(
     private companion object {
         /** A paste is a handful of stickers; a page of links is a mistake, and each one is a request. */
         const val MAX_LINKS = 30
+
+        /** Long enough to outlast a keystroke, short enough that a paste reads as instant. */
+        const val PROBE_DEBOUNCE_MS = 400L
     }
 }

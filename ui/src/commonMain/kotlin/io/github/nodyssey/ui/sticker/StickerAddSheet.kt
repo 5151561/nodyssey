@@ -185,6 +185,24 @@ internal fun StickerAddSheet(
     // What the last 添加 put into 我的, waiting one frame to be worded: the count is a plural-free
     // format string, and resolving it needs composition.
     var added by remember { mutableStateOf<List<String>?>(null) }
+
+    // One 添加 at a time. A second tap while the first is writing would add nothing new and its
+    // empty answer would replace the first one's 已添加 · 撤销. Left set once [work] has done its
+    // part: the sheet is on its way out, and a tap in that last frame would do the same.
+    var busy by remember { mutableStateOf(false) }
+
+    fun submit(work: suspend () -> Boolean) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            var done = false
+            try {
+                done = work()
+            } finally {
+                if (!done) busy = false
+            }
+        }
+    }
     added?.let { urls ->
         val text = if (urls.isEmpty()) noneText else stringResource(Res.string.sticker_added_count, urls.size)
         LaunchedEffect(urls) {
@@ -208,17 +226,29 @@ internal fun StickerAddSheet(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             when (tab) {
-                StickerAddTab.LINK -> LinkTab(viewModel) { scope.launch { added = viewModel.addLinks() } }
+                StickerAddTab.LINK -> LinkTab(viewModel, enabled = !busy) {
+                    submit {
+                        added = viewModel.addLinks()
+                        true
+                    }
+                }
 
-                StickerAddTab.HOST -> HostTab(viewModel) { scope.launch { added = viewModel.addHostSelection() } }
+                StickerAddTab.HOST -> HostTab(viewModel, enabled = !busy) {
+                    submit {
+                        added = viewModel.addHostSelection()
+                        true
+                    }
+                }
 
                 StickerAddTab.UPLOAD -> UploadTab(viewModel)
 
-                StickerAddTab.GITHUB -> GitHubTab(viewModel) {
-                    scope.launch {
-                        if (viewModel.subscribe()) {
-                            onNotice(StickerNotice(subscribedText))
-                            onDismiss()
+                StickerAddTab.GITHUB -> GitHubTab(viewModel, enabled = !busy) {
+                    submit {
+                        viewModel.subscribe().also { subscribed ->
+                            if (subscribed) {
+                                onNotice(StickerNotice(subscribedText))
+                                onDismiss()
+                            }
                         }
                     }
                 }
@@ -232,6 +262,7 @@ internal fun StickerAddSheet(
 @Composable
 private fun ColumnScope.LinkTab(
     viewModel: StickerAddViewModel,
+    enabled: Boolean,
     onAdd: () -> Unit,
 ) {
     val text by viewModel.linkText.collectAsStateWithLifecycle()
@@ -295,8 +326,8 @@ private fun ColumnScope.LinkTab(
         }
     }
     SectionNote(stringResource(Res.string.sticker_link_note), contentPadding = PaddingValues(0.dp))
-    val ready = previews.count { it.loads == true }
-    Button(onClick = onAdd, enabled = ready > 0, modifier = Modifier.fillMaxWidth()) {
+    val ready = previews.count { it.ready }
+    Button(onClick = onAdd, enabled = enabled && ready > 0, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(Res.string.sticker_add_count, ready))
     }
     renaming?.let { target ->
@@ -392,6 +423,7 @@ internal fun StickerThumbnail(
 @Composable
 private fun ColumnScope.HostTab(
     viewModel: StickerAddViewModel,
+    enabled: Boolean,
     onAdd: () -> Unit,
 ) {
     val state by viewModel.host.collectAsStateWithLifecycle()
@@ -464,7 +496,7 @@ private fun ColumnScope.HostTab(
                 TextButton(onClick = viewModel::clearHostSelection, enabled = selection.isNotEmpty()) {
                     Text(stringResource(Res.string.sticker_host_clear))
                 }
-                Button(onClick = onAdd, enabled = selection.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                Button(onClick = onAdd, enabled = enabled && selection.isNotEmpty(), modifier = Modifier.weight(1f)) {
                     Text(stringResource(Res.string.sticker_add_count, selection.size))
                 }
             }
@@ -664,6 +696,7 @@ private fun UploadRow(
 @Composable
 private fun ColumnScope.GitHubTab(
     viewModel: StickerAddViewModel,
+    enabled: Boolean,
     onSubscribe: () -> Unit,
 ) {
     val subscriptions by viewModel.subscriptions.collectAsStateWithLifecycle()
@@ -785,7 +818,7 @@ private fun ColumnScope.GitHubTab(
                 }
             }
             val chosen = listing.folders.filter { it.path in selection }
-            Button(onClick = onSubscribe, enabled = chosen.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onSubscribe, enabled = enabled && chosen.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
                 Text(
                     stringResource(
                         if (source == null) Res.string.sticker_github_subscribe else Res.string.sticker_github_save,
