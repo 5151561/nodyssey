@@ -1324,7 +1324,10 @@ private fun LastReply(
     summary: PostSummary,
     modifier: Modifier = Modifier,
 ) {
-    val time = summary.lastActiveText?.let(TimeFormat::withoutAgo) ?: return
+    // Drawn without its "ago", which beside a clock glyph says nothing; spoken with it, since
+    // TalkBack has no glyph to read "5min" against.
+    val time = summary.lastActiveText ?: return
+    val shown = TimeFormat.withoutAgo(time)
     val name = summary.lastCommenterName
     val spoken = if (name != null) stringResource(Res.string.post_last_reply_by, name, time) else time
     // Each half wears its own glyph, the way the counts beside them do; the name gives way first
@@ -1342,7 +1345,7 @@ private fun LastReply(
                 modifier = Modifier.weight(1f, fill = false),
             )
         }
-        MetaStat(icon = PlazaIcons.Schedule, value = time, contentDescription = time)
+        MetaStat(icon = PlazaIcons.Schedule, value = shown, contentDescription = time)
     }
 }
 

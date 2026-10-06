@@ -23,6 +23,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -107,7 +109,12 @@ internal fun SearchPostCard(
                 UserNoteTag(summary.authorUid, Modifier.weight(1f, fill = false))
                 summary.lastActiveText?.let {
                     MetaText("·", singleLine = true)
-                    MetaText(TimeFormat.withoutAgo(it), singleLine = true)
+                    // Drawn without its "ago", spoken with it.
+                    MetaText(
+                        TimeFormat.withoutAgo(it),
+                        Modifier.semantics { contentDescription = it },
+                        singleLine = true,
+                    )
                 }
             }
             PostBadges(summary)

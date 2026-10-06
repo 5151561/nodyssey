@@ -2652,7 +2652,10 @@ private fun FloorTimeLine(
         itemVerticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        content.createdAtText?.let { MetaText(TimeFormat.withoutAgo(it)) }
+        // Drawn without its "ago", spoken with it: read aloud, a bare "5min" is not a time.
+        content.createdAtText?.let {
+            MetaText(TimeFormat.withoutAgo(it), Modifier.semantics { contentDescription = it })
+        }
         if (content.isEdited) {
             if (content.createdAtText != null) MetaText("·")
             EditedMarker(content)
@@ -2672,7 +2675,10 @@ private fun EditedMarker(content: PostContent) {
     val label = content.editedAtText?.let { stringResource(Res.string.post_edited_at, TimeFormat.withoutAgo(it)) } ?: plain
     // The absolute stamp is the accessible name where the page gave one — a relative label read
     // aloud out of context ("5min ago", from a screen opened ten minutes back) dates itself.
-    val spoken = content.editedAtTitle?.let { stringResource(Res.string.post_edited_at, it) } ?: label
+    // Without one, the relative label is spoken whole — "ago" and all, which only the drawn one drops.
+    val spoken =
+        (content.editedAtTitle ?: content.editedAtText)?.let { stringResource(Res.string.post_edited_at, it) }
+            ?: plain
     val underline = MaterialTheme.colorScheme.outlineVariant
     Text(
         text = label,
