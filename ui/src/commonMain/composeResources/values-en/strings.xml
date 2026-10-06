@@ -1444,4 +1444,6 @@
     <string name="post_untrack_thread">Unfollow</string>
     <string name="post_tracked">Following. You’ll be notified of new replies.</string>
     <string name="post_track_full">You can follow up to 50 threads. Unfollow some first.</string>
+    <string name="notifications_one_hand_tip">This blank is not a bug. It is one-handed mode, keeping the title within thumb reach.</string>
+    <string name="notifications_one_hand_tip_settings">Settings</string>
 </resources>

@@ -108,6 +108,12 @@ fun OneHandTopAppBar(
      * repainting the whole header read as the screen changing colour rather than as depth.
      */
     liftOnScroll: Boolean = true,
+    /**
+     * Drawn in the blank *instead of* the big title, fading as it would — a one-off note about the
+     * blank itself, the way One UI puts a tip where its settings title would be. Gone with the
+     * blank: nothing of it reaches the collapsed toolbar, which stays the screen's spoken name.
+     */
+    blankAccessory: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val density = LocalDensity.current
@@ -133,7 +139,9 @@ fun OneHandTopAppBar(
     // The title exists twice and only one of them may be readable, or a screen reader announces the
     // screen's name twice. The handover is a plain threshold rather than the alpha curves below,
     // which cross over gradually and would leave a band where both or neither are the live one.
-    val expandedTitleIsLive by remember { derivedStateOf { state.fraction >= SEMANTICS_HANDOVER } }
+    val expandedTitleIsLive by remember(blankAccessory != null) {
+        derivedStateOf { blankAccessory == null && state.fraction >= SEMANTICS_HANDOVER }
+    }
 
     Surface(
         color = containerColor,
@@ -171,6 +179,10 @@ fun OneHandTopAppBar(
                             if (expandedTitleIsLive) Modifier else Modifier.clearAndSetSemantics {},
                         ),
                 ) {
+                    if (blankAccessory != null) {
+                        blankAccessory()
+                        return@Column
+                    }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineLarge,

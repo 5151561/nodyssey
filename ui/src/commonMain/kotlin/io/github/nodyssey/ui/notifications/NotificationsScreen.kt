@@ -1,15 +1,18 @@
 package io.github.nodyssey.ui.notifications
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -17,11 +20,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -45,6 +52,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -66,6 +74,7 @@ import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.common.withoutBottom
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_close
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.history_section_earlier
 import io.github.nodyssey.ui.resources.history_section_today
@@ -80,6 +89,8 @@ import io.github.nodyssey.ui.resources.notifications_empty
 import io.github.nodyssey.ui.resources.notifications_interactions
 import io.github.nodyssey.ui.resources.notifications_mark_all_read
 import io.github.nodyssey.ui.resources.notifications_messages
+import io.github.nodyssey.ui.resources.notifications_one_hand_tip
+import io.github.nodyssey.ui.resources.notifications_one_hand_tip_settings
 import io.github.nodyssey.ui.resources.tab_notifications
 import io.github.plaza.core.TimeFormat
 import io.github.plaza.designsys.component.GroupedListItem
@@ -114,6 +125,9 @@ fun NotificationsRoute(
     onVerify: (String) -> Unit,
     onNotificationClick: (ForumNotification) -> Unit,
     onOpenThread: (Long, String) -> Unit,
+    showOneHandTip: Boolean,
+    onDismissOneHandTip: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopRequests: Int = 0,
 ) {
@@ -148,9 +162,70 @@ fun NotificationsRoute(
             viewModel.dismissNewConversation()
             onOpenThread(user.uid, user.name)
         },
+        showOneHandTip = showOneHandTip,
+        onDismissOneHandTip = onDismissOneHandTip,
+        onOpenSettings = onOpenSettings,
         modifier = modifier,
         scrollToTopRequests = scrollToTopRequests,
     )
+}
+
+/**
+ * 通知 is where the one-hand blank is most often reported as a layout bug, so it says what it is,
+ * once, in the blank itself — the way One UI's own settings page puts a tip above its big title.
+ * The bar only draws it while there is a blank, so 单手模式 off or a landscape window never shows it.
+ */
+@Composable
+private fun OneHandTip(
+    onOpenSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth(),
+    ) {
+        Box {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                modifier = Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, top = 52.dp, bottom = 28.dp),
+            ) {
+                Text(
+                    text = stringResource(Res.string.notifications_one_hand_tip),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                FilledTonalButton(
+                    onClick = onOpenSettings,
+                    colors =
+                    ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                ) {
+                    Text(stringResource(Res.string.notifications_one_hand_tip_settings))
+                }
+            }
+            FilledIconButton(
+                onClick = onDismiss,
+                colors =
+                IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier.align(Alignment.TopEnd).padding(Spacing.sm).size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(Res.string.action_close),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
 }
 
 /**
@@ -176,6 +251,9 @@ fun NotificationsScreen(
     onNewConversationSearch: () -> Unit,
     onNewConversationDismiss: () -> Unit,
     onRecipientClick: (UserSearchResult) -> Unit,
+    showOneHandTip: Boolean,
+    onDismissOneHandTip: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopRequests: Int = 0,
 ) {
@@ -236,6 +314,12 @@ fun NotificationsScreen(
                     title = stringResource(Res.string.tab_notifications),
                     state = appBarState,
                     liftOnScroll = false,
+                    blankAccessory =
+                    if (showOneHandTip) {
+                        { OneHandTip(onOpenSettings = onOpenSettings, onDismiss = onDismissOneHandTip) }
+                    } else {
+                        null
+                    },
                     actions = {
                         TextButton(onClick = onMarkAllRead, enabled = state.hasUnread) {
                             Icon(
@@ -785,6 +869,9 @@ private fun NotificationsPreview() {
             onNewConversationSearch = {},
             onNewConversationDismiss = {},
             onRecipientClick = {},
+            showOneHandTip = true,
+            onDismissOneHandTip = {},
+            onOpenSettings = {},
         )
     }
 }

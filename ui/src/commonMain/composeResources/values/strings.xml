@@ -1709,4 +1709,7 @@
     <string name="post_untrack_thread">取消追踪</string>
     <string name="post_tracked">已追踪，有新回复会通知你</string>
     <string name="post_track_full">最多追踪 50 个帖子，先取消几个</string>
+    <!-- 通知页单手空白区里的一次性说明气泡，关掉就不再出现 -->
+    <string name="notifications_one_hand_tip">这块空白不是 bug，是单手模式，让标题落在拇指够得着的地方。</string>
+    <string name="notifications_one_hand_tip_settings">去设置</string>
 </resources>

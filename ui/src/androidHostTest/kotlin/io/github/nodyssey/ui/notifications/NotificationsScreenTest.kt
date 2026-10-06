@@ -63,6 +63,9 @@ class NotificationsScreenTest {
                     onNewConversationSearch = {},
                     onNewConversationDismiss = {},
                     onRecipientClick = {},
+                    showOneHandTip = false,
+                    onDismissOneHandTip = {},
+                    onOpenSettings = {},
                 )
             }
         }
@@ -96,6 +99,9 @@ class NotificationsScreenTest {
                     onNewConversationSearch = {},
                     onNewConversationDismiss = {},
                     onRecipientClick = {},
+                    showOneHandTip = false,
+                    onDismissOneHandTip = {},
+                    onOpenSettings = {},
                     scrollToTopRequests = requests,
                 )
             }
@@ -224,6 +230,9 @@ class NotificationsScreenTest {
                     onNewConversationSearch = {},
                     onNewConversationDismiss = {},
                     onRecipientClick = {},
+                    showOneHandTip = false,
+                    onDismissOneHandTip = {},
+                    onOpenSettings = {},
                 )
             }
         }

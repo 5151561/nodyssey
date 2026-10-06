@@ -63,6 +63,9 @@ class NotificationsScreenRenderTest {
                 onNewConversationSearch = {},
                 onNewConversationDismiss = {},
                 onRecipientClick = {},
+                showOneHandTip = false,
+                onDismissOneHandTip = {},
+                onOpenSettings = {},
             )
         }
     }

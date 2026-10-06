@@ -1,6 +1,8 @@
 package io.github.nodyssey
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.EntryProviderScope
@@ -18,6 +20,8 @@ import io.github.nodyssey.ui.profile.ProfileViewModel
 import io.github.nodyssey.ui.search.SearchRoute
 import io.github.nodyssey.ui.search.SearchViewModel
 import io.github.nodyssey.ui.settings.UpdateReminderViewModel
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /**
  * The three tab roots, 搜索 — which 首页's app bar opens on top of itself — and the conversation
@@ -86,6 +90,12 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
     }
 
     entry<NotificationsKey> {
+        // The settings flow's own default would flash the note on every launch before the stored
+        // answer arrives; starting from "dismissed" errs towards not showing it.
+        val oneHandTipDismissed by remember {
+            container.settingsRepository.settings.map { it.oneHandTipDismissed }
+        }.collectAsStateWithLifecycle(initialValue = true)
+        val scope = rememberCoroutineScope()
         NotificationsRoute(
             viewModel = notificationsViewModel,
             onSignIn = { backStack.add(SignInKey) },
@@ -100,6 +110,9 @@ internal fun EntryProviderScope<NavKey>.tabRootEntries(nav: StackEntryScope) = w
             onOpenThread = { uid, name ->
                 backStack.add(MessageThreadKey(uid, name))
             },
+            showOneHandTip = !oneHandTipDismissed,
+            onDismissOneHandTip = { scope.launch { container.settingsRepository.dismissOneHandTip() } },
+            onOpenSettings = { backStack.add(SettingsKey) },
             scrollToTopRequests = notificationsScrollToTopRequests(),
         )
     }

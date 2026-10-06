@@ -122,6 +122,7 @@ class SettingsRepository(
                 updateCheckOnLaunch = preferences[KEY_UPDATE_CHECK_ON_LAUNCH] ?: true,
                 updateDevChannel = preferences[KEY_UPDATE_DEV_CHANNEL] ?: devChannelDefault,
                 onboardingSeen = preferences[KEY_ONBOARDING_SEEN] ?: false,
+                oneHandTipDismissed = preferences[KEY_ONE_HAND_TIP_DISMISSED] ?: false,
             )
         }
 
@@ -279,6 +280,9 @@ class SettingsRepository(
      * for, and someone who skipped it on install has no other way back to that sentence.
      */
     suspend fun setOnboardingSeen(seen: Boolean) = edit { it[KEY_ONBOARDING_SEEN] = seen }
+
+    /** The note in 通知's blank saying it is 单手模式 — closed once, closed for good. */
+    suspend fun dismissOneHandTip() = edit { it[KEY_ONE_HAND_TIP_DISMISSED] = true }
 
     suspend fun setUpdateCheckOnLaunch(enabled: Boolean) =
         edit { it[KEY_UPDATE_CHECK_ON_LAUNCH] = enabled }
@@ -661,6 +665,7 @@ class SettingsRepository(
         private val KEY_CLIPBOARD_POST_PROMPT = booleanPreferencesKey("clipboard_post_prompt")
         private val KEY_LAST_CLIPBOARD_POST_LINK = stringPreferencesKey("last_clipboard_post_link")
         private val KEY_ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
+        private val KEY_ONE_HAND_TIP_DISMISSED = booleanPreferencesKey("one_hand_tip_dismissed")
         private val KEY_HOLIDAY_THEME = booleanPreferencesKey("holiday_theme")
         private val KEY_NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
         private val KEY_NOTIFICATION_POLL_MINUTES = intPreferencesKey("notification_poll_minutes")
@@ -928,6 +933,11 @@ data class UserSettings(
      * once.
      */
     val onboardingSeen: Boolean = false,
+    /**
+     * Whether the note in 通知's one-hand blank has been closed. A record like [onboardingSeen]:
+     * 通知 is where the blank is most often taken for a layout bug, so it is where the note sits.
+     */
+    val oneHandTipDismissed: Boolean = false,
 )
 
 /**

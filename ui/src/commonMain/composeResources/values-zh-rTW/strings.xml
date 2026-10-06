@@ -1436,4 +1436,6 @@
     <string name="post_untrack_thread">取消追蹤</string>
     <string name="post_tracked">已追蹤，有新回覆會通知你</string>
     <string name="post_track_full">最多追蹤 50 個帖子，先取消幾個</string>
+    <string name="notifications_one_hand_tip">這塊空白不是 bug，是單手模式，讓標題落在拇指搆得著的地方。</string>
+    <string name="notifications_one_hand_tip_settings">去設定</string>
 </resources>
