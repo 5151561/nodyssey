@@ -93,6 +93,8 @@ import io.github.nodyssey.ui.resources.search_pane_empty
 import io.github.nodyssey.ui.resources.space_pane_empty
 import io.github.nodyssey.ui.settings.UpdateReminderDialog
 import io.github.nodyssey.ui.settings.UpdateReminderViewModel
+import io.github.nodyssey.ui.sticker.LocalStickerNavigation
+import io.github.nodyssey.ui.sticker.StickerNavigation
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.theme.LocalEinkMode
 import io.github.plaza.designsys.theme.LocalPlazaLayers
@@ -574,6 +576,12 @@ fun MainNavigation(
                 val eink = LocalEinkMode.current
                 val openNetworkCheck = remember(backStack) { { backStack.add(NetworkCheckKey) } }
                 val openReportCompare = remember(backStack) { { backStack.add(ReportCompareKey) } }
+                val stickerNavigation = remember(backStack) {
+                    StickerNavigation(
+                        openManager = { backStack.add(StickerManageKey) },
+                        openImageHost = { backStack.add(ImageHostKey) },
+                    )
+                }
                 CompositionLocalProvider(
                     LocalThreadTransition provides
                         this@SharedTransitionLayout.takeUnless { isListDetailExpanded || eink },
@@ -581,6 +589,8 @@ fun MainNavigation(
                     LocalOpenNetworkCheck provides { openNetworkCheck() },
                     // 测评对比 from any report card's 对比 (n), onto whichever tab the card is in.
                     LocalOpenReportCompare provides { openReportCompare() },
+                    // 表情管理 and 图床 from an editor's emoji panel, onto whichever tab the editor is in.
+                    LocalStickerNavigation provides stickerNavigation,
                 ) {
                     NavDisplay(
                         entries = entries,

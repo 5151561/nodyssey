@@ -40,6 +40,7 @@ internal val NavKeySavedStateConfiguration =
                     subclass(DohSettingsKey::class)
                     subclass(NetworkCheckKey::class)
                     subclass(ImageHostKey::class)
+                    subclass(StickerManageKey::class)
                     subclass(AboutAppKey::class)
                     subclass(AboutCommunityKey::class)
                     subclass(PrivacyKey::class)

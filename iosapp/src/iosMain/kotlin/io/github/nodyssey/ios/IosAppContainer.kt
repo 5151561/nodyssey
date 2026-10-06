@@ -89,6 +89,8 @@ import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
 import io.github.nodyssey.data.settings.ReportCompareStore
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.sticker.GitHubStickerSource
+import io.github.nodyssey.data.sticker.StickerLibrary
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.di.AppContainer
 import io.github.plaza.core.AppClock
@@ -508,6 +510,20 @@ class IosAppContainer(
     }
 
     private val imagePreparer: ImagePreparer by lazy { IosImagePreparer(dispatchers) }
+
+    override val stickerLibrary: StickerLibrary by lazy {
+        val thirdParty = NSUrlSessionTransport { imageHostSession.current }
+        StickerLibrary(
+            dao = database.stickerDao(),
+            github = GitHubStickerSource(thirdParty),
+            cdnStore = settingsRepository.stickerCdn,
+            imageHost = imageHostRepository,
+            preparer = imagePreparer,
+            http = thirdParty,
+            clock = clock,
+            scope = appScope,
+        )
+    }
 
     override val sessionRepository: SessionRepository by lazy { SessionRepository(sessionCookies) }
 

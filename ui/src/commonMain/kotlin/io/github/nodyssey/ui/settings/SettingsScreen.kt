@@ -113,9 +113,13 @@ import io.github.nodyssey.ui.resources.settings_update_on_launch
 import io.github.nodyssey.ui.resources.settings_version
 import io.github.nodyssey.ui.resources.settings_wifi_images
 import io.github.nodyssey.ui.resources.settings_wifi_images_hint
+import io.github.nodyssey.ui.resources.sticker_manage_tab_mine
+import io.github.nodyssey.ui.resources.sticker_manage_tab_subs
+import io.github.nodyssey.ui.resources.sticker_manage_title
 import io.github.nodyssey.ui.richtext.PostRichContent
 import io.github.nodyssey.ui.settings.theme.ThemeSummaryDot
 import io.github.nodyssey.ui.settings.theme.themeSummary
+import io.github.nodyssey.ui.sticker.LocalStickerLibrary
 import io.github.plaza.core.richtext.InlineNode
 import io.github.plaza.core.richtext.RichNode
 import io.github.plaza.designsys.component.ChoiceSegments
@@ -146,6 +150,7 @@ fun SettingsRoute(
     onOpenDoh: () -> Unit,
     onOpenNetworkCheck: () -> Unit,
     onOpenImageHost: () -> Unit,
+    onOpenStickers: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenLicenses: () -> Unit,
     onOpenBlockKeywords: () -> Unit,
@@ -181,6 +186,7 @@ fun SettingsRoute(
         onOpenDoh = onOpenDoh,
         onOpenNetworkCheck = onOpenNetworkCheck,
         onOpenImageHost = onOpenImageHost,
+        onOpenStickers = onOpenStickers,
         onOpenAbout = onOpenAbout,
         onOpenLicenses = onOpenLicenses,
         onOpenBlockKeywords = onOpenBlockKeywords,
@@ -213,6 +219,7 @@ fun SettingsScreen(
     onOpenDoh: () -> Unit = {},
     onOpenNetworkCheck: () -> Unit = {},
     onOpenImageHost: () -> Unit = {},
+    onOpenStickers: () -> Unit = {},
     onOpenAbout: () -> Unit = {},
     onOpenLicenses: () -> Unit = {},
     onOpenBlockKeywords: () -> Unit = {},
@@ -462,6 +469,7 @@ fun SettingsScreen(
                     onClick = onOpenImageHost,
                     icon = PlazaIcons.CloudUpload,
                 )
+                StickersRow(onClick = onOpenStickers)
                 GroupedRow(
                     title = stringResource(Res.string.settings_clear_cache),
                     // The figure is the one system settings shows under 缓存, in the units it uses.
@@ -859,4 +867,22 @@ private fun SettingsWidePreview() {
             onOpenAppLinkSettings = {},
         )
     }
+}
+
+/**
+ * 表情管理, summarised the way its neighbours are — by what is in it — counted straight off the
+ * sticker library rather than through this screen's ViewModel, which has nothing else to do with it.
+ */
+@Composable
+private fun StickersRow(onClick: () -> Unit) {
+    val library = LocalStickerLibrary.current ?: return
+    val mine by remember(library) { library.mine }.collectAsStateWithLifecycle(emptyList())
+    val subscriptions by remember(library) { library.subscriptions }.collectAsStateWithLifecycle(emptyList())
+    GroupedRow(
+        title = stringResource(Res.string.sticker_manage_title),
+        subtitle = stringResource(Res.string.sticker_manage_tab_mine, mine.size) + SUBTITLE_SEPARATOR +
+            stringResource(Res.string.sticker_manage_tab_subs, subscriptions.sumOf { it.folders.size }),
+        onClick = onClick,
+        icon = PlazaIcons.Mood,
+    )
 }

@@ -57,6 +57,7 @@ internal fun EntryProviderScope<NavKey>.settingsEntries(nav: StackEntryScope) = 
             onOpenDoh = { backStack.add(DohSettingsKey) },
             onOpenNetworkCheck = { backStack.add(NetworkCheckKey) },
             onOpenImageHost = { backStack.add(ImageHostKey) },
+            onOpenStickers = { backStack.add(StickerManageKey) },
             onOpenAbout = { backStack.add(AboutAppKey) },
             onOpenLicenses = { backStack.add(OpenSourceLicensesKey) },
             onOpenBlockKeywords = { backStack.add(AccountBlockListKey(titles = true)) },

@@ -38,6 +38,7 @@ import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
 import io.github.nodyssey.data.settings.ReportCompareStore
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.sticker.StickerLibrary
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.plaza.core.AppClock
 import io.github.plaza.core.AppDispatchers
@@ -94,6 +95,9 @@ interface AppContainer {
 
     /** The selected image host — a service of its own, with its own credential. See [ImageHostRepository]. */
     val imageHostRepository: ImageHostRepository
+
+    /** 我的表情 and the GitHub sticker packs — see [StickerLibrary]. The device owner's; kept on sign-out. */
+    val stickerLibrary: StickerLibrary
     val sessionRepository: SessionRepository
 
     /**

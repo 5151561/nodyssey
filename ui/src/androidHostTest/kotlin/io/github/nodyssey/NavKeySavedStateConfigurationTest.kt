@@ -137,6 +137,7 @@ private val EVERY_KEY: List<NavKey> =
         DohSettingsKey,
         NetworkCheckKey,
         ImageHostKey,
+        StickerManageKey,
         AboutAppKey,
         AboutCommunityKey,
         PrivacyKey,

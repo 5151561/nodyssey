@@ -20,6 +20,8 @@ import io.github.nodyssey.ui.account.SecurityRoute
 import io.github.nodyssey.ui.account.SecurityViewModel
 import io.github.nodyssey.ui.account.TitleBlockViewModel
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.sticker.StickerManageRoute
+import io.github.nodyssey.ui.sticker.StickerManageViewModel
 
 /**
  * 账号设置 and its sub-pages — the screens that write to the account on nodeseek.com itself.
@@ -52,6 +54,16 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
             onBack = { backStack.removeLastOrNull() },
             // Every image host is a different site with a different session; the in-app web
             // view exists to carry NodeSeek's cookies and has no business holding these.
+            onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
+        )
+    }
+
+    entry<StickerManageKey> {
+        val library = container.stickerLibrary
+        val viewModel: StickerManageViewModel = viewModel { StickerManageViewModel(library) }
+        StickerManageRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
             onOpenUrl = { url -> runCatching { uriHandler.openUri(url) } },
         )
     }

@@ -65,6 +65,7 @@ import io.github.nodyssey.data.composer.DefaultCommentComposerRepository
 import io.github.nodyssey.data.composer.DefaultPostComposerRepository
 import io.github.nodyssey.data.composer.DefaultPostEditor
 import io.github.nodyssey.data.composer.ImageHostUploader
+import io.github.nodyssey.data.composer.ImagePreparer
 import io.github.nodyssey.data.composer.ImageUploader
 import io.github.nodyssey.data.composer.PostComposerRepository
 import io.github.nodyssey.data.composer.PostEditor
@@ -98,6 +99,8 @@ import io.github.nodyssey.data.session.SessionRepository
 import io.github.nodyssey.data.session.SignInRepository
 import io.github.nodyssey.data.settings.ReportCompareStore
 import io.github.nodyssey.data.settings.SettingsRepository
+import io.github.nodyssey.data.sticker.GitHubStickerSource
+import io.github.nodyssey.data.sticker.StickerLibrary
 import io.github.nodyssey.data.update.AppUpdateRepository
 import io.github.nodyssey.data.update.DefaultAppUpdateRepository
 import io.github.nodyssey.platform.AndroidApkInstaller
@@ -679,10 +682,23 @@ class DefaultAppContainer(
         )
     }
 
+    private val imagePreparer: ImagePreparer by lazy { DefaultImagePreparer(appContext, dispatchers) }
+
     override val imageUploader: ImageUploader by lazy {
-        ImageHostUploader(
-            repository = imageHostRepository,
-            preparer = DefaultImagePreparer(appContext, dispatchers),
+        ImageHostUploader(repository = imageHostRepository, preparer = imagePreparer)
+    }
+
+    override val stickerLibrary: StickerLibrary by lazy {
+        val thirdParty = OkHttpTransport(imageHostClient)
+        StickerLibrary(
+            dao = database.stickerDao(),
+            github = GitHubStickerSource(thirdParty),
+            cdnStore = settingsRepository.stickerCdn,
+            imageHost = imageHostRepository,
+            preparer = imagePreparer,
+            http = thirdParty,
+            clock = clock,
+            scope = appScope,
         )
     }
 

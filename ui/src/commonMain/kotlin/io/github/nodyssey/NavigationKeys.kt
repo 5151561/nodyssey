@@ -83,6 +83,13 @@ data object NetworkCheckKey : NavKey
 @Serializable
 data object ImageHostKey : NavKey
 
+/**
+ * 表情管理 — 我的表情 and the subscribed GitHub packs. This device's, like [ImageHostKey], and so
+ * reachable signed out.
+ */
+@Serializable
+data object StickerManageKey : NavKey
+
 @Serializable
 data object AboutAppKey : NavKey
 

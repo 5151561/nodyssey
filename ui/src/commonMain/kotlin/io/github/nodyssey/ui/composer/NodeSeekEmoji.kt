@@ -16,6 +16,8 @@ import io.github.nodyssey.ui.resources.composer_emoji_group_chick
 import io.github.nodyssey.ui.resources.composer_emoji_group_fluent
 import io.github.nodyssey.ui.resources.composer_emoji_group_onion
 import io.github.nodyssey.ui.resources.composer_emoji_stickers_pending
+import io.github.nodyssey.ui.sticker.LocalStickerLibrary
+import io.github.nodyssey.ui.sticker.StickerPanelHost
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
@@ -49,11 +51,13 @@ import org.jetbrains.compose.resources.stringResource
  * knows none of it.
  */
 val NodeSeekEmojiGroups = listOf(
-    EmojiGroup({ stringResource(Res.string.composer_emoji_group_acn) }, stickers(NodeSeekStickers.AC)),
-    EmojiGroup({ stringResource(Res.string.composer_emoji_group_onion) }, stickers(NodeSeekStickers.YCT)),
-    EmojiGroup({ stringResource(Res.string.composer_emoji_group_chick) }, stickers(NodeSeekStickers.XHJ)),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_acn) }, stickers(NodeSeekStickers.AC), key = "site:ac"),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_onion) }, stickers(NodeSeekStickers.YCT), key = "site:yct"),
+    EmojiGroup({ stringResource(Res.string.composer_emoji_group_chick) }, stickers(NodeSeekStickers.XHJ), key = "site:xhj"),
     EmojiGroup(
         { stringResource(Res.string.composer_emoji_group_fluent) },
+        key = "fluent",
+        entries =
         listOf(
             "😀", "😄", "😅", "🤣", "🙂", "😉",
             "😍", "😘", "🤔", "😐", "😴", "😭",
@@ -123,16 +127,26 @@ fun NodeSeekEmojiPanel(
     onRecentChange: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    EmojiPanel(
-        groups = NodeSeekEmojiGroups,
-        onInsert = onInsert,
-        onBackspace = onBackspace,
-        recent = recent,
-        onRecentChange = onRecentChange,
-        emptyGroupText = stringResource(Res.string.composer_emoji_stickers_pending),
-        stickerImage = { sticker, description, imageModifier ->
-            NodeSeekStickerImage(sticker, description, imageModifier)
-        },
-        modifier = modifier,
-    )
+    val panel: @Composable (List<EmojiGroup>) -> Unit = { groups ->
+        EmojiPanel(
+            groups = groups,
+            onInsert = onInsert,
+            onBackspace = onBackspace,
+            recent = recent,
+            onRecentChange = onRecentChange,
+            emptyGroupText = stringResource(Res.string.composer_emoji_stickers_pending),
+            stickerImage = { sticker, description, imageModifier ->
+                NodeSeekStickerImage(sticker, description, imageModifier)
+            },
+            modifier = modifier,
+        )
+    }
+    // 我的 and the subscribed packs go ahead of the site's own; with no library — a preview — the
+    // panel is the site's packs alone.
+    val library = LocalStickerLibrary.current
+    if (library == null) {
+        panel(NodeSeekEmojiGroups)
+    } else {
+        StickerPanelHost(library) { stickerGroups -> panel(stickerGroups + NodeSeekEmojiGroups) }
+    }
 }

@@ -37,6 +37,7 @@ import io.github.nodyssey.ui.settings.rememberAppLinkSettingsLauncher
 import io.github.nodyssey.ui.settings.theme.activeCharacterPalette
 import io.github.nodyssey.ui.settings.theme.rememberActiveSeed
 import io.github.nodyssey.ui.settings.theme.toPlaza
+import io.github.nodyssey.ui.sticker.LocalStickerLibrary
 import io.github.plaza.designsys.component.LocalLinkPrefetcher
 import io.github.plaza.designsys.richtext.DismissTextSelectionOnTap
 import io.github.plaza.designsys.richtext.LocalStickerSizing
@@ -227,6 +228,9 @@ internal fun NodysseyChrome(
                 LocalReportFormat provides settings.reportFormat,
                 LocalReportCompareBasket provides reportCompareBasket,
                 LocalStickerSizing provides stickerSizing,
+                // 我的表情 rides here for the reason the basket does: three editors draw the panel and
+                // every post body's long press can add to it. See `LocalStickerLibrary`.
+                LocalStickerLibrary provides container.stickerLibrary,
                 // The one thing on this list that is not a setting: it is what the platform says this
                 // build is called, so that a debug build's screens say "Nodyssey·D" like its launcher
                 // icon does. See `LocalAppName`.
