@@ -219,6 +219,12 @@ private class NativeShell(
             // back to. These screens draw their own. The swipe-anywhere recognizer is iOS 26 API on a
             // target that starts at 16, hence the check; Compose Multiplatform already knows to stop
             // it when a drag belongs to something scrolling sideways inside the page.
+            //
+            // The view first: UIKit hands both recognizers back to its own delegate when it loads a
+            // navigation controller's view, and a tab's view loads the first time the tab is shown.
+            // Set before that, the delegate held for 首页 only — every screen under 通知 and 我的
+            // went back by its arrow alone.
+            navigationController.loadViewIfNeeded()
             val popDelegate = popGestureDelegates.getValue(destination)
             navigationController.interactivePopGestureRecognizer?.delegate = popDelegate
             if (navigationController.hasContentPopGesture()) {
