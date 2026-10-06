@@ -4,6 +4,8 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -70,11 +72,12 @@ class SearchScreenTest {
     /**
      * The results list.
      *
-     * Matched by the scroll-to-index action, which on this screen only a lazy list has: plain
-     * `hasScrollAction` also catches the search field, and naming a row it contains would stop
+     * Matched by the scroll-to-index action on a vertical axis, which on this screen only the lazy
+     * list has: the 帖子 / 用户 pager around it scrolls to an index too, sideways; plain
+     * `hasScrollAction` also catches the search field; and naming a row it contains would stop
      * matching the moment a swipe carried that row off the screen.
      */
-    private val resultList = hasScrollToIndexAction()
+    private val resultList = hasScrollToIndexAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
 
     /** Renders the screen against a mutable state so a test can change the search out from under it. */
     private fun setScreen(
@@ -120,6 +123,7 @@ class SearchScreenTest {
     private fun searchedState() =
         SearchUiState(
             submittedQuery = "轻量",
+            postResultsQuery = "轻量",
             target = SearchTarget.POSTS,
             boards = boards,
         )

@@ -3,6 +3,7 @@ package io.github.nodyssey.ui.space
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -39,13 +42,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -74,6 +83,7 @@ import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.lockBadgeDescription
 import io.github.nodyssey.ui.common.postCardTitleStyle
+import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -129,8 +139,9 @@ import io.github.plaza.designsys.theme.Sizes
 import io.github.plaza.designsys.theme.Spacing
 import io.github.plaza.designsys.theme.TABULAR_FIGURES
 import io.github.plaza.designsys.theme.readableWidth
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -151,17 +162,11 @@ fun UserSpaceRoute(
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val topics =
-        if (state.selectedTab == SpaceTab.TOPICS) viewModel.topics.collectAsLazyPagingItems() else null
-    val comments =
-        if (state.selectedTab == SpaceTab.COMMENTS) viewModel.comments.collectAsLazyPagingItems() else null
-    val collections =
-        if (state.selectedTab == SpaceTab.COLLECTIONS) viewModel.collections.collectAsLazyPagingItems() else null
     UserSpaceScreen(
         state = state,
-        topics = topics,
-        comments = comments,
-        collections = collections,
+        topics = viewModel.topics,
+        comments = viewModel.comments,
+        collections = viewModel.collections,
         onBack = onBack,
         onTabSelected = viewModel::selectTab,
         onPostClick = onPostClick,
@@ -195,9 +200,13 @@ fun UserSpaceScreen(
     onVerify: (String) -> Unit,
     onToggleFollow: () -> Unit = {},
     onFollowFailureShown: () -> Unit = {},
-    topics: LazyPagingItems<SpacePost>? = null,
-    comments: LazyPagingItems<SpaceComment>? = null,
-    collections: LazyPagingItems<SpacePost>? = null,
+    /**
+     * The list tabs' feeds, collected by their own pages: a neighbour starts loading as soon as a
+     * swipe drags it into view, and a tab nobody visits never spends a request.
+     */
+    topics: Flow<PagingData<SpacePost>> = emptyFlow(),
+    comments: Flow<PagingData<SpaceComment>> = emptyFlow(),
+    collections: Flow<PagingData<SpacePost>> = emptyFlow(),
     /** Readme/bio links. Separate from [onOpenBrowser] so our own URLs can stay in the app. */
     onLinkClick: (String) -> Unit = onOpenBrowser,
 ) {
@@ -274,53 +283,73 @@ fun UserSpaceScreen(
             return@Scaffold
         }
 
-        // One scrolling page, header card included (3a): the header grew into a card with the bio,
-        // the stats and both actions on it, and pinned above a list it would leave the list a strip.
-        // The tabs are the exception: they stick once the header has gone, so a reader forty topics
-        // down can still switch to 评论.
-        val listState = rememberLazyListState()
-        val scope = rememberCoroutineScope()
-        LazyColumn(
-            state = listState,
-            modifier =
+        /*
+         * The header card scrolls away and the tabs stay (3a): the card grew the bio, the stats and
+         * both actions, and pinned above a list it would leave the list a strip.
+         *
+         * 左右滑动切换 makes that two scrollers rather than one list. The outer one holds the card,
+         * the tabs and a pager exactly one viewport-minus-tabs tall, so once the card is gone the
+         * tabs sit at the top with the pager filling the rest; each page is a list of its own and
+         * keeps its own position. A drag upward folds the card away before the list under the finger
+         * moves — [collapseHeaderFirst] — and a drag downward is the list's until it is back at its
+         * top, after which the leftover brings the card back down through the outer scroller's own
+         * nested scrolling.
+         */
+        val outerScroll = rememberScrollState()
+        val collapseHeaderFirst =
+            remember(outerScroll) {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
+                        if (available.y < 0f) Offset(0f, -outerScroll.dispatchRawDelta(-available.y)) else Offset.Zero
+                }
+            }
+        val tabs = state.tabs
+        val pagerState =
+            rememberTabPagerState(
+                selectedIndex = tabs.indexOf(state.selectedTab).coerceAtLeast(0),
+                pageCount = tabs.size,
+                onPageSettled = { onTabSelected(tabs[it]) },
+            )
+        var tabsHeightPx by remember { mutableIntStateOf(0) }
+        BoxWithConstraints(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .readableWidth(),
-            contentPadding = PaddingValues(start = LayerPageGutter, end = LayerPageGutter, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(LayerCardGap),
         ) {
-            item(key = "header") {
-                SpaceHeader(state = state, onMessage = onMessage, onToggleFollow = onToggleFollow)
-            }
-            stickyHeader(key = "tabs") {
+            val pagerHeight = maxHeight - with(LocalDensity.current) { tabsHeightPx.toDp() }
+            Column(Modifier.fillMaxSize().verticalScroll(outerScroll)) {
+                Box(Modifier.padding(start = LayerPageGutter, end = LayerPageGutter, bottom = LayerCardGap)) {
+                    SpaceHeader(state = state, onMessage = onMessage, onToggleFollow = onToggleFollow)
+                }
                 SpaceTabs(
                     state = state,
-                    onTabSelected = { tab ->
-                        onTabSelected(tab)
-                        // Switched while stuck: the new tab starts at its top, under the tabs. Left
-                        // alone, the list would keep the old tab's row index and open the new one
-                        // somewhere in its middle.
-                        if (listState.firstVisibleItemIndex >= TABS_INDEX) {
-                            scope.launch { listState.scrollToItem(TABS_INDEX) }
-                        }
-                    },
-                    // The page's own colour, so rows scrolling under the stuck tabs do not show
-                    // through between the pills.
-                    modifier = Modifier.background(LocalPlazaLayers.current.page).padding(vertical = 2.dp),
+                    currentPage = pagerState.currentPage,
+                    onTabSelected = onTabSelected,
+                    modifier =
+                    Modifier
+                        .onSizeChanged { tabsHeightPx = it.height }
+                        .padding(horizontal = LayerPageGutter, vertical = 2.dp),
                 )
+                HorizontalPager(
+                    state = pagerState,
+                    key = { tabs[it].name },
+                    modifier = Modifier.height(pagerHeight).nestedScroll(collapseHeaderFirst),
+                ) { index ->
+                    SpaceTabPage(
+                        tab = tabs[index],
+                        state = state,
+                        topics = topics,
+                        comments = comments,
+                        collections = collections,
+                        onPostClick = onPostClick,
+                        onOpenBrowser = onOpenBrowser,
+                        onLinkClick = onLinkClick,
+                        onSignIn = onSignIn,
+                        onVerify = onVerify,
+                    )
+                }
             }
-            spaceTabContent(
-                state = state,
-                topics = topics,
-                comments = comments,
-                collections = collections,
-                onPostClick = onPostClick,
-                onOpenBrowser = onOpenBrowser,
-                onLinkClick = onLinkClick,
-                onSignIn = onSignIn,
-                onVerify = onVerify,
-            )
         }
     }
 }
@@ -534,21 +563,58 @@ private fun Int.formatted(): String =
 @Composable
 private fun SpaceTabs(
     state: UserSpaceUiState,
+    currentPage: Int,
     onTabSelected: (SpaceTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PillTabRow(
-        selectedTabIndex = state.tabs.indexOf(state.selectedTab).coerceAtLeast(0),
+        selectedTabIndex = currentPage,
         tabs = state.tabs.map { TabLabel(stringResource(it.labelRes())) },
         onSelect = { onTabSelected(state.tabs[it]) },
         modifier = modifier,
     )
 }
 
-/** The tabs' place in the list: right after the header card. */
-private const val TABS_INDEX = 1
+/** One tab's page: its own list, collecting its own feed only while the page is on screen. */
+@Composable
+private fun SpaceTabPage(
+    tab: SpaceTab,
+    state: UserSpaceUiState,
+    topics: Flow<PagingData<SpacePost>>,
+    comments: Flow<PagingData<SpaceComment>>,
+    collections: Flow<PagingData<SpacePost>>,
+    onPostClick: (Long, String?) -> Unit,
+    onOpenBrowser: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
+    onSignIn: () -> Unit,
+    onVerify: (String) -> Unit,
+) {
+    val topicItems = if (tab == SpaceTab.TOPICS) topics.collectAsLazyPagingItems() else null
+    val commentItems = if (tab == SpaceTab.COMMENTS) comments.collectAsLazyPagingItems() else null
+    val collectionItems = if (tab == SpaceTab.COLLECTIONS) collections.collectAsLazyPagingItems() else null
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding =
+        PaddingValues(start = LayerPageGutter, end = LayerPageGutter, top = LayerCardGap, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(LayerCardGap),
+    ) {
+        spaceTabContent(
+            tab = tab,
+            state = state,
+            topics = topicItems,
+            comments = commentItems,
+            collections = collectionItems,
+            onPostClick = onPostClick,
+            onOpenBrowser = onOpenBrowser,
+            onLinkClick = onLinkClick,
+            onSignIn = onSignIn,
+            onVerify = onVerify,
+        )
+    }
+}
 
 private fun LazyListScope.spaceTabContent(
+    tab: SpaceTab,
     state: UserSpaceUiState,
     topics: LazyPagingItems<SpacePost>?,
     comments: LazyPagingItems<SpaceComment>?,
@@ -559,7 +625,7 @@ private fun LazyListScope.spaceTabContent(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
 ) {
-    when (state.selectedTab) {
+    when (tab) {
         SpaceTab.GENERAL -> item(key = "readme") { ReadmeCard(state, onLinkClick) }
 
         SpaceTab.TOPICS ->
@@ -687,8 +753,7 @@ private const val README_COLLAPSED_LINES = 8
 /**
  * The list tabs, which differ only in their row and their end-of-list sentence.
  *
- * Emitted into the page's own `LazyColumn` rather than as a list of their own, so the header card
- * scrolls away with the rows. The repository remains page-numbered, while Paging 3 owns loading,
+ * Emitted into the tab page's `LazyColumn`. The repository remains page-numbered, while Paging 3 owns loading,
  * retries and append state.
  */
 private fun <T : Any> LazyListScope.spaceListTab(
@@ -958,10 +1023,9 @@ private fun UserSpaceSelfDarkPreview() {
 
 @Composable
 private fun PreviewScreen(state: UserSpaceUiState) {
-    val topics = flowOf(PagingData.from(previewTopics)).collectAsLazyPagingItems()
     UserSpaceScreen(
         state = state,
-        topics = topics,
+        topics = flowOf(PagingData.from(previewTopics)),
         onBack = {},
         onTabSelected = {},
         onPostClick = { _, _ -> },

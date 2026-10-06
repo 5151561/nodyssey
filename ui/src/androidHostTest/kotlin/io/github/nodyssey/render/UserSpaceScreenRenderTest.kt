@@ -6,7 +6,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.paging.PagingData
-import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.data.SpaceComment
 import io.github.nodyssey.data.SpacePost
@@ -53,7 +52,7 @@ class UserSpaceScreenRenderTest {
 
     @Composable
     private fun Space(state: UserSpaceUiState) {
-        val topics = remember { flowOf(PagingData.from(TOPICS)) }.collectAsLazyPagingItems()
+        val topics = remember { flowOf(PagingData.from(TOPICS)) }
         UserSpaceScreen(
             state = state,
             topics = topics,

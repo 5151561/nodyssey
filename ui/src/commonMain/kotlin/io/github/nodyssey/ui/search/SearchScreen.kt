@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -103,6 +104,7 @@ import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SortMenuItem
 import io.github.nodyssey.ui.common.describedAsLoading
 import io.github.nodyssey.ui.common.labelRes
+import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.postlist.toSiteError
 import io.github.nodyssey.ui.resources.Res
@@ -278,6 +280,19 @@ fun SearchScreen(
         navigationBarScrollConnection.reveal()
     }
 
+    // 左右滑动切换 between 帖子 and 用户, once there are results to swipe between. The setup screen's
+    // switch is part of the form instead — what the next search looks for — and has no pages.
+    val resultPager =
+        if (state.submittedQuery != null) {
+            rememberTabPagerState(
+                selectedIndex = TargetOrder.indexOf(state.target),
+                pageCount = TargetOrder.size,
+                onPageSettled = { onTargetChange(TargetOrder[it]) },
+            )
+        } else {
+            null
+        }
+
     Scaffold(modifier = modifier) { padding ->
         Column(
             modifier = Modifier.padding(padding).fillMaxSize().readableWidth(),
@@ -305,10 +320,10 @@ fun SearchScreen(
                     optionsActive = state.hasCustomOptions,
                 )
 
-                if (state.submittedQuery == null) {
+                if (resultPager == null) {
                     TargetSwitch(selected = state.target, onTargetChange = onTargetChange)
                 } else {
-                    ResultTabs(state = state, onTargetChange = onTargetChange)
+                    ResultTabs(state = state, currentPage = resultPager.currentPage, onTargetChange = onTargetChange)
                 }
 
                 // Part of the header rather than of the results, because it is chrome for them: the
@@ -323,7 +338,7 @@ fun SearchScreen(
                 }
             }
 
-            if (state.submittedQuery == null) {
+            if (resultPager == null) {
                 // No connection here on purpose. The setup screen is where a query is written, and
                 // the field it is written in must not be scrollable off the top by the history list
                 // sitting under it.
@@ -346,16 +361,23 @@ fun SearchScreen(
                         .nestedScroll(navigationBarScrollConnection)
                         .nestedScroll(headerScrollBehavior.nestedScrollConnection),
                 ) {
-                    SearchResults(
-                        state = state,
-                        queryState = queryState,
-                        onPostClick = onPostClick,
-                        onUserClick = onUserClick,
-                        postResults = postResults,
-                        onRetry = onRetry,
-                        onSignIn = onSignIn,
-                        onVerify = onVerify,
-                    )
+                    HorizontalPager(
+                        state = resultPager,
+                        key = { TargetOrder[it].name },
+                        modifier = Modifier.fillMaxSize(),
+                    ) { index ->
+                        SearchResults(
+                            target = TargetOrder[index],
+                            state = state,
+                            queryState = queryState,
+                            onPostClick = onPostClick,
+                            onUserClick = onUserClick,
+                            postResults = postResults,
+                            onRetry = onRetry,
+                            onSignIn = onSignIn,
+                            onVerify = onVerify,
+                        )
+                    }
                 }
             }
         }
@@ -563,10 +585,11 @@ private fun TargetSwitch(
 @Composable
 private fun ResultTabs(
     state: SearchUiState,
+    currentPage: Int,
     onTargetChange: (SearchTarget) -> Unit,
 ) {
     UnderlineTabRow(
-        selectedTabIndex = TargetOrder.indexOf(state.target),
+        selectedTabIndex = currentPage,
         // No count on 帖子: `/search` never returns a total, and the number of rows loaded so far is
         // not one — it grows as you scroll, which reads as the site changing.
         tabs =
@@ -686,6 +709,7 @@ private fun ResultScopeRow(
 
 @Composable
 private fun SearchResults(
+    target: SearchTarget,
     state: SearchUiState,
     queryState: TextFieldState,
     onPostClick: (Long) -> Unit,
@@ -695,7 +719,7 @@ private fun SearchResults(
     onSignIn: () -> Unit,
     onVerify: (String) -> Unit,
 ) {
-    if (state.target == SearchTarget.USERS) {
+    if (target == SearchTarget.USERS) {
         when (val loadState = state.userLoadState) {
             SearchLoadState.Idle,
             SearchLoadState.Loading,
@@ -732,6 +756,9 @@ private fun SearchResults(
         return
     }
 
+    // Not searched yet for this query: the page was swiped into view from 用户 and its search goes
+    // out once the swipe settles. What the pager holds until then is an older answer or none.
+    if (state.postResultsQuery != state.submittedQuery) return LoadingState()
     val posts = postResults ?: return LoadingState()
     when (val refresh = posts.loadState.refresh) {
         LoadState.Loading -> LoadingState()

@@ -122,7 +122,7 @@ class SearchViewModel(
         viewModelScope.launch {
             snapshotFlow { query.text.toString() }.collect { value ->
                 if (value == _uiState.value.submittedQuery) return@collect
-                _uiState.update { it.copy(submittedQuery = null, userLoadState = SearchLoadState.Idle) }
+                _uiState.update { it.copy(submittedQuery = null, userLoadState = SearchLoadState.Idle, postResultsQuery = null) }
                 postRequest.value = null
                 userJob?.cancel()
             }
@@ -263,6 +263,7 @@ class SearchViewModel(
             startPostSearch(normalized)
         } else {
             postRequest.value = null
+            _uiState.update { it.copy(postResultsQuery = null) }
             startUserSearch(normalized)
         }
     }
@@ -277,6 +278,7 @@ class SearchViewModel(
     private fun startPostSearch(query: String) {
         val state = _uiState.value
         postRequest.value = PostSearchRequest(query = query, board = state.selectedBoard, sort = state.sort)
+        _uiState.update { it.copy(postResultsQuery = query) }
     }
 
     private fun startUserSearch(query: String) {
@@ -341,6 +343,12 @@ data class SearchUiState(
     val sort: FeedSort = DefaultSearchSort,
     val userResults: List<UserSearchResult> = emptyList(),
     val userLoadState: SearchLoadState = SearchLoadState.Idle,
+    /**
+     * The query the post results on hand answer, or null for none. The posts tab is searched on
+     * first visit, so after a search from 用户 this lags [submittedQuery] until then — and a 帖子
+     * page swiped into view meanwhile shows a load in progress rather than "no results".
+     */
+    val postResultsQuery: String? = null,
 )
 
 /** `/search` reads the boards' own `sortBy`, and reads it as 新帖子 when it is absent. */

@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -17,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MailOutline
@@ -36,10 +33,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +62,7 @@ import io.github.nodyssey.data.NotificationTab
 import io.github.nodyssey.data.UserSearchResult
 import io.github.nodyssey.ui.common.SignedOutState
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.common.withoutBottom
 import io.github.nodyssey.ui.resources.Res
@@ -217,25 +213,12 @@ fun NotificationsScreen(
      * vertically first, and from then on the pager sees every change as consumed and cannot start.
      */
     val tabs = NotificationTab.entries
-    val selectedIndex = tabs.indexOf(state.selectedTab).coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = selectedIndex) { tabs.size }
-
-    // A settled page is a decision; anything before it is a gesture still being made, and switching
-    // group mid-swipe would refresh both lists under a finger that had not chosen yet.
-    val currentTab by rememberUpdatedState(state.selectedTab)
-    val currentOnTabChange by rememberUpdatedState(onTabChange)
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { page ->
-            // Coming to rest on the selected group says nothing — that is every first composition,
-            // and every page this effect was the one to move.
-            tabs.getOrNull(page)?.takeIf { it != currentTab }?.let { currentOnTabChange(it) }
-        }
-    }
-
-    // The other direction: a tab tapped, or a group restored with the screen.
-    LaunchedEffect(selectedIndex) {
-        if (pagerState.currentPage != selectedIndex) pagerState.animateScrollToPage(selectedIndex)
-    }
+    val pagerState =
+        rememberTabPagerState(
+            selectedIndex = tabs.indexOf(state.selectedTab).coerceAtLeast(0),
+            pageCount = tabs.size,
+            onPageSettled = { onTabChange(tabs[it]) },
+        )
 
     // The header stays flush with the page however far a list runs under it — no shadow, no tint.
     // It used to lift as one piece, title and tabs together, and in dark that repainted the whole

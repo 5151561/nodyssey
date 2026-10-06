@@ -179,6 +179,7 @@ class SearchScreenRenderTest {
         val POST_RESULTS =
             SearchUiState(
                 submittedQuery = "NAS",
+                postResultsQuery = "NAS",
                 boards = BOARDS,
                 selectedBoard = "tech",
                 sort = FeedSort.LAST_REPLY,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.data.TitleBlockRule
 import io.github.nodyssey.data.account.BlockedUser
+import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.account_block_add_action
 import io.github.nodyssey.ui.resources.account_block_add_label
@@ -177,6 +179,12 @@ fun BlockListScreen(
 ) {
     val appBarState = rememberOneHandAppBarState()
     val tabs = BlockTab.entries
+    val pagerState =
+        rememberTabPagerState(
+            selectedIndex = tabs.indexOf(selectedTab),
+            pageCount = tabs.size,
+            onPageSettled = { onSelectTab(tabs[it]) },
+        )
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -197,7 +205,7 @@ fun BlockListScreen(
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().readableWidth()) {
             UnderlineTabRow(
-                selectedTabIndex = tabs.indexOf(selectedTab),
+                selectedTabIndex = pagerState.currentPage,
                 tabs =
                 tabs.map {
                     TabLabel(
@@ -211,36 +219,44 @@ fun BlockListScreen(
                 },
                 onSelect = { onSelectTab(tabs[it]) },
             )
-            Column(
-                modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = LayerPageGutter, vertical = Spacing.md),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-            ) {
-                ShowBlockedSwitchCard(
-                    checked = state.showBlockedContent,
-                    onCheckedChange = onShowBlockedChange,
-                )
-                when (selectedTab) {
-                    BlockTab.USERS ->
-                        BlockedUsersContent(
-                            state = state,
-                            onNameChange = onNameChange,
-                            onBlock = onBlock,
-                            onRequestUnblock = onRequestUnblock,
-                            onOpenUser = onOpenUser,
-                        )
+            // 左右滑动切换. The reveal switch heads both pages because it waives both, so each page
+            // carries it rather than it standing above the pager: it scrolls away with either list.
+            HorizontalPager(
+                state = pagerState,
+                key = { tabs[it].name },
+                modifier = Modifier.fillMaxSize(),
+            ) { index ->
+                Column(
+                    modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = LayerPageGutter, vertical = Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    ShowBlockedSwitchCard(
+                        checked = state.showBlockedContent,
+                        onCheckedChange = onShowBlockedChange,
+                    )
+                    when (tabs[index]) {
+                        BlockTab.USERS ->
+                            BlockedUsersContent(
+                                state = state,
+                                onNameChange = onNameChange,
+                                onBlock = onBlock,
+                                onRequestUnblock = onRequestUnblock,
+                                onOpenUser = onOpenUser,
+                            )
 
-                    BlockTab.TITLES ->
-                        TitleRulesContent(
-                            state = titleState,
-                            onInputChange = onRuleInputChange,
-                            onRegexChange = onRegexChange,
-                            onAdd = onAddRule,
-                            onRemove = onRemoveRule,
-                        )
+                        BlockTab.TITLES ->
+                            TitleRulesContent(
+                                state = titleState,
+                                onInputChange = onRuleInputChange,
+                                onRegexChange = onRegexChange,
+                                onAdd = onAddRule,
+                                onRemove = onRemoveRule,
+                            )
+                    }
                 }
             }
         }

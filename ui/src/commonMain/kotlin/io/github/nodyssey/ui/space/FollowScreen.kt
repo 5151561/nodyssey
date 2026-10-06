@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.nodyssey.core.NodeSeekSite
 import io.github.nodyssey.data.FollowUser
 import io.github.nodyssey.ui.common.SiteErrorState
+import io.github.nodyssey.ui.common.rememberTabPagerState
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.follow_empty_followers_body
@@ -94,7 +96,12 @@ fun FollowScreen(
     modifier: Modifier = Modifier,
 ) {
     val tabs = FollowTab.entries
-    val list = state.listFor(state.selectedTab)
+    val pagerState =
+        rememberTabPagerState(
+            selectedIndex = tabs.indexOf(state.selectedTab),
+            pageCount = tabs.size,
+            onPageSettled = { onTabSelected(tabs[it]) },
+        )
 
     val appBarState = rememberOneHandAppBarState()
     Scaffold(
@@ -121,71 +128,93 @@ fun FollowScreen(
             // count once its list has loaded: the endpoint answers with the whole list, so its length
             // is the site's own number, not a page's worth.
             UnderlineTabRow(
-                selectedTabIndex = tabs.indexOf(state.selectedTab),
+                selectedTabIndex = pagerState.currentPage,
                 tabs = tabs.map { TabLabel(it.label(state.listFor(it))) },
                 onSelect = { onTabSelected(tabs[it]) },
                 modifier = Modifier.padding(bottom = Spacing.md),
             )
 
-            when {
-                list.isLoading && list.items.isEmpty() -> LoadingState()
-
-                list.error != null && list.items.isEmpty() ->
-                    SiteErrorState(
-                        error = list.error,
-                        onRetry = { onRetry(state.selectedTab) },
-                        // Named rather than reached by [SiteErrorState]'s fallback: the two are the
-                        // same closure here, and a challenge arriving at a web view by fallback is how
-                        // this stopped being a challenge web view on other screens.
-                        onOpenBrowser = {
-                            onOpenBrowser(
-                                NodeSeekSite.BASE_URL +
-                                    NodeSeekSite.fansPath(state.selectedTab == FollowTab.FOLLOWERS),
-                            )
-                        },
-                        onVerify = {
-                            onOpenBrowser(
-                                NodeSeekSite.BASE_URL +
-                                    NodeSeekSite.fansPath(state.selectedTab == FollowTab.FOLLOWERS),
-                            )
-                        },
-                        onSignIn = onSignIn,
-                    )
-
-                list.items.isEmpty() -> FollowEmptyState(state.selectedTab)
-
-                else ->
-                    LazyColumn(Modifier.fillMaxSize()) {
-                        items(count = list.items.size, key = { list.items[it].uid }) { index ->
-                            val user = list.items[index]
-                            FollowRow(
-                                user = user,
-                                first = index == 0,
-                                last = index == list.items.lastIndex,
-                                onClick = { onUserClick(user.uid) },
-                            )
-                        }
-                        item(key = "footer") {
-                            Text(
-                                text =
-                                stringResource(
-                                    when (state.selectedTab) {
-                                        FollowTab.FOLLOWING -> Res.string.follow_end_following
-                                        FollowTab.FOLLOWERS -> Res.string.follow_end_followers
-                                    },
-                                    list.items.size,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 22.dp),
-                            )
-                        }
-                    }
+            // 左右滑动切换. Each page draws its own tab's list, so the neighbour slides in with the
+            // finger; one not fetched yet shows as loading until the swipe settles and asks for it.
+            HorizontalPager(
+                state = pagerState,
+                key = { tabs[it].name },
+                modifier = Modifier.fillMaxSize(),
+            ) { index ->
+                FollowPage(
+                    tab = tabs[index],
+                    list = state.listFor(tabs[index]),
+                    onUserClick = onUserClick,
+                    onRetry = onRetry,
+                    onOpenBrowser = onOpenBrowser,
+                    onSignIn = onSignIn,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun FollowPage(
+    tab: FollowTab,
+    list: SpaceListState<FollowUser>,
+    onUserClick: (Long) -> Unit,
+    onRetry: (FollowTab) -> Unit,
+    onOpenBrowser: (String) -> Unit,
+    onSignIn: () -> Unit,
+) {
+    when {
+        // `!loaded` as well: a neighbour dragged into view before its first load is not empty.
+        (list.isLoading || !list.loaded) && list.error == null && list.items.isEmpty() -> LoadingState()
+
+        list.error != null && list.items.isEmpty() ->
+            SiteErrorState(
+                error = list.error,
+                onRetry = { onRetry(tab) },
+                // Named rather than reached by [SiteErrorState]'s fallback: the two are the
+                // same closure here, and a challenge arriving at a web view by fallback is how
+                // this stopped being a challenge web view on other screens.
+                onOpenBrowser = {
+                    onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.fansPath(tab == FollowTab.FOLLOWERS))
+                },
+                onVerify = {
+                    onOpenBrowser(NodeSeekSite.BASE_URL + NodeSeekSite.fansPath(tab == FollowTab.FOLLOWERS))
+                },
+                onSignIn = onSignIn,
+            )
+
+        list.items.isEmpty() -> FollowEmptyState(tab)
+
+        else ->
+            LazyColumn(Modifier.fillMaxSize()) {
+                items(count = list.items.size, key = { list.items[it].uid }) { index ->
+                    val user = list.items[index]
+                    FollowRow(
+                        user = user,
+                        first = index == 0,
+                        last = index == list.items.lastIndex,
+                        onClick = { onUserClick(user.uid) },
+                    )
+                }
+                item(key = "footer") {
+                    Text(
+                        text =
+                        stringResource(
+                            when (tab) {
+                                FollowTab.FOLLOWING -> Res.string.follow_end_following
+                                FollowTab.FOLLOWERS -> Res.string.follow_end_followers
+                            },
+                            list.items.size,
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 22.dp),
+                    )
+                }
+            }
     }
 }
 
