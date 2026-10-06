@@ -124,12 +124,15 @@ fun ImageActionsSheet(
     state: ImageActionsState,
     snackbarHostState: SnackbarHostState,
 ) {
+    // Above the early return, so they belong to the screen hosting the sheet rather than to the sheet:
+    // every action closes the sheet first, and a scope remembered past the return would leave the
+    // composition with it — cancelling a save half-written and an add before its 撤销 is offered.
+    val scope = rememberCoroutineScope()
+    val saver = rememberImageGallerySaver(remember { AppDispatchers() })
     val request = state.request ?: return
     val library = LocalStickerLibrary.current
-    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val copy = rememberClipboardCopy()
-    val saver = rememberImageGallerySaver(remember { AppDispatchers() })
     val mine by remember(library) { library?.mine ?: flowOf(emptyList()) }.collectAsStateWithLifecycle(emptyList())
     val alreadyMine = mine.any { it.url == request.url }
     // A site sticker is in the panel already, and inserts as its shortcode; adding its picture
