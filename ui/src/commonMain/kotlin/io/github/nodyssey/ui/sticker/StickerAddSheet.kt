@@ -46,11 +46,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -157,6 +159,7 @@ import io.github.plaza.designsys.component.UnderlineTabRow
 import io.github.plaza.designsys.image.allowMeteredImage
 import io.github.plaza.designsys.theme.Spacing
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -212,6 +215,76 @@ internal fun StickerAddSheet(
         }
     }
 
+    // Every way out of the sheet to another screen closes it first. Left open, its saved 「open」 state
+    // reopened it whenever the page under it was composed again — and a back gesture on the screen it
+    // led to composes that page for the predictive-back preview. The reopened sheet, a window of its
+    // own, took the gesture, the preview was dropped, and back never left 图床.
+    val outer = LocalStickerNavigation.current
+    val dismiss by rememberUpdatedState(onDismiss)
+    val leaving = remember(outer) {
+        outer?.let { navigation ->
+            StickerNavigation(
+                openManager = {
+                    dismiss()
+                    navigation.openManager()
+                },
+                openSources = {
+                    dismiss()
+                    navigation.openSources()
+                },
+                openImageHost = {
+                    dismiss()
+                    navigation.openImageHost()
+                },
+            )
+        }
+    }
+
+    CompositionLocalProvider(LocalStickerNavigation provides leaving) {
+        SheetBody(
+            viewModel = viewModel,
+            tab = tab,
+            tabs = tabs,
+            busy = busy,
+            onDismiss = onDismiss,
+            onAddLinks = {
+                submit {
+                    added = viewModel.addLinks()
+                    true
+                }
+            },
+            onAddHost = {
+                submit {
+                    added = viewModel.addHostSelection()
+                    true
+                }
+            },
+            onSubscribe = {
+                submit {
+                    viewModel.subscribe().also { subscribed ->
+                        if (subscribed) {
+                            onNotice(StickerNotice(subscribedText))
+                            onDismiss()
+                        }
+                    }
+                }
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SheetBody(
+    viewModel: StickerAddViewModel,
+    tab: StickerAddTab,
+    tabs: List<Pair<StickerAddTab, StringResource>>,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onAddLinks: () -> Unit,
+    onAddHost: () -> Unit,
+    onSubscribe: () -> Unit,
+) {
     PlazaSheet(onDismiss = onDismiss, title = stringResource(Res.string.sticker_add)) {
         UnderlineTabRow(
             selectedTabIndex = tabs.indexOfFirst { it.first == tab },
@@ -226,32 +299,10 @@ internal fun StickerAddSheet(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             when (tab) {
-                StickerAddTab.LINK -> LinkTab(viewModel, enabled = !busy) {
-                    submit {
-                        added = viewModel.addLinks()
-                        true
-                    }
-                }
-
-                StickerAddTab.HOST -> HostTab(viewModel, enabled = !busy) {
-                    submit {
-                        added = viewModel.addHostSelection()
-                        true
-                    }
-                }
-
+                StickerAddTab.LINK -> LinkTab(viewModel, enabled = !busy, onAdd = onAddLinks)
+                StickerAddTab.HOST -> HostTab(viewModel, enabled = !busy, onAdd = onAddHost)
                 StickerAddTab.UPLOAD -> UploadTab(viewModel)
-
-                StickerAddTab.GITHUB -> GitHubTab(viewModel, enabled = !busy) {
-                    submit {
-                        viewModel.subscribe().also { subscribed ->
-                            if (subscribed) {
-                                onNotice(StickerNotice(subscribedText))
-                                onDismiss()
-                            }
-                        }
-                    }
-                }
+                StickerAddTab.GITHUB -> GitHubTab(viewModel, enabled = !busy, onSubscribe = onSubscribe)
             }
         }
     }
