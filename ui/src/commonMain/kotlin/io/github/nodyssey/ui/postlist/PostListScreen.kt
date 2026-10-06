@@ -106,8 +106,10 @@ import io.github.nodyssey.ui.common.SelectableMenuItem
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.SortMenuItem
 import io.github.nodyssey.ui.common.UserNoteTag
+import io.github.nodyssey.ui.common.collectPagesAtRest
 import io.github.nodyssey.ui.common.compactCount
 import io.github.nodyssey.ui.common.postCardTitleStyle
+import io.github.nodyssey.ui.common.settleOn
 import io.github.nodyssey.ui.common.sharedThreadAuthor
 import io.github.nodyssey.ui.common.sharedThreadAvatar
 import io.github.nodyssey.ui.common.sharedThreadBoard
@@ -161,7 +163,6 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.abs
 
 /**
  * Stateful entry point. It only wires the ViewModel to the stateless [PostListScreen] below, which is
@@ -305,7 +306,7 @@ fun PostListScreen(
     val currentSlug by rememberUpdatedState(state.categorySlug)
     val currentOnBoardClick by rememberUpdatedState(onBoardClick)
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { page ->
+        pagerState.collectPagesAtRest { page ->
             // Coming to rest where the selection already is says nothing — that is every first
             // composition, and every page this effect was the one to move.
             currentBoards.getOrNull(page)?.takeIf { it.slug != currentSlug }?.let {
@@ -319,14 +320,7 @@ fun PostListScreen(
      * with the screen. Only a step to the immediate neighbour is animated — a tap on a distant pill
      * would otherwise fly through every board between the two, fetching each on the way past.
      */
-    LaunchedEffect(selectedIndex) {
-        if (pagerState.currentPage == selectedIndex) return@LaunchedEffect
-        if (abs(pagerState.currentPage - selectedIndex) == 1) {
-            pagerState.animateScrollToPage(selectedIndex)
-        } else {
-            pagerState.scrollToPage(selectedIndex)
-        }
-    }
+    LaunchedEffect(selectedIndex) { pagerState.settleOn(selectedIndex) }
 
     val directionThresholdPx = with(LocalDensity.current) { NavigationDirectionThreshold.toPx() }
     val currentOnNavigationBarHiddenChanged by
