@@ -125,12 +125,18 @@ import org.jetbrains.compose.resources.stringResource
  *
  * [parkedBoards] is deliberately a second list rather than a flag inside [boards]: outside edit mode
  * a parked board is not selectable, and [boards] is exactly the list the feed may page through.
+ *
+ * [highlightedSlug] is the pill drawn lit and [selectedSlug] the board actually selected; they differ
+ * while a swipe between boards is still under way. Only the selection scrolls the strip — the lit
+ * pill can change back and forth as a finger hovers over the pager's threshold, and a strip that
+ * chased it would slide one way and back again with every wobble.
  */
 @Composable
 internal fun BoardStrip(
     boards: List<Board>,
     parkedBoards: List<Board>,
     selectedSlug: String?,
+    highlightedSlug: String?,
     onBoardClick: (String?) -> Unit,
     onArrangementChange: (order: List<String>, parked: Set<String>) -> Unit,
 ) {
@@ -231,7 +237,7 @@ internal fun BoardStrip(
                 ExpandedBoards(
                     slots = slots.filterNot { it.parked },
                     parkedSlots = slots.filter { it.parked },
-                    selectedSlug = selectedSlug,
+                    selectedSlug = highlightedSlug,
                     editing = editing,
                     firstRowInset = if (editing) 0.dp else ToggleWidth + PillGap,
                     modifier = Modifier
@@ -266,7 +272,7 @@ internal fun BoardStrip(
                             val board = boards[index]
                             BoardPill(
                                 board = board,
-                                selected = board.slug == selectedSlug,
+                                selected = board.slug == highlightedSlug,
                                 onClick = { onBoardClick(board.slug) },
                             )
                         }

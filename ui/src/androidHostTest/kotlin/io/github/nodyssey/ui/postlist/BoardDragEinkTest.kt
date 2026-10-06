@@ -57,6 +57,7 @@ class BoardDragEinkTest {
                     boards = BOARDS,
                     parkedBoards = emptyList(),
                     selectedSlug = null,
+                    highlightedSlug = null,
                     onBoardClick = {},
                     onArrangementChange = { _, _ -> reordered = true },
                 )

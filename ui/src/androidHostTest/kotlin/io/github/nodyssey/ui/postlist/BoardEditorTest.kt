@@ -48,6 +48,7 @@ class BoardEditorTest {
                     boards = BOARDS,
                     parkedBoards = emptyList(),
                     selectedSlug = null,
+                    highlightedSlug = null,
                     onBoardClick = { opened += it },
                     onArrangementChange = { order, parked ->
                         lastOrder = order

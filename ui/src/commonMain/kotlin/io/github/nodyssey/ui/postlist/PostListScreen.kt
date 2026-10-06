@@ -572,11 +572,19 @@ fun PostListScreen(
                 BoardStrip(
                     boards = state.boards,
                     parkedBoards = state.parkedBoards,
-                    // The pill follows the finger: the page the pager is heading for, which crosses
-                    // over halfway through a swipe and is the destination at once for a tap. The
-                    // selection itself only lands when the swipe settles — see above — and the
-                    // strip waiting for it lit the new pill a beat after the page had arrived.
-                    selectedSlug = boards.getOrNull(pagerState.targetPage)?.slug ?: state.categorySlug,
+                    selectedSlug = state.categorySlug,
+                    // The pill follows the finger: the page the pager is heading for, which moves on
+                    // once a drag has gone a short way towards it (the pager's positional threshold,
+                    // not halfway) and is the destination at once for a tap. The selection itself
+                    // only lands when the swipe settles — see above — and the strip waiting for it
+                    // lit the new pill a beat after the page had arrived. 综合 is a page whose slug
+                    // is null, so only a page that does not exist falls back to the selection.
+                    highlightedSlug =
+                    if (pagerState.targetPage in boards.indices) {
+                        boards[pagerState.targetPage].slug
+                    } else {
+                        state.categorySlug
+                    },
                     onBoardClick = onBoardClick,
                     onArrangementChange = onArrangementChange,
                 )
