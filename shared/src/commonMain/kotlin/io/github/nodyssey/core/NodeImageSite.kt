@@ -12,7 +12,7 @@ package io.github.nodyssey.core
  * It is the default of six hosts the app can be pointed at, not the only one — the rest are described
  * in `data/imagehost/`, and this file stays the one place nodeimage.com's own vocabulary lives.
  *
- * The endpoints are the ones nodeimage.com documents on its own API page (read 2026-07-28). The web
+ * Upload is the endpoint nodeimage.com documents on its own API page (read 2026-07-28). The web
  * uploader uses a different, cookie-authenticated path (`POST /upload`); the app deliberately takes
  * the documented key-authenticated one instead, because it needs no OAuth round trip through NodeSeek
  * and no shared browser session.
@@ -27,9 +27,16 @@ object NodeImageSite {
 
     const val UPLOAD_PATH = "/api/upload"
 
-    const val IMAGES_PATH = "/api/images"
+    /*
+     * The key-authenticated list and delete live under `/api/v1/`. The unversioned `/api/images`
+     * and `/api/images/{id}` beside them are the website's own, cookie-authenticated, and answer a
+     * key with 401 「未认证，请先通过NodeSeek授权登录」 — which is what this app used to call, and why
+     * it once concluded the host could not be browsed by key at all. Both v1 routes were confirmed
+     * with a real key and no cookie on 2026-10-08.
+     */
+    const val IMAGES_PATH = "/api/v1/images"
 
-    fun imagePath(imageId: String): String = "/api/image/$imageId"
+    fun deletePath(imageId: String): String = "/api/v1/delete/$imageId"
 
     const val API_KEY_HEADER = "X-API-Key"
 

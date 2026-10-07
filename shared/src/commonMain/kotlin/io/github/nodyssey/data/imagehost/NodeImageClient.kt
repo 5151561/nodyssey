@@ -11,10 +11,10 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * nodeimage.com — the host NodeSeek's own editor reaches through a browser extension.
  *
- * The endpoints are the ones the site documents on its own API page (read 2026-07-28). Its web
- * uploader uses a different, cookie-authenticated path (`POST /upload`); the app deliberately takes
- * the documented key-authenticated one instead, because it needs no OAuth round trip through
- * NodeSeek and no shared browser session.
+ * Every call here is authenticated by the API key alone. The website uses different,
+ * cookie-authenticated paths for the same three things; the app deliberately takes the key ones,
+ * because they need no OAuth round trip through NodeSeek and no shared browser session. See
+ * [NodeImageSite.IMAGES_PATH] for how far apart the two families are.
  */
 internal class NodeImageClient(private val http: HttpTransport) : ImageHostClient {
 
@@ -29,7 +29,6 @@ internal class NodeImageClient(private val http: HttpTransport) : ImageHostClien
                 headers(config),
                 upload.multipart(NodeImageSite.UPLOAD_FILE_FIELD),
             ),
-            keyIsEnough = true,
             onUploadProgress = onProgress,
         )
         val root = payload.asJsonObject()
@@ -65,40 +64,32 @@ internal class NodeImageClient(private val http: HttpTransport) : ImageHostClien
     }
 
     override suspend fun images(config: ImageHostConfig): List<HostedImage> {
-        val payload = http.readBody(
-            getRequest(url(NodeImageSite.IMAGES_PATH), headers(config)),
-            keyIsEnough = false,
-        )
-        val element = runCatching { imageHostJson.parseToJsonElement(payload) }
+        // `{"success":true,"count":33,"images":[…]}`, every image at once: `page` and `limit` are
+        // ignored (checked 2026-10-08), so there is no paging to do.
+        val root = http.readBody(getRequest(url(NodeImageSite.IMAGES_PATH), headers(config))).asJsonObject()
+        val rows = runCatching { root.getValue("images").jsonArray }
             .getOrElse { throw ImageHostException(ImageHostError.Unparsable, cause = it) }
-        // A bare array today, but a paged `{images:[…]}` is the obvious next shape for this host, so
-        // both are read rather than letting a server-side change empty the screen without a word.
-        val rows = runCatching {
-            element.jsonArray
-        }.recoverCatching {
-            element.jsonObject["images"]?.jsonArray ?: error("no images array")
-        }.getOrElse { throw ImageHostException(ImageHostError.Unparsable, cause = it) }
-
-        return rows.mapNotNull { row ->
-            val obj = runCatching { row.jsonObject }.getOrNull() ?: return@mapNotNull null
-            obj.toHostedImage()
-        }
+        return rows.mapNotNull { row -> runCatching { row.jsonObject }.getOrNull()?.toHostedImage() }
     }
 
     override suspend fun delete(config: ImageHostConfig, image: HostedImage) {
-        http.readBody(
-            deleteRequest(url(NodeImageSite.imagePath(image.deleteToken)), headers(config)),
-            keyIsEnough = false,
-        )
+        try {
+            http.readBody(deleteRequest(url(NodeImageSite.deletePath(image.deleteToken)), headers(config)))
+        } catch (error: ImageHostException) {
+            // 404 `IMAGE_NOT_FOUND`: already gone — deleted on the website, or by a second tap here.
+            // Either way what the user asked for is true, and the row should leave the grid.
+            if (error.error != ImageHostError.Http(404)) throw error
+        }
     }
 
+    /** One row of the v1 list — the same snake_case record, `links` and all, that upload answers. */
     private fun JsonObject.toHostedImage(): HostedImage? {
-        val id = stringAt("imageId", "image_id") ?: return null
+        val id = stringAt("image_id", "imageId") ?: return null
         return HostedImage(
             id = id,
             fileName = stringAt("filename") ?: id,
-            url = stringAt("url").orEmpty(),
-            uploadTime = stringAt("uploadTime"),
+            url = stringAtPath("links.direct") ?: stringAt("url").orEmpty(),
+            uploadTime = stringAt("upload_time", "uploadTime"),
             sizeBytes = longAt("size") ?: 0L,
             mimeType = stringAt("mimetype"),
         )

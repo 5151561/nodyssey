@@ -1201,7 +1201,6 @@
     <string name="imagehost_error_not_configured">No image host connected — pick one above and fill in its key</string>
     <string name="imagehost_error_invalid_key">The key is invalid or has been regenerated — enter it again</string>
     <string name="imagehost_error_rejected">The host refused this file</string>
-    <string name="imagehost_error_session_required">NodeImage only accepts uploads by API key; browsing and deleting have to be done at nodeimage.com after signing in with a NodeSeek account</string>
     <string name="imagehost_error_cloudflare">A human check stopped the host — try again later, or open its site in a browser first</string>
     <string name="imagehost_error_http">The host cannot be reached right now — try again later</string>
     <string name="imagehost_error_unsupported">This host only offers uploading; listing and deleting have to be done on its own site</string>

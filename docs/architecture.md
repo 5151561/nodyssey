@@ -149,11 +149,11 @@ WorkerFactory 构造注入）、CI 门禁（含 R8 minified 冒烟与依赖锁�
   连接池是共享的——连接池本来就按 host 分桶，不会串。
 - 错误类型也是分开的（`ImageHostError`，不是 `NodeSeekError`）：NodeSeek 的 401 意思是
   "去论坛登录"，图床的 401 意思是"你的凭证不对"，把后者导去论坛登录页是帮倒忙。
-- **nodeimage 四个端点里只有上传真的认 API Key。** 站点 API 页面把 Key 写成通用凭证，但真机实测
-  （2026-07-28）：同一把刚上传成功的 Key，`GET /api/images` 返回 401
-  `{"error":"未认证，请先通过NodeSeek授权登录"}`。所以 `readBody()` 带一个 `keyIsEnough` 参数决定
-  401 的**含义**——上传的 401 是 `InvalidKey`，列表/删除的 401 是 `SessionRequired`，图床页对后者
-  显示"要去网页操作"并给出站点入口，而不是让用户去重新生成一把本来能用的 Key。
+- **nodeimage 的列表和删除要走 `/api/v1/`。** 不带版本号的 `/api/images`、`/api/images/{id}`
+  是网页自己用的 cookie 接口，拿 API Key 去调只会得到 401
+  `{"error":"未认证，请先通过NodeSeek授权登录"}`——App 曾因此以为这家只能上传（2026-07-28）。
+  Key 认证的是 `GET /api/v1/images`（一次返回全部，`page`/`limit` 被忽略）和
+  `DELETE /api/v1/delete/{id}`，2026-10-08 用真 Key、不带 cookie 实测通过。
 - **nodeimage 上传响应有两种形状，两种都要读。** Key 认证的 `/api/upload` 回 snake_case 且 URL 嵌在
   `links.direct` 里；网页版 cookie 认证的 `/upload` 回扁平的 `url`。只读后者，就是"图床已经存下了
   图，App 却报上传失败"那个 bug。

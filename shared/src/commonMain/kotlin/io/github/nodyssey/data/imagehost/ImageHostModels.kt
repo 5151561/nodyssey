@@ -55,16 +55,6 @@ sealed interface ImageHostError {
     /** The credential was rejected. It was revoked, regenerated, or pasted wrong. */
     data object InvalidKey : ImageHostError
 
-    /**
-     * The endpoint wants a browser session; a token is not enough.
-     *
-     * Measured, not assumed: on device, nodeimage.com's `GET /api/images` with a key that had *just*
-     * succeeded on `POST /api/upload` answered 401 `{"error":"未认证，请先通过NodeSeek授权登录"}`
-     * (2026-07-28). Kept apart from [InvalidKey] because the key is fine, and telling the user to
-     * regenerate a working key would break the half that does work.
-     */
-    data object SessionRequired : ImageHostError
-
     /** The host refused this particular file — too large, or a format it does not take. */
     data class Rejected(val statusCode: Int) : ImageHostError
 

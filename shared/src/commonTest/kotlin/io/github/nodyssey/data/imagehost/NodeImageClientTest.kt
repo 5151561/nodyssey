@@ -34,6 +34,14 @@ private const val LEGACY_UPLOAD_RESPONSE =
         """"filename":"Yzk9P567htkDWMzJzUiQXvqADYMuLJs2.webp","size":1214,""" +
         """"url":"https://cdn.nodeimage.com/i/Yzk9P567htkDWMzJzUiQXvqADYMuLJs2.webp"}"""
 
+/** `GET /api/v1/images` with a key and no cookie, 2026-10-08 — one row of it, owner id replaced. */
+private const val LIST_RESPONSE =
+    """{"success":true,"count":1,"images":[{"image_id":"lzO212gTHGJHsYtxPR2yJ321r5U3CFyr",""" +
+        """"filename":"lzO212gTHGJHsYtxPR2yJ321r5U3CFyr.webp","user_id":"10000","size":34368,""" +
+        """"mimetype":"image/webp","upload_time":"2026-10-07T17:13:08.825Z","links":{""" +
+        """"direct":"https://cdn.nodeimage.com/i/lzO212gTHGJHsYtxPR2yJ321r5U3CFyr.webp",""" +
+        """"markdown":"![image](https://cdn.nodeimage.com/i/lzO212gTHGJHsYtxPR2yJ321r5U3CFyr.webp)"}}]}"""
+
 /** Shaped like a real key (64 hex) and deliberately not one; the tests only check it round-trips. */
 private const val API_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
@@ -128,28 +136,6 @@ class NodeImageClientTest {
         assertEquals(ImageHostError.Network, error.error)
     }
 
-    /**
-     * The host documents the API key for all four endpoints, but only upload honours it: on device,
-     * a key that had just uploaded successfully got 401 「未认证，请先通过NodeSeek授权登录」 from the
-     * list. Reporting that as a bad key would push the user to regenerate a working credential.
-     */
-    @Test
-    fun `a 401 from the list means the website is needed rather than a new key`() = runTest {
-        val body = httpResponse("""{"error":"未认证，请先通过NodeSeek授权登录"}""", code = 401)
-
-        assertEquals(
-            ImageHostError.SessionRequired,
-            assertImageHostFails { repositoryFor(NODE_IMAGE, RecordingTransport(body)).images() }.error,
-        )
-        assertEquals(
-            ImageHostError.SessionRequired,
-            assertImageHostFails {
-                repositoryFor(NODE_IMAGE, RecordingTransport(body))
-                    .delete(HostedImage(id = "abc", fileName = "a", url = "u"))
-            }.error,
-        )
-    }
-
     @Test
     fun `a file the host refuses is not reported as a broken key`() = runTest {
         val recorder = RecordingTransport(httpResponse("""{"error":"File too large"}""", code = 413))
@@ -180,34 +166,59 @@ class NodeImageClientTest {
         assertEquals(ImageHostError.Cloudflare, error.error)
     }
 
+    /**
+     * The list has to come from `/api/v1/images`: the unversioned `/api/images` beside it is the
+     * website's cookie endpoint and answers a key with 401, which is how this screen came to say
+     * the host could not be browsed at all. The row is the v1 shape, URL nested under `links`.
+     */
     @Test
-    fun `the image list reads the host's own row shape`() = runTest {
-        val recorder = RecordingTransport(
-            httpResponse(
-                """[{"imageId":"abc","filename":"abc.webp","userId":"52425",""" +
-                    """"url":"https://cdn.nodeimage.com/i/abc.webp","uploadTime":"2026-07-28T04:04:11Z",""" +
-                    """"size":1214,"mimetype":"image/webp"}]""",
-            ),
-        )
+    fun `the image list reads the v1 endpoint and its row shape`() = runTest {
+        val recorder = RecordingTransport(httpResponse(LIST_RESPONSE))
 
         val images = repositoryFor(NODE_IMAGE, recorder).images()
 
+        assertEquals("GET", recorder.request?.method)
+        assertEquals("/api/v1/images", recorder.request?.path)
+        assertEquals(API_KEY, recorder.request?.headers?.get(NodeImageSite.API_KEY_HEADER))
         assertEquals(1, images.size)
-        assertEquals("abc", images.first().id)
-        assertEquals("abc.webp", images.first().fileName)
-        assertEquals(1214L, images.first().sizeBytes)
-        assertEquals("image/webp", images.first().mimeType)
+        val image = images.single()
+        assertEquals("lzO212gTHGJHsYtxPR2yJ321r5U3CFyr", image.id)
+        assertEquals("https://cdn.nodeimage.com/i/lzO212gTHGJHsYtxPR2yJ321r5U3CFyr.webp", image.url)
+        assertEquals("2026-10-07T17:13:08.825Z", image.uploadTime)
+        assertEquals(34368L, image.sizeBytes)
+        assertEquals("image/webp", image.mimeType)
     }
 
     @Test
-    fun `delete addresses the image by id`() = runTest {
+    fun `delete goes to the v1 delete route by id`() = runTest {
         val recorder = RecordingTransport(httpResponse("""{"success":true}"""))
 
         repositoryFor(NODE_IMAGE, recorder)
             .delete(HostedImage(id = "abc", fileName = "abc.webp", url = "u"))
 
         assertEquals("DELETE", recorder.request?.method)
-        assertEquals("/api/image/abc", recorder.request?.path)
+        assertEquals("/api/v1/delete/abc", recorder.request?.path)
+    }
+
+    /** Already deleted — on the website, or by a second tap — is what the user asked for. */
+    @Test
+    fun `deleting an image that is already gone succeeds`() = runTest {
+        val gone = httpResponse("""{"error":"图片不存在或已被删除","code":"IMAGE_NOT_FOUND"}""", code = 404)
+
+        repositoryFor(NODE_IMAGE, RecordingTransport(gone))
+            .delete(HostedImage(id = "abc", fileName = "abc.webp", url = "u"))
+    }
+
+    @Test
+    fun `any other delete failure still reaches the screen`() = runTest {
+        val fault = httpResponse("""{"error":"boom"}""", code = 500)
+
+        val error = assertImageHostFails {
+            repositoryFor(NODE_IMAGE, RecordingTransport(fault))
+                .delete(HostedImage(id = "abc", fileName = "abc.webp", url = "u"))
+        }
+
+        assertEquals(ImageHostError.Http(500), error.error)
     }
 
     /** 200 with `success:false` is a refusal the host can describe, not an upload that worked. */

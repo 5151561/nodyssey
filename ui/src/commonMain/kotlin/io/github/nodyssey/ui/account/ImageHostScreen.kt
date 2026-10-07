@@ -107,7 +107,6 @@ import io.github.nodyssey.ui.resources.imagehost_error_insecure_link
 import io.github.nodyssey.ui.resources.imagehost_error_invalid_key
 import io.github.nodyssey.ui.resources.imagehost_error_not_configured
 import io.github.nodyssey.ui.resources.imagehost_error_rejected
-import io.github.nodyssey.ui.resources.imagehost_error_session_required
 import io.github.nodyssey.ui.resources.imagehost_error_unparsable
 import io.github.nodyssey.ui.resources.imagehost_error_unsupported
 import io.github.nodyssey.ui.resources.imagehost_hint_custom
@@ -682,15 +681,6 @@ private fun ImagesSection(
          */
         state.imagesError == ImageHostError.Unsupported -> InfoCard(
             text = stringResource(Res.string.imagehost_error_unsupported),
-        )
-
-        /*
-         * nodeimage.com's list and delete endpoints turn the API key down — verified on device, with
-         * a key that had just succeeded on upload. So this half of the screen cannot work, and it
-         * says so and hands over to the website rather than showing an empty gallery.
-         */
-        state.imagesError == ImageHostError.SessionRequired -> InfoCard(
-            text = stringResource(Res.string.imagehost_error_session_required),
             action = stringResource(Res.string.imagehost_open_site) to onOpenSite,
         )
 
@@ -889,7 +879,6 @@ internal fun ImageHostProvider.siteUrlFor(typed: String): String = when (this) {
 internal fun ImageHostError.messageRes(): StringResource = when (this) {
     ImageHostError.NotConfigured -> Res.string.imagehost_error_not_configured
     ImageHostError.InvalidKey -> Res.string.imagehost_error_invalid_key
-    ImageHostError.SessionRequired -> Res.string.imagehost_error_session_required
     is ImageHostError.Rejected -> Res.string.imagehost_error_rejected
     ImageHostError.Cloudflare -> Res.string.imagehost_error_cloudflare
     is ImageHostError.Http -> Res.string.imagehost_error_http

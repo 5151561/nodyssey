@@ -1446,7 +1446,6 @@
     <string name="imagehost_error_not_configured">还没连接图床，先在上面选一个并填好密钥</string>
     <string name="imagehost_error_invalid_key">密钥无效或已重新生成，请重新填写</string>
     <string name="imagehost_error_rejected">图床拒绝了这个文件</string>
-    <string name="imagehost_error_session_required">NodeImage 只允许用 API Key 上传，查看和删除要在 nodeimage.com 网页上用 NodeSeek 账号登录后进行</string>
     <string name="imagehost_error_cloudflare">图床被人机验证拦下了，稍后重试或先在浏览器打开它的网站</string>
     <string name="imagehost_error_http">图床暂时无法访问，请稍后重试</string>
     <string name="imagehost_error_unsupported">这个图床只提供上传接口，图片列表和删除要到它自己的网页上操作</string>

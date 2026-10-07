@@ -29,14 +29,9 @@ internal val imageHostJson = Json { ignoreUnknownKeys = true }
  * `:app` — see [ImageHostClient]. The transport reports a call that never completed as
  * [SiteException] with `Network`, and that is the one exception shape a caller of this has to
  * translate: everything else it hands back is an answer, which is what the `when` below reads.
- *
- * @param keyIsEnough whether a token alone authenticates this endpoint. It decides what a 401
- *   *means*, which is the difference between "your token is broken" and "this one needs the
- *   website". See [ImageHostError.SessionRequired].
  */
 internal suspend fun HttpTransport.readBody(
     request: HttpRequest,
-    keyIsEnough: Boolean = true,
     onUploadProgress: UploadProgress? = null,
 ): String {
     val response = try {
@@ -62,10 +57,7 @@ internal suspend fun HttpTransport.readBody(
     return when {
         response.isSuccessful -> payload
 
-        response.code == 401 || response.code == 403 -> throw ImageHostException(
-            if (keyIsEnough) ImageHostError.InvalidKey else ImageHostError.SessionRequired,
-            detail,
-        )
+        response.code == 401 || response.code == 403 -> throw ImageHostException(ImageHostError.InvalidKey, detail)
 
         // 413 is over the size cap, 415 an unsupported format, 422 a file it could not decode.
         response.code == 413 || response.code == 415 || response.code == 422 ->

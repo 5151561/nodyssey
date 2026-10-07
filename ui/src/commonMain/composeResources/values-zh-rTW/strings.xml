@@ -1194,7 +1194,6 @@
     <string name="imagehost_error_not_configured">還沒連線圖床，先在上面選一個並填好金鑰</string>
     <string name="imagehost_error_invalid_key">金鑰無效或已重新產生，請重新填寫</string>
     <string name="imagehost_error_rejected">圖床拒絕了這個檔案</string>
-    <string name="imagehost_error_session_required">NodeImage 只允許用 API Key 上傳，檢視和刪除要在 nodeimage.com 網頁上用 NodeSeek 帳號登入後進行</string>
     <string name="imagehost_error_cloudflare">圖床被人機驗證攔下了，稍後重試或先在瀏覽器開啟它的網站</string>
     <string name="imagehost_error_http">圖床暫時無法存取，請稍後重試</string>
     <string name="imagehost_error_unsupported">這個圖床只提供上傳介面，圖片清單和刪除要到它自己的網頁上操作</string>
