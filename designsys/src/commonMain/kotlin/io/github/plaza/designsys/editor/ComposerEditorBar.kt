@@ -102,6 +102,8 @@ fun ComposerEditorBar(
     appMenu: (@Composable () -> Unit)? = null,
     /** Drawn in the keyboard's place while [EditorAction.EMOJI] is lit. */
     emojiPanel: @Composable (EmojiPanelScope) -> Unit = {},
+    /** What the body field draws as pictures — the same value it was handed. */
+    inlinePictures: InlinePictures?,
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
     // Either panel stands in for part of the keyboard, and back puts it away before it leaves.
@@ -144,7 +146,7 @@ fun ComposerEditorBar(
                 )
             }
         }
-        if (editorState.emojiOpen) emojiPanel(editorState.emojiPanelScope(bodyState))
+        if (editorState.emojiOpen) emojiPanel(editorState.emojiPanelScope(bodyState, inlinePictures))
     }
 }
 

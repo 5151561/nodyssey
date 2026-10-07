@@ -266,6 +266,7 @@ private fun ReplyEditorSheet(
     onInsertStardust: () -> Unit,
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
+    val stickerPictures = rememberStickerPictures()
 
     ModalBottomSheet(
         // Guarded like the close button and the BackHandler: while a publish is in flight, a swipe
@@ -362,6 +363,7 @@ private fun ReplyEditorSheet(
                 hint = stringResource(Res.string.post_reply_editor_hint),
                 textStyle = CommentBody.copy(color = MaterialTheme.colorScheme.onSurface),
                 hintStyle = CommentBody,
+                inlinePictures = stickerPictures,
                 modifier = Modifier
                     .readableWidth()
                     .heightIn(min = MIN_EDITOR_HEIGHT, max = MAX_EDITOR_HEIGHT)
@@ -412,6 +414,7 @@ private fun ReplyEditorSheet(
                         onRecentChange = panel.onRecentChange,
                     )
                 },
+                inlinePictures = stickerPictures,
             )
         }
     }

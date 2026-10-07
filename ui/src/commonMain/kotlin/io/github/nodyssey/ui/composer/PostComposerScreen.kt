@@ -120,6 +120,7 @@ import io.github.plaza.designsys.component.PlazaSpinner
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.editor.ComposerEditorBar
 import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.InlinePictures
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.rememberMarkdownEditorState
 import io.github.plaza.designsys.theme.CommentBody
@@ -543,9 +544,12 @@ private fun EditorContent(
                 onNext = { focusRequester.requestFocus() },
             )
         }
+        // One value for the field and the panel's backspace, so the two agree on what a sticker is.
+        val stickerPictures = rememberStickerPictures()
         BodyArea(
             state = state,
             bodyState = bodyState,
+            stickerPictures = stickerPictures,
             focusRequester = focusRequester,
             modifier = Modifier.weight(1f),
         )
@@ -575,6 +579,7 @@ private fun EditorContent(
                     onRecentChange = panel.onRecentChange,
                 )
             },
+            inlinePictures = stickerPictures,
             // The bar's own APP slot rather than an [EditorAction]: that enum is the shared pool
             // every editor draws from, and adding to it would put 插入投票 in the message, signature
             // and readme editors too — none of which can carry a vote or a 收款码.
@@ -625,17 +630,18 @@ private fun EditorContent(
 private fun BodyArea(
     state: PostComposerUiState,
     bodyState: TextFieldState,
+    stickerPictures: InlinePictures,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
     if (state.viewMode != ComposerViewMode.COMPARE) {
-        BodyField(bodyState, focusRequester, modifier)
+        BodyField(bodyState, stickerPictures, focusRequester, modifier)
         return
     }
     // 对照: the site puts the two side by side, which needs a width a phone does not have. Stacked
     // keeps the pairing — edit above, result below — without shrinking either to an unreadable column.
     Column(modifier = modifier) {
-        BodyField(bodyState, focusRequester, Modifier.weight(1f))
+        BodyField(bodyState, stickerPictures, focusRequester, Modifier.weight(1f))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         MarkdownPreviewBody(
             markdown = state.body,
@@ -652,6 +658,7 @@ private fun BodyArea(
 @Composable
 private fun BodyField(
     bodyState: TextFieldState,
+    stickerPictures: InlinePictures,
     focusRequester: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
@@ -660,6 +667,7 @@ private fun BodyField(
         hint = stringResource(Res.string.composer_body_hint),
         textStyle = CommentBody.copy(color = MaterialTheme.colorScheme.onSurface),
         hintStyle = CommentBody,
+        inlinePictures = stickerPictures,
         modifier = modifier
             .readableWidth()
             .focusRequester(focusRequester)

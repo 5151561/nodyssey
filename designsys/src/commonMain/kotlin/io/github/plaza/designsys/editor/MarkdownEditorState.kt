@@ -127,11 +127,19 @@ fun MarkdownEditorState.dispatch(
     }
 }
 
-/** The emoji panel's wiring into [bodyState] and these recents. */
-fun MarkdownEditorState.emojiPanelScope(bodyState: TextFieldState) =
-    EmojiPanelScope(
-        onInsert = { text -> bodyState.edit { insertText(text) } },
-        onBackspace = { bodyState.edit { deleteBackwards() } },
-        recent = recentEmoji,
-        onRecentChange = { recentEmoji = it },
-    )
+/**
+ * The emoji panel's wiring into [bodyState] and these recents.
+ *
+ * [pictures] are what the body field draws as pictures, and the panel's backspace takes one of those
+ * whole the way the keyboard's does — a step of one character would turn the sticker back into its
+ * Markdown, missing a bracket.
+ */
+fun MarkdownEditorState.emojiPanelScope(
+    bodyState: TextFieldState,
+    pictures: InlinePictures?,
+) = EmojiPanelScope(
+    onInsert = { text -> bodyState.edit { insertText(text) } },
+    onBackspace = { bodyState.edit { if (!deletePictureBeforeCaret(pictures)) deleteBackwards() } },
+    recent = recentEmoji,
+    onRecentChange = { recentEmoji = it },
+)

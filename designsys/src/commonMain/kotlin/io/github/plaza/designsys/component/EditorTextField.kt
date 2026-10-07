@@ -2,6 +2,7 @@ package io.github.plaza.designsys.component
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
@@ -11,10 +12,18 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import io.github.plaza.designsys.editor.InlinePictureLayer
+import io.github.plaza.designsys.editor.InlinePictureOutput
+import io.github.plaza.designsys.editor.InlinePictures
 
 /**
  * The text field every editor in the app is built on.
@@ -29,6 +38,9 @@ import androidx.compose.ui.text.style.TextOverflow
  * box that fills the screen, the reply sheet one that fills the width, the message bar a rounded pill,
  * the title a row with a counter and a rule under it. It receives the placeholder and the field
  * together and is responsible for stacking them — a `Box`, or something that ends in one.
+ *
+ * [inlinePictures] shows the runs it finds — stickers, in practice — as pictures in the text rather
+ * than as the Markdown that stands for them; the text itself is untouched.
  */
 @Composable
 fun EditorTextField(
@@ -42,14 +54,22 @@ fun EditorTextField(
     inputTransformation: InputTransformation? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     onKeyboardAction: KeyboardActionHandler? = null,
+    inlinePictures: InlinePictures? = null,
     container: @Composable (content: @Composable () -> Unit) -> Unit = { content ->
         Box(Modifier.fillMaxWidth()) { content() }
     },
 ) {
+    val output = remember(inlinePictures) { inlinePictures?.let { InlinePictureOutput(it.find) } }
+    // Hoisted only so the pictures can follow the text when the field scrolls under them.
+    val scrollState = rememberScrollState()
+    var layout by remember { mutableStateOf<(() -> TextLayoutResult?)?>(null) }
     BasicTextField(
         state = state,
         lineLimits = lineLimits,
         inputTransformation = inputTransformation,
+        outputTransformation = output,
+        scrollState = scrollState,
+        onTextLayout = if (inlinePictures == null) null else { result -> layout = result },
         keyboardOptions = keyboardOptions,
         onKeyboardAction = onKeyboardAction,
         textStyle = textStyle,
@@ -66,7 +86,14 @@ fun EditorTextField(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                inner()
+                if (inlinePictures == null) {
+                    inner()
+                } else {
+                    Box {
+                        inner()
+                        layout?.let { InlinePictureLayer(state, inlinePictures, scrollState, it) }
+                    }
+                }
             }
         },
     )

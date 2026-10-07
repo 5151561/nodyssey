@@ -55,6 +55,7 @@ class ComposerEditorBarTest {
                         actions = listOf(EditorAction.IMAGE, EditorAction.EMOJI, EditorAction.MENTION),
                         bodyState = bodyState,
                         editorState = rememberMarkdownEditorState(),
+                        inlinePictures = null,
                         onCustomize = {},
                         emojiPanel = { Text("面板") },
                     )

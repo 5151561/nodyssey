@@ -101,6 +101,7 @@ import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.composer.AttachmentTray
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.rememberImagePicker
+import io.github.nodyssey.ui.composer.rememberStickerPictures
 import io.github.nodyssey.ui.notifications.previewText
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.action_back
@@ -142,6 +143,7 @@ import io.github.plaza.designsys.component.QuotePreview
 import io.github.plaza.designsys.component.UserAvatar
 import io.github.plaza.designsys.component.rememberClipboardCopy
 import io.github.plaza.designsys.editor.EditorAction
+import io.github.plaza.designsys.editor.InlinePictures
 import io.github.plaza.designsys.editor.MarkdownEditorState
 import io.github.plaza.designsys.editor.ToolbarCustomizeSheet
 import io.github.plaza.designsys.editor.dispatch
@@ -788,6 +790,7 @@ private fun MessageComposer(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val fieldFocus = remember { FocusRequester() }
+    val stickerPictures = rememberStickerPictures()
     // The grid is this bar's format card, and the emoji panel takes its place as it does under the
     // post editor's: [MarkdownEditorState] keeps the two exclusive.
     val panelOpen = editorState.formatOpen || editorState.emojiOpen
@@ -830,6 +833,7 @@ private fun MessageComposer(
         }
         MessageInputBar(
             draftState = draftState,
+            stickerPictures = stickerPictures,
             canSend = state.canSend,
             panelOpen = panelOpen,
             onTogglePanel = {
@@ -869,7 +873,7 @@ private fun MessageComposer(
             )
         }
         if (editorState.emojiOpen) {
-            val panel = editorState.emojiPanelScope(draftState)
+            val panel = editorState.emojiPanelScope(draftState, stickerPictures)
             NodeSeekEmojiPanel(
                 onInsert = panel.onInsert,
                 onBackspace = panel.onBackspace,
@@ -891,6 +895,7 @@ private fun MessageComposer(
 @Composable
 private fun MessageInputBar(
     draftState: TextFieldState,
+    stickerPictures: InlinePictures,
     canSend: Boolean,
     panelOpen: Boolean,
     onTogglePanel: () -> Unit,
@@ -926,6 +931,7 @@ private fun MessageInputBar(
         }
         MessageDraftField(
             draftState = draftState,
+            stickerPictures = stickerPictures,
             modifier =
             Modifier
                 .weight(1f)
@@ -954,6 +960,7 @@ private fun MessageInputBar(
 @Composable
 private fun MessageDraftField(
     draftState: TextFieldState,
+    stickerPictures: InlinePictures,
     modifier: Modifier = Modifier,
 ) {
     val layers = LocalPlazaLayers.current
@@ -970,6 +977,7 @@ private fun MessageDraftField(
         // would grow it before anything has been typed.
         hintMaxLines = 1,
         lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = MAX_INPUT_LINES),
+        inlinePictures = stickerPictures,
         modifier = modifier,
         container = { content ->
             // A white pill on the page, lifted like a card: 3d draws the field as the one surface

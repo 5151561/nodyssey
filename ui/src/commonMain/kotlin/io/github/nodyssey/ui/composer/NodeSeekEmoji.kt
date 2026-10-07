@@ -6,10 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import io.github.nodyssey.core.NodeSeekStickers
+import io.github.nodyssey.data.sticker.StickerCdnSettings
 import io.github.nodyssey.ui.resources.Res
 import io.github.nodyssey.ui.resources.composer_emoji_group_acn
 import io.github.nodyssey.ui.resources.composer_emoji_group_chick
@@ -20,11 +22,15 @@ import io.github.nodyssey.ui.resources.sticker_manage_title
 import io.github.nodyssey.ui.sticker.LocalStickerLibrary
 import io.github.nodyssey.ui.sticker.LocalStickerNavigation
 import io.github.nodyssey.ui.sticker.StickerPanelHost
+import io.github.nodyssey.ui.sticker.folderEntries
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
 import io.github.plaza.designsys.editor.EmojiPanel
+import io.github.plaza.designsys.editor.InlinePicture
+import io.github.plaza.designsys.editor.InlinePictures
 import io.github.plaza.designsys.image.allowMeteredImage
+import kotlinx.coroutines.flow.flowOf
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -155,3 +161,86 @@ fun NodeSeekEmojiPanel(
         StickerPanelHost(library, NodeSeekEmojiGroups) { groups -> panel(groups) }
     }
 }
+
+/**
+ * The stickers in an editor's text, for the field to draw as pictures: every `:name:` the site has,
+ * and every `![name](url)` whose link is one of 我的表情 or a subscribed pack's.
+ *
+ * Only those links, because a photo uploaded into the body is written the same way and is not a
+ * sticker. A link the library no longer has — a pack unsubscribed since, or the CDN switched after
+ * the draft was written — stays the Markdown it is, which is still exactly what will be sent.
+ */
+@Composable
+fun rememberStickerPictures(): InlinePictures {
+    val library = LocalStickerLibrary.current
+    val mine by remember(library) { library?.mine ?: flowOf(emptyList()) }.collectAsStateWithLifecycle(emptyList())
+    val subscriptions by remember(library) { library?.subscriptions ?: flowOf(emptyList()) }
+        .collectAsStateWithLifecycle(emptyList())
+    val cdn by remember(library) { library?.cdn ?: flowOf(StickerCdnSettings()) }
+        .collectAsStateWithLifecycle(StickerCdnSettings())
+    return remember(mine, subscriptions, cdn) {
+        val known = buildSet {
+            mine.forEach { add(it.url) }
+            subscriptions.forEach { subscription ->
+                subscription.folders.forEach { folder -> folderEntries(folder, cdn).forEach { add(it.url) } }
+            }
+        }
+        InlinePictures(
+            find = { text -> findStickers(text, known::contains, NodeSeekStickers::urlFor) },
+            image = { url, modifier ->
+                NodeSeekStickerImage(EmojiEntry.Sticker(name = "", shortcode = "", url = url), null, modifier)
+            },
+        )
+    }
+}
+
+/**
+ * The sticker runs in [text], in order: `![alt](url)` where [isSticker] knows the link, and `:name:`
+ * where [shortcode] resolves the name — under the same rules the Markdown reader applies, so the
+ * editor never shows a picture the post would not.
+ */
+internal fun findStickers(
+    text: CharSequence,
+    isSticker: (String) -> Boolean,
+    shortcode: (String) -> String?,
+): List<InlinePicture> {
+    val found = mutableListOf<InlinePicture>()
+    var index = 0
+    while (index < text.length) {
+        val next = when (text[index]) {
+            '!' -> MARKDOWN_IMAGE.matchAt(text, index)
+                ?.takeIf { isSticker(it.groupValues[1]) }
+                ?.let { InlinePicture(index, it.range.last + 1, it.groupValues[1]) }
+
+            ':' -> shortcodeAt(text, index, shortcode)
+
+            else -> null
+        }
+        if (next == null) {
+            index++
+        } else {
+            found += next
+            index = next.end
+        }
+    }
+    return found
+}
+
+private fun shortcodeAt(
+    text: CharSequence,
+    start: Int,
+    shortcode: (String) -> String?,
+): InlinePicture? {
+    var close = start + 1
+    while (close < text.length && close - start - 1 <= MAX_SHORTCODE_LENGTH && text[close].isShortcodeChar()) close++
+    if (close >= text.length || text[close] != ':' || close == start + 1) return null
+    val url = shortcode(text.substring(start + 1, close)) ?: return null
+    return InlinePicture(start, close + 1, url)
+}
+
+private fun Char.isShortcodeChar() = this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9' || this in "_-+"
+
+private val MARKDOWN_IMAGE = Regex("""!\[[^\]\n]*]\(([^)\s]+)\)""")
+
+/** The Markdown reader's own limit on a shortcode's name. */
+private const val MAX_SHORTCODE_LENGTH = 32

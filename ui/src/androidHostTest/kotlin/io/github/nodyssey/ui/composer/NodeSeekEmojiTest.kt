@@ -3,6 +3,7 @@ package io.github.nodyssey.ui.composer
 import io.github.nodyssey.core.NodeSeekStickers
 import io.github.plaza.designsys.editor.EmojiEntry
 import io.github.plaza.designsys.editor.EmojiGroup
+import io.github.plaza.designsys.editor.InlinePicture
 import io.github.plaza.designsys.editor.insertion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -35,5 +36,31 @@ class NodeSeekEmojiTest {
         // reading "8:30:" would draw a broken image where the time was.
         assertEquals(null, NodeSeekStickers.urlFor("ac99"))
         assertEquals(null, NodeSeekStickers.urlFor("30"))
+    }
+}
+
+class FindStickersTest {
+    private val mine = "https://cdn.example/pack/doge.gif"
+
+    private fun find(text: String) = findStickers(text, { it == mine }, NodeSeekStickers::urlFor)
+
+    @Test
+    fun `a saved sticker becomes a picture and an uploaded photo stays its link`() {
+        val text = "看 ![doge]($mine) 和 ![截图](https://i.example/shot.png)"
+
+        assertEquals(listOf(InlinePicture(2, 2 + "![doge]($mine)".length, mine)), find(text))
+    }
+
+    /** The scan has to restart at every colon, or the `:` closing a time eats the one opening a sticker. */
+    @Test
+    fun `a site shortcode after a stray colon is still found`() {
+        val text = "8:30 :ac01:"
+
+        assertEquals(listOf(InlinePicture(5, 11, NodeSeekStickers.urlFor("ac01")!!)), find(text))
+    }
+
+    @Test
+    fun `a shortcode the site does not have stays text`() {
+        assertEquals(emptyList<InlinePicture>(), find(":ac99: 21:30:"))
     }
 }

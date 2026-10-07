@@ -33,6 +33,7 @@ class EmojiPanelSlotTest {
                     actions = listOf(EditorAction.BOLD, EditorAction.EMOJI),
                     bodyState = bodyState,
                     editorState = rememberMarkdownEditorState(),
+                    inlinePictures = null,
                     emojiPanel = panel,
                 )
             }
