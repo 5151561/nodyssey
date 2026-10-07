@@ -52,7 +52,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -216,30 +215,7 @@ internal fun StickerAddSheet(
         }
     }
 
-    // Every way out of the sheet to another screen closes it first. Left open, its saved 「open」 state
-    // reopened it whenever the page under it was composed again — and a back gesture on the screen it
-    // led to composes that page for the predictive-back preview. The reopened sheet, a window of its
-    // own, took the gesture, the preview was dropped, and back never left 图床.
-    val outer = LocalStickerNavigation.current
-    val dismiss by rememberUpdatedState(onDismiss)
-    val leaving = remember(outer) {
-        outer?.let { navigation ->
-            StickerNavigation(
-                openManager = {
-                    dismiss()
-                    navigation.openManager()
-                },
-                openSources = {
-                    dismiss()
-                    navigation.openSources()
-                },
-                openImageHost = {
-                    dismiss()
-                    navigation.openImageHost()
-                },
-            )
-        }
-    }
+    val leaving = rememberLeavingStickerNavigation(onDismiss)
 
     CompositionLocalProvider(LocalStickerNavigation provides leaving) {
         SheetBody(

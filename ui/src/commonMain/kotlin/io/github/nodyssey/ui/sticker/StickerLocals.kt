@@ -1,5 +1,9 @@
 package io.github.nodyssey.ui.sticker
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import io.github.nodyssey.data.sticker.StickerLibrary
 
@@ -24,3 +28,36 @@ class StickerNavigation(
 )
 
 val LocalStickerNavigation = staticCompositionLocalOf<StickerNavigation?> { null }
+
+/**
+ * [LocalStickerNavigation] for the inside of a sheet: every way out to another screen closes the
+ * sheet first.
+ *
+ * Left open, its saved 「open」 state reopened it whenever the page under it was composed again — and a
+ * back gesture on the screen it led to composes that page for the predictive-back preview. The
+ * reopened sheet, a window of its own, took the gesture, the preview was dropped, and back never left
+ * 图床. Every sheet that can lead somewhere provides this rather than the outer value.
+ */
+@Composable
+internal fun rememberLeavingStickerNavigation(onDismiss: () -> Unit): StickerNavigation? {
+    val outer = LocalStickerNavigation.current
+    val dismiss by rememberUpdatedState(onDismiss)
+    return remember(outer) {
+        outer?.let { navigation ->
+            StickerNavigation(
+                openManager = {
+                    dismiss()
+                    navigation.openManager()
+                },
+                openSources = {
+                    dismiss()
+                    navigation.openSources()
+                },
+                openImageHost = {
+                    dismiss()
+                    navigation.openImageHost()
+                },
+            )
+        }
+    }
+}

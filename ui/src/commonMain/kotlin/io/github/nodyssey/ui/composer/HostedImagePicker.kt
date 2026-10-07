@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -38,11 +39,14 @@ import io.github.nodyssey.ui.resources.sticker_host_empty
 import io.github.nodyssey.ui.sticker.HostImageGrid
 import io.github.nodyssey.ui.sticker.HostImagesFailed
 import io.github.nodyssey.ui.sticker.HostListState
+import io.github.nodyssey.ui.sticker.LocalStickerNavigation
+import io.github.nodyssey.ui.sticker.rememberLeavingStickerNavigation
 import io.github.nodyssey.ui.sticker.stickerMarkdown
 import io.github.plaza.core.runCatchingExceptCancellation
 import io.github.plaza.designsys.component.PlazaLoadingIndicator
 import io.github.plaza.designsys.editor.appendBlock
 import io.github.plaza.designsys.theme.Spacing
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,16 +74,36 @@ class HostedImagePickerViewModel(
     private val _selection = MutableStateFlow<Set<String>>(emptySet())
     val selection: StateFlow<Set<String>> = _selection.asStateFlow()
 
-    /** Fetched afresh on every open: an upload from the editor a minute ago belongs in the list. */
+    private var loading: Job? = null
+
+    /**
+     * Fetches the list, dropping a fetch still in flight so that only the latest answer lands. The
+     * selection stays: a retry should not undo the picking that was done before it.
+     */
     fun load() {
+        loading?.cancel()
         _host.value = HostListState.Loading
-        _selection.value = emptySet()
-        viewModelScope.launch {
+        loading = viewModelScope.launch {
             _host.value = runCatchingExceptCancellation { repository.images() }.fold(
                 onSuccess = { HostListState.Loaded(it) },
                 onFailure = { HostListState.Failed((it as? ImageHostException)?.error ?: ImageHostError.Network) },
             )
         }
+    }
+
+    /** Opened with nothing loaded yet — a first open, or one after [reset]. A rotation is neither. */
+    val needsLoad: Boolean get() = loading == null
+
+    /**
+     * Back to empty when the sheet closes. The ViewModel outlives the sheet — it belongs to the screen
+     * — and without this the next open would draw last time's list and picks for a frame before its
+     * own fetch began, when an upload from the editor a minute ago belongs in the list.
+     */
+    fun reset() {
+        loading?.cancel()
+        loading = null
+        _host.value = HostListState.Loading
+        _selection.value = emptySet()
     }
 
     fun toggle(url: String) = _selection.update { if (url in it) it - url else it + url }
@@ -115,51 +139,58 @@ internal fun HostedImagePickerSheet(
     val viewModel = viewModel(key = "hosted-image-picker") { HostedImagePickerViewModel(repository) }
     val state by viewModel.host.collectAsStateWithLifecycle()
     val selection by viewModel.selection.collectAsStateWithLifecycle()
-    LaunchedEffect(viewModel) { viewModel.load() }
+    LaunchedEffect(viewModel) { if (viewModel.needsLoad) viewModel.load() }
+    val close: () -> Unit = {
+        viewModel.reset()
+        onDismiss()
+    }
 
-    PlazaSheet(onDismiss = onDismiss, title = stringResource(Res.string.hosted_image_pick_title)) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        ) {
-            when (val current = state) {
-                HostListState.Loading ->
-                    Box(Modifier.fillMaxWidth().height(LOADING_HEIGHT), contentAlignment = Alignment.Center) {
-                        PlazaLoadingIndicator()
-                    }
-
-                is HostListState.Failed -> HostImagesFailed(current.error, onRetry = viewModel::load)
-
-                is HostListState.Loaded -> {
-                    if (current.images.isEmpty()) {
-                        Text(
-                            stringResource(Res.string.sticker_host_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        HostImageGrid(
-                            images = current.images,
-                            selection = selection,
-                            onToggle = viewModel::toggle,
-                            onDragSelect = viewModel::select,
-                            maxHeight = GRID_HEIGHT,
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = viewModel::clear, enabled = selection.isNotEmpty()) {
-                            Text(stringResource(Res.string.sticker_host_clear))
+    // 去连接图床 leaves from in here, and has to close the sheet on its way out.
+    CompositionLocalProvider(LocalStickerNavigation provides rememberLeavingStickerNavigation(close)) {
+        PlazaSheet(onDismiss = close, title = stringResource(Res.string.hosted_image_pick_title)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                when (val current = state) {
+                    HostListState.Loading ->
+                        Box(Modifier.fillMaxWidth().height(LOADING_HEIGHT), contentAlignment = Alignment.Center) {
+                            PlazaLoadingIndicator()
                         }
-                        Button(
-                            onClick = {
-                                val markdown = viewModel.selectedMarkdown()
-                                bodyState.edit { markdown.forEach { appendBlock(it) } }
-                                onDismiss()
-                            },
-                            enabled = selection.isNotEmpty(),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(stringResource(Res.string.hosted_image_insert_count, selection.size))
+
+                    is HostListState.Failed -> HostImagesFailed(current.error, onRetry = viewModel::load)
+
+                    is HostListState.Loaded -> {
+                        if (current.images.isEmpty()) {
+                            Text(
+                                stringResource(Res.string.sticker_host_empty),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        } else {
+                            HostImageGrid(
+                                images = current.images,
+                                selection = selection,
+                                onToggle = viewModel::toggle,
+                                onDragSelect = viewModel::select,
+                                maxHeight = GRID_HEIGHT,
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = viewModel::clear, enabled = selection.isNotEmpty()) {
+                                Text(stringResource(Res.string.sticker_host_clear))
+                            }
+                            Button(
+                                onClick = {
+                                    val markdown = viewModel.selectedMarkdown()
+                                    bodyState.edit { markdown.forEach { appendBlock(it) } }
+                                    close()
+                                },
+                                enabled = selection.isNotEmpty(),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(stringResource(Res.string.hosted_image_insert_count, selection.size))
+                            }
                         }
                     }
                 }
