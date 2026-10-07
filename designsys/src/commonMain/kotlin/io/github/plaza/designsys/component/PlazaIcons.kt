@@ -402,16 +402,6 @@ object PlazaIcons {
 
     // --- Editor toolbar (boards 6d / 7a / c5 / c6) ---------------------------
 
-    /** The 格式 pill that opens the post and reply editors' Markdown card (1d / 2c). */
-    val TextFormat: ImageVector by lazy {
-        materialIcon(
-            name = "TextFormat",
-            pathData =
-            "M5,17v2h14v-2L5,17zM9.5,12.8h5l0.9,2.2h2.1L12.75,4h-1.5L6.5,15h2.1l0.9,-2.2z" +
-                "M12,5.98L13.87,11h-3.74L12,5.98z",
-        )
-    }
-
     /** 阅读权限 · 公开 on the post editor's option row (1d). */
     val Public: ImageVector by lazy {
         materialIcon(

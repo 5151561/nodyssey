@@ -45,8 +45,8 @@ class MarkdownEditorState(
         private set
 
     /**
-     * Whether the editor's card of formatting keys is open in the keyboard's place — [ComposerEditorBar]'s
-     * 格式 card, the message bar's tool grid.
+     * Whether the editor's card of formatting keys is open in the keyboard's place — the message bar's
+     * tool grid. [ComposerEditorBar] has no such card and never opens it.
      *
      * Hoisted with the rest for the same reason: a rotation mid-edit should come back to the card the
      * writer had open.
@@ -60,7 +60,7 @@ class MarkdownEditorState(
 
     internal fun toggleEmoji() {
         emojiOpen = !emojiOpen
-        // The two panels are alternatives: a sticker grid under a format card is two drawers open at
+        // The two panels are alternatives: a sticker grid under a tool grid is two drawers open at
         // once over a field the writer can no longer see.
         if (emojiOpen) formatOpen = false
     }

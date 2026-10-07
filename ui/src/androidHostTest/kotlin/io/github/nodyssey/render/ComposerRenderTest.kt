@@ -4,7 +4,6 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
@@ -27,12 +26,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The two editors from boards 1d, 1e and 2c: the post page, its 格式 card, and the reply sheet with
- * the emoji panel open.
+ * The two editors: the post page, and the reply sheet with the emoji panel open.
  *
  * Robolectric has no IME, so the keyboard the boards draw under the bar is simply absent — the bar
- * sits on the bottom edge instead. The 格式 card and the emoji panel are opened by tapping, the way a
- * writer would, rather than by constructing state the screen owns.
+ * sits on the bottom edge instead. The emoji panel is opened by tapping, the way a writer would,
+ * rather than by constructing state the screen owns.
  *
  * The reply sheet is a `ModalBottomSheet`, which is a window of its own; [captureScreenRoboImage]
  * takes every window, where the other renders' `onRoot()` would only see the empty host behind it.
@@ -121,20 +119,6 @@ class ComposerRenderTest {
     fun `the preview in light`() {
         setPost(darkTheme = false, state = POST.copy(viewMode = ComposerViewMode.PREVIEW))
         composeRule.onRoot().captureRender("composer-preview-light")
-    }
-
-    @Test
-    fun `the format card in light`() {
-        setPost(darkTheme = false)
-        composeRule.onNodeWithText("格式").performClick()
-        composeRule.onRoot().captureRender("composer-format-light")
-    }
-
-    @Test
-    fun `the format card in dark`() {
-        setPost(darkTheme = true)
-        composeRule.onNodeWithText("格式").performClick()
-        composeRule.onRoot().captureRender("composer-format-dark")
     }
 
     @Test

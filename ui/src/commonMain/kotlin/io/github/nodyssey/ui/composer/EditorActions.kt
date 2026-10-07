@@ -9,13 +9,10 @@ import io.github.plaza.designsys.editor.EditorAction
  * comparison — every entry is an argument about what that surface is for, and those arguments are only
  * checkable next to each other:
  *
- * - [Post] and [Reply] are the same four, and none of them formats: since "先写，后排版" (boards 1d
- *   and 2c) these two editors keep the formatting keys on a 格式 card that opens on demand, so what
- *   is left on their bar is what gets *inserted* — a new picture, one already on the image host, a
- *   sticker, an @. Anyone who wants
- *   加粗 one tap away can still pin it there with the wrench; that is what the arrangement is for
- *   now. (They used to differ — a topic led with a list and a link, a reply with a quote — and that
- *   argument moved to the card, which offers all of them to both.)
+ * - [Post] and [Reply] are the same, and are everything: one strip that scrolls, with what gets
+ *   *inserted* — a new picture, one already on the image host, a sticker, an @ — ahead of the
+ *   formatting keys, the commonest first. (Boards 1d and 2c moved the formatting keys to a 格式
+ *   card, "先写，后排版"; on 2026-10-08 the strip came back.)
  * - [Message] is the shortest, and only that: every key is available through its wrench, images
  *   included — `message/send` carries `content` as Markdown and the thread renders images in it.
  *   The image host's key is on it by default (asked for, 2026-10-08); the photo picker is not, and
@@ -24,7 +21,7 @@ import io.github.plaza.designsys.editor.EditorAction
  *   costs a second message, not a deleted topic.
  * - [Signature] omits images and quotes because NodeSeek's own helper text says signatures support
  *   neither. Offering keys the server will strip is the failure the reduced set exists to avoid.
- * - [Readme] is the longest, because a Readme is a document: it is the one field the space page runs
+ * - [Readme] is the longest of the fixed sets, because a Readme is a document: it is the one field the space page runs
  *   through the full Markdown renderer, so headings, lists and quotes all land. It stops short of
  *   images and emoji only because the profile form hosts neither a picker nor a panel.
  */
@@ -35,6 +32,14 @@ object EditorActions {
             EditorAction.HOSTED_IMAGE,
             EditorAction.EMOJI,
             EditorAction.MENTION,
+            EditorAction.BOLD,
+            EditorAction.LINK,
+            EditorAction.QUOTE,
+            EditorAction.CODE,
+            EditorAction.LIST,
+            EditorAction.HEADING,
+            EditorAction.STRIKETHROUGH,
+            EditorAction.ITALIC,
         )
 
     val Reply = Post
