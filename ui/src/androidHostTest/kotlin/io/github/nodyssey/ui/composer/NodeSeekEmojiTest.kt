@@ -63,4 +63,18 @@ class FindStickersTest {
     fun `a shortcode the site does not have stays text`() {
         assertEquals(emptyList<InlinePicture>(), find(":ac99: 21:30:"))
     }
+
+    /** The post sends code as written, so the editor must not hide what is typed inside it. */
+    @Test
+    fun `stickers inside a fenced block or a backtick span stay text`() {
+        val text = "```\n:ac01: ![doge]($mine)\n```\n`:ac01:` :ac01:"
+
+        assertEquals(listOf(InlinePicture(text.length - 6, text.length, NodeSeekStickers.urlFor("ac01")!!)), find(text))
+    }
+
+    @Test
+    fun `an unclosed fence runs to the end and a lone backtick is just a character`() {
+        assertEquals(emptyList<InlinePicture>(), find("```\n:ac01:"))
+        assertEquals(1, find("a ` b :ac01:").size)
+    }
 }

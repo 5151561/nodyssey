@@ -197,7 +197,8 @@ fun rememberStickerPictures(): InlinePictures {
 /**
  * The sticker runs in [text], in order: `![alt](url)` where [isSticker] knows the link, and `:name:`
  * where [shortcode] resolves the name — under the same rules the Markdown reader applies, so the
- * editor never shows a picture the post would not.
+ * editor never shows a picture the post would not. That includes code: a fenced block and a
+ * backtick span are sent as written, so whatever is inside them stays the Markdown it is.
  */
 internal fun findStickers(
     text: CharSequence,
@@ -207,12 +208,22 @@ internal fun findStickers(
     val found = mutableListOf<InlinePicture>()
     var index = 0
     while (index < text.length) {
+        val lineStart = index == 0 || text[index - 1] == '\n'
+        if (lineStart && text.startsWith(FENCE, index)) {
+            index = fencedBlockEnd(text, index)
+            continue
+        }
         val next = when (text[index]) {
             '!' -> MARKDOWN_IMAGE.matchAt(text, index)
                 ?.takeIf { isSticker(it.groupValues[1]) }
                 ?.let { InlinePicture(index, it.range.last + 1, it.groupValues[1]) }
 
             ':' -> shortcodeAt(text, index, shortcode)
+
+            '`' -> {
+                index = codeSpanEnd(text, index)
+                continue
+            }
 
             else -> null
         }
@@ -226,13 +237,44 @@ internal fun findStickers(
     return found
 }
 
+/**
+ * Just past the fenced block opening at [start]: past its closing fence's line, or the end of the
+ * text when it never closes — the reader's rule, under which an unclosed fence runs to the end.
+ */
+private fun fencedBlockEnd(
+    text: CharSequence,
+    start: Int,
+): Int {
+    var line = text.indexOf('\n', start).let { if (it < 0) return text.length else it + 1 }
+    while (line < text.length && !text.startsWith(FENCE, line)) {
+        line = text.indexOf('\n', line).let { if (it < 0) return text.length else it + 1 }
+    }
+    if (line >= text.length) return text.length
+    return text.indexOf('\n', line).let { if (it < 0) text.length else it + 1 }
+}
+
+/**
+ * Just past the backtick span opening at [start], closed by a run of the same length within its
+ * paragraph; one past the opening run when there is no such close, which leaves it ordinary text.
+ */
+private fun codeSpanEnd(
+    text: CharSequence,
+    start: Int,
+): Int {
+    var run = 0
+    while (start + run < text.length && text[start + run] == '`') run++
+    val paragraphEnd = text.indexOf("\n\n", start).let { if (it < 0) text.length else it }
+    val close = text.indexOf("`".repeat(run), start + run)
+    return if (close < 0 || close >= paragraphEnd) start + run else close + run
+}
+
 private fun shortcodeAt(
     text: CharSequence,
     start: Int,
     shortcode: (String) -> String?,
 ): InlinePicture? {
     var close = start + 1
-    while (close < text.length && close - start - 1 <= MAX_SHORTCODE_LENGTH && text[close].isShortcodeChar()) close++
+    while (close < text.length && close - start - 1 < MAX_SHORTCODE_LENGTH && text[close].isShortcodeChar()) close++
     if (close >= text.length || text[close] != ':' || close == start + 1) return null
     val url = shortcode(text.substring(start + 1, close)) ?: return null
     return InlinePicture(start, close + 1, url)
@@ -241,6 +283,8 @@ private fun shortcodeAt(
 private fun Char.isShortcodeChar() = this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9' || this in "_-+"
 
 private val MARKDOWN_IMAGE = Regex("""!\[[^\]\n]*]\(([^)\s]+)\)""")
+
+private const val FENCE = "```"
 
 /** The Markdown reader's own limit on a shortcode's name. */
 private const val MAX_SHORTCODE_LENGTH = 32
