@@ -17,6 +17,7 @@
     <string name="composer_format_link">链接</string>
     <string name="composer_format_mention">提到某人</string>
     <string name="composer_format_image">图片</string>
+    <string name="composer_format_hosted_image">图床</string>
     <string name="composer_format_emoji">表情</string>
 
     <!-- The wrench at the end of a composer strip, and the panel it opens -->

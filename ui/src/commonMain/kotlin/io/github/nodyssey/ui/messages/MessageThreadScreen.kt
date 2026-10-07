@@ -99,6 +99,7 @@ import io.github.nodyssey.data.contentPreview
 import io.github.nodyssey.ui.common.SiteErrorState
 import io.github.nodyssey.ui.common.webViewUrl
 import io.github.nodyssey.ui.composer.AttachmentTray
+import io.github.nodyssey.ui.composer.HostedImagePickerSheet
 import io.github.nodyssey.ui.composer.NodeSeekEmojiPanel
 import io.github.nodyssey.ui.composer.rememberImagePicker
 import io.github.nodyssey.ui.composer.rememberStickerPictures
@@ -241,6 +242,7 @@ fun MessageThreadScreen(
 ) {
     val webUrl = NodeSeekSite.BASE_URL + NodeSeekSite.messageThreadWebPath(state.uid)
     var customizing by rememberSaveable { mutableStateOf(false) }
+    var pickingHosted by rememberSaveable { mutableStateOf(false) }
     val editorState = rememberMarkdownEditorState()
     Scaffold(
         modifier = modifier,
@@ -314,11 +316,16 @@ fun MessageThreadScreen(
                 onSend = onSend,
                 onRemoveQuote = onRemoveQuote,
                 onPickImages = onPickImages,
+                onPickHostedImages = { pickingHosted = true },
                 onRemoveAttachment = onRemoveAttachment,
                 onRetryAttachment = onRetryAttachment,
                 onCustomize = { customizing = true },
             )
         }
+    }
+
+    if (pickingHosted) {
+        HostedImagePickerSheet(bodyState = draftState, onDismiss = { pickingHosted = false })
     }
 
     if (customizing) {
@@ -777,6 +784,7 @@ private fun MessageComposer(
     onSend: () -> Unit,
     onRemoveQuote: (String) -> Unit,
     onPickImages: (List<PickedImage>) -> Unit,
+    onPickHostedImages: () -> Unit,
     onRemoveAttachment: (ImageAttachment) -> Unit,
     onRetryAttachment: (ImageAttachment) -> Unit,
     onCustomize: () -> Unit,
@@ -860,6 +868,7 @@ private fun MessageComposer(
                         action = action,
                         bodyState = draftState,
                         onPickImages = pickImages,
+                        onPickHostedImages = onPickHostedImages,
                         // Straight back to the field: the placeholder the key inserted is selected,
                         // and the next keystroke is meant to replace it.
                         onFormatted = {
@@ -1002,6 +1011,9 @@ private fun MessageDraftField(
     )
 }
 
+/** The tiles that insert something rather than format, which lead the grid. */
+private val INSERT_TILES = setOf(EditorAction.IMAGE, EditorAction.HOSTED_IMAGE, EditorAction.EMOJI)
+
 /**
  * 3e's grid behind the + key, four tiles to a row.
  *
@@ -1018,7 +1030,7 @@ private fun ToolGrid(
     onCustomize: () -> Unit,
 ) {
     val tiles = buildList<@Composable () -> Unit> {
-        state.toolbar.enabled.filter { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
+        state.toolbar.enabled.filter { it in INSERT_TILES }.forEach { action ->
             add {
                 ToolTile(
                     icon = if (action == EditorAction.IMAGE) PlazaIcons.PhotoLibrary else action.icon,
@@ -1027,7 +1039,7 @@ private fun ToolGrid(
                 )
             }
         }
-        state.toolbar.enabled.filterNot { it == EditorAction.IMAGE || it == EditorAction.EMOJI }.forEach { action ->
+        state.toolbar.enabled.filterNot { it in INSERT_TILES }.forEach { action ->
             add {
                 ToolTile(icon = action.icon, label = stringResource(action.label), onClick = { onAction(action) })
             }

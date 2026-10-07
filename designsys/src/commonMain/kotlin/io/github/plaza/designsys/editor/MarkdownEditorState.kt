@@ -108,6 +108,7 @@ fun MarkdownEditorState.dispatch(
     action: EditorAction,
     bodyState: TextFieldState,
     onPickImages: () -> Unit,
+    onPickHostedImages: () -> Unit,
     onFormatted: () -> Unit,
     hideKeyboard: () -> Unit,
 ) {
@@ -118,6 +119,8 @@ fun MarkdownEditorState.dispatch(
         }
 
         EditorAction.IMAGE -> onPickImages()
+
+        EditorAction.HOSTED_IMAGE -> onPickHostedImages()
 
         else -> {
             closeEmoji()

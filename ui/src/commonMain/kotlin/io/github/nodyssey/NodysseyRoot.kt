@@ -27,6 +27,7 @@ import io.github.nodyssey.ui.common.rememberBrowserLinks
 import io.github.nodyssey.ui.common.rememberReducedMotionEnabled
 import io.github.nodyssey.ui.compare.LocalReportCompareBasket
 import io.github.nodyssey.ui.compare.rememberReportCompareBasket
+import io.github.nodyssey.ui.composer.LocalImageHostRepository
 import io.github.nodyssey.ui.navigation.TopLevelDestination
 import io.github.nodyssey.ui.onboarding.OnboardingScreen
 import io.github.nodyssey.ui.richtext.LocalReportFormat
@@ -231,6 +232,8 @@ internal fun NodysseyChrome(
                 // 我的表情 rides here for the reason the basket does: three editors draw the panel and
                 // every post body's long press can add to it. See `LocalStickerLibrary`.
                 LocalStickerLibrary provides container.stickerLibrary,
+                // The editors' 图床 key, for the same reason: three screens, no ViewModel of theirs.
+                LocalImageHostRepository provides container.imageHostRepository,
                 // The one thing on this list that is not a setting: it is what the platform says this
                 // build is called, so that a debug build's screens say "Nodyssey·D" like its launcher
                 // icon does. See `LocalAppName`.

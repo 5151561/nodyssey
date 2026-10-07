@@ -52,6 +52,7 @@ class ComposerEditorBarTest {
             PlazaTheme {
                 CompositionLocalProvider(LocalSoftwareKeyboardController provides keyboard) {
                     ComposerEditorBar(
+                        onPickHostedImages = {},
                         actions = listOf(EditorAction.IMAGE, EditorAction.EMOJI, EditorAction.MENTION),
                         bodyState = bodyState,
                         editorState = rememberMarkdownEditorState(),

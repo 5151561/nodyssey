@@ -30,6 +30,7 @@ class EmojiPanelSlotTest {
         composeRule.setContent {
             PlazaTheme {
                 ComposerEditorBar(
+                    onPickHostedImages = {},
                     actions = listOf(EditorAction.BOLD, EditorAction.EMOJI),
                     bodyState = bodyState,
                     editorState = rememberMarkdownEditorState(),

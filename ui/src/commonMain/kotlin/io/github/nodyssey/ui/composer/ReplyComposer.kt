@@ -159,6 +159,8 @@ fun ReplyComposerHost(
     // a ModalBottomSheet's content stacks two windows, and the sheet's own scrim ends up over it.
     var composingVote by rememberSaveable { mutableStateOf(false) }
     var composingReceiveCode by rememberSaveable { mutableStateOf(false) }
+    // A sheet as well, so a sibling for the wrench panel's reason.
+    var pickingHosted by rememberSaveable { mutableStateOf(false) }
     val launchPicker =
         rememberImagePicker(
             maxItems = MAX_IMAGES_PER_PICK,
@@ -196,6 +198,7 @@ fun ReplyComposerHost(
             onClearReplyTo = onClearReplyTo,
             onPreview = { onPreviewChange(true) },
             onPickImages = launchPicker,
+            onPickHostedImages = { pickingHosted = true },
             onRemoveAttachment = onRemoveAttachment,
             onRetryAttachment = onRetryAttachment,
             onRetryFailedUploads = onRetryFailedUploads,
@@ -217,6 +220,10 @@ fun ReplyComposerHost(
             onReset = onToolbarReset,
             onDismiss = { customizing = false },
         )
+    }
+
+    if (pickingHosted) {
+        HostedImagePickerSheet(bodyState = bodyState, onDismiss = { pickingHosted = false })
     }
 
     if (composingVote) {
@@ -253,6 +260,7 @@ private fun ReplyEditorSheet(
     onClearReplyTo: () -> Unit,
     onPreview: () -> Unit,
     onPickImages: () -> Unit,
+    onPickHostedImages: () -> Unit,
     onRemoveAttachment: (ImageAttachment) -> Unit,
     onRetryAttachment: (ImageAttachment) -> Unit,
     onRetryFailedUploads: () -> Unit,
@@ -402,6 +410,7 @@ private fun ReplyEditorSheet(
                 bodyState = bodyState,
                 editorState = editorState,
                 onPickImages = onPickImages,
+                onPickHostedImages = onPickHostedImages,
                 onCustomize = onCustomize,
                 appMenu = {
                     ComposerAppMenu(onInsertVote = onInsertVote, onInsertStardust = onInsertStardust)

@@ -95,6 +95,8 @@ fun ComposerEditorBar(
     barModifier: Modifier = Modifier,
     /** The host owns the photo picker, so [EditorAction.IMAGE] comes back out rather than acting. */
     onPickImages: () -> Unit = {},
+    /** Same for [EditorAction.HOSTED_IMAGE]: the host owns the image-host picker too. */
+    onPickHostedImages: () -> Unit,
     /** Runs after markup is applied — both editors put focus back in the body with it. */
     onFormatted: () -> Unit = {},
     onCustomize: (() -> Unit)? = null,
@@ -109,7 +111,7 @@ fun ComposerEditorBar(
     // Either panel stands in for part of the keyboard, and back puts it away before it leaves.
     PlazaBackHandler(enabled = editorState.emojiOpen || editorState.formatOpen) { editorState.closePanels() }
     val onAction: (EditorAction) -> Unit = { action ->
-        editorState.dispatch(action, bodyState, onPickImages, onFormatted) { keyboard?.hide() }
+        editorState.dispatch(action, bodyState, onPickImages, onPickHostedImages, onFormatted) { keyboard?.hide() }
     }
     val openFormat: () -> Unit = {
         editorState.toggleFormat()

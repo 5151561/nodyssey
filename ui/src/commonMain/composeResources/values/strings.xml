@@ -1748,6 +1748,8 @@
     <string name="sticker_host_hint">按住拖动可连续多选；已加过的半透明，不能再选</string>
     <string name="sticker_host_connect">去连接图床</string>
     <string name="sticker_host_empty">图床里还没有图片</string>
+    <string name="hosted_image_pick_title">从图床选择</string>
+    <string name="hosted_image_insert_count">插入 %1$d 张</string>
     <string name="sticker_upload_to">上传到</string>
     <string name="sticker_upload_host_default">%1$s · 默认图床</string>
     <string name="sticker_keep_original">保留原图</string>

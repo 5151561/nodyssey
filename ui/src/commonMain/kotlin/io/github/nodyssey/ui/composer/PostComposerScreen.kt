@@ -530,6 +530,7 @@ private fun EditorContent(
     var customizing by rememberSaveable { mutableStateOf(false) }
     var composingVote by rememberSaveable { mutableStateOf(false) }
     var composingReceiveCode by rememberSaveable { mutableStateOf(false) }
+    var pickingHosted by rememberSaveable { mutableStateOf(false) }
 
     // The keyboard padding is the caller's — [paddingWithKeyboard] has to sit next to the Scaffold
     // padding it consumes, and applying `imePadding` again here would put the gap right back.
@@ -567,6 +568,7 @@ private fun EditorContent(
             // emoji panel under it stands in for the keyboard, and spans the window as one does.
             barModifier = Modifier.readableWidth(),
             onPickImages = onPickImages,
+            onPickHostedImages = { pickingHosted = true },
             onCustomize = { customizing = true },
             // The bar takes focus when it is tapped, and a caret the user cannot see is a caret
             // they have lost track of.
@@ -614,6 +616,10 @@ private fun EditorContent(
             },
             onDismiss = { composingReceiveCode = false },
         )
+    }
+
+    if (pickingHosted) {
+        HostedImagePickerSheet(bodyState = bodyState, onDismiss = { pickingHosted = false })
     }
 
     if (customizing) {

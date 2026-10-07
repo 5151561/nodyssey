@@ -28,6 +28,7 @@ import io.github.plaza.designsys.resources.composer_format_bold
 import io.github.plaza.designsys.resources.composer_format_code
 import io.github.plaza.designsys.resources.composer_format_emoji
 import io.github.plaza.designsys.resources.composer_format_heading
+import io.github.plaza.designsys.resources.composer_format_hosted_image
 import io.github.plaza.designsys.resources.composer_format_image
 import io.github.plaza.designsys.resources.composer_format_italic
 import io.github.plaza.designsys.resources.composer_format_link
@@ -152,6 +153,7 @@ val EditorAction.icon: ImageVector
         EditorAction.LINK -> PlazaIcons.Link
         EditorAction.MENTION -> PlazaIcons.AlternateEmail
         EditorAction.IMAGE -> PlazaIcons.Image
+        EditorAction.HOSTED_IMAGE -> PlazaIcons.CloudUpload
         EditorAction.EMOJI -> PlazaIcons.Mood
     }
 
@@ -167,5 +169,6 @@ val EditorAction.label: StringResource
         EditorAction.LINK -> Res.string.composer_format_link
         EditorAction.MENTION -> Res.string.composer_format_mention
         EditorAction.IMAGE -> Res.string.composer_format_image
+        EditorAction.HOSTED_IMAGE -> Res.string.composer_format_hosted_image
         EditorAction.EMOJI -> Res.string.composer_format_emoji
     }

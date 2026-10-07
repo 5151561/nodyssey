@@ -13,7 +13,8 @@ import androidx.compose.foundation.text.input.TextFieldBuffer
  * shows — and it is deliberately absent: it lives in each surface's own chrome, alongside 发布 and
  * the close button, rather than competing with 加粗 for a slot.
  *
- * [IMAGE] and [EMOJI] open something rather than rewriting text; the screen handles them.
+ * [IMAGE], [HOSTED_IMAGE] and [EMOJI] open something rather than rewriting text; the screen handles
+ * them. [IMAGE] uploads a new picture; [HOSTED_IMAGE] links one that is already on the image host.
  */
 enum class EditorAction {
     BOLD,
@@ -26,6 +27,7 @@ enum class EditorAction {
     LINK,
     MENTION,
     IMAGE,
+    HOSTED_IMAGE,
     EMOJI,
 }
 
@@ -64,7 +66,7 @@ fun TextFieldBuffer.applyMarkdown(action: EditorAction) {
         EditorAction.HEADING -> toggleLinePrefix("## ")
         EditorAction.QUOTE -> toggleLinePrefix("> ")
         EditorAction.LIST -> toggleLinePrefix("- ")
-        EditorAction.IMAGE, EditorAction.EMOJI -> Unit
+        EditorAction.IMAGE, EditorAction.HOSTED_IMAGE, EditorAction.EMOJI -> Unit
     }
 }
 

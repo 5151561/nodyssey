@@ -17,6 +17,7 @@
     <string name="composer_format_link">Link</string>
     <string name="composer_format_mention">Mention someone</string>
     <string name="composer_format_image">Image</string>
+    <string name="composer_format_hosted_image">Image host</string>
     <string name="composer_format_emoji">Emoji</string>
 
     <string name="composer_toolbar_customize">Customise toolbar</string>

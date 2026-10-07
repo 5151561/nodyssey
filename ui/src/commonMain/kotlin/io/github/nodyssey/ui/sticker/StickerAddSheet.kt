@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -482,32 +483,13 @@ private fun ColumnScope.HostTab(
     val selection by viewModel.hostSelection.collectAsStateWithLifecycle()
     val mine by viewModel.mineUrls.collectAsStateWithLifecycle()
     val gifOnly by viewModel.gifOnly.collectAsStateWithLifecycle()
-    val navigation = LocalStickerNavigation.current
 
     when (val current = state) {
         HostListState.Loading -> Box(Modifier.fillMaxWidth().height(HOST_GRID_HEIGHT), contentAlignment = Alignment.Center) {
             PlazaLoadingIndicator()
         }
 
-        is HostListState.Failed -> {
-            Text(
-                stringResource(current.error.messageRes()),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val configurable = current.error == ImageHostError.NotConfigured ||
-                current.error == ImageHostError.Unsupported ||
-                current.error == ImageHostError.InvalidKey
-            if (configurable && navigation != null) {
-                Button(onClick = navigation.openImageHost, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.sticker_host_connect))
-                }
-            } else {
-                Button(onClick = viewModel::loadHost, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(Res.string.action_retry))
-                }
-            }
-        }
+        is HostListState.Failed -> HostImagesFailed(current.error, onRetry = viewModel::loadHost)
 
         is HostListState.Loaded -> {
             val images = current.images.filter { !gifOnly || it.isGif() }
@@ -534,7 +516,7 @@ private fun ColumnScope.HostTab(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                HostGrid(
+                HostImageGrid(
                     images = images,
                     selection = selection,
                     added = mine,
@@ -561,16 +543,49 @@ private fun HostedImage.isGif(): Boolean =
         fileName.endsWith(".gif", ignoreCase = true)
 
 /**
- * The host's pictures, four across. A tap toggles one; a long press and a drag selects every cell
- * the finger passes over — 1d's 按住拖动可连续多选 — found by hit-testing the grid's own layout.
+ * Why the host's pictures could not be listed, and the one way forward: 图床设置 when the fix is a
+ * setting (none connected, a host with no list, a rejected key), otherwise another try.
  */
 @Composable
-private fun HostGrid(
+internal fun HostImagesFailed(
+    error: ImageHostError,
+    onRetry: () -> Unit,
+) {
+    val navigation = LocalStickerNavigation.current
+    Text(
+        stringResource(error.messageRes()),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    val configurable = error == ImageHostError.NotConfigured ||
+        error == ImageHostError.Unsupported ||
+        error == ImageHostError.InvalidKey
+    if (configurable && navigation != null) {
+        Button(onClick = navigation.openImageHost, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.sticker_host_connect))
+        }
+    } else {
+        Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.action_retry))
+        }
+    }
+}
+
+/**
+ * The host's pictures, four across. A tap toggles one; a long press and a drag selects every cell
+ * the finger passes over — 1d's 按住拖动可连续多选 — found by hit-testing the grid's own layout.
+ *
+ * Shared by 添加表情's 我的图床 tab and the editors' 从图床选择 sheet. [added] is the sticker tab's:
+ * pictures already in 我的表情, dimmed and not selectable; the editors pass none.
+ */
+@Composable
+internal fun HostImageGrid(
     images: List<HostedImage>,
     selection: Set<String>,
-    added: Set<String>,
     onToggle: (String) -> Unit,
     onDragSelect: (String) -> Unit,
+    added: Set<String> = emptySet(),
+    maxHeight: Dp = HOST_GRID_HEIGHT,
 ) {
     val gridState = rememberLazyGridState()
     fun urlAt(offset: Offset): String? =
@@ -588,7 +603,7 @@ private fun HostGrid(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = HOST_GRID_HEIGHT)
+            .heightIn(max = maxHeight)
             .pointerInput(images, added) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { offset -> urlAt(offset)?.takeIf { it !in added }?.let(onDragSelect) },

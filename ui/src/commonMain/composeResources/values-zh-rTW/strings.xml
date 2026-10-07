@@ -1473,6 +1473,8 @@
     <string name="sticker_host_hint">按住拖動可連續多選；已加過的半透明，不能再選</string>
     <string name="sticker_host_connect">去連接圖床</string>
     <string name="sticker_host_empty">圖床裡還沒有圖片</string>
+    <string name="hosted_image_pick_title">從圖床選擇</string>
+    <string name="hosted_image_insert_count">插入 %1$d 張</string>
     <string name="sticker_upload_to">上傳到</string>
     <string name="sticker_upload_host_default">%1$s · 預設圖床</string>
     <string name="sticker_keep_original">保留原圖</string>

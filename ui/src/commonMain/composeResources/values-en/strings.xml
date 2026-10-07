@@ -1481,6 +1481,8 @@
     <string name="sticker_host_hint">Press and drag to select several; ones already added are dimmed</string>
     <string name="sticker_host_connect">Connect an image host</string>
     <string name="sticker_host_empty">Nothing on the host yet</string>
+    <string name="hosted_image_pick_title">Pick from image host</string>
+    <string name="hosted_image_insert_count">Insert %1$d</string>
     <string name="sticker_upload_to">Upload to</string>
     <string name="sticker_upload_host_default">%1$s · default host</string>
     <string name="sticker_keep_original">Keep original</string>
