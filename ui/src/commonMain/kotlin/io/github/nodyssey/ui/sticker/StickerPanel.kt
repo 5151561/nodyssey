@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.nodyssey.data.sticker.MAX_NAME_LENGTH
 import io.github.nodyssey.data.sticker.MINE_GROUP_KEY
 import io.github.nodyssey.data.sticker.MySticker
@@ -73,15 +72,15 @@ internal fun stickerMarkdown(
 private val ALT_UNSAFE = Regex("""[\[\]()]""")
 
 /** A line under the panel with an undo — 「已添加到我的表情 · 撤销」. */
-internal class StickerNotice(
+class StickerNotice(
     val text: String,
     val undoUrls: List<String> = emptyList(),
 )
 
 /**
  * The panel's groups — 我的, the subscribed folders and [siteGroups] — in the order 表情管理 keeps
- * (1g), less the ones hidden there. Also hosts what those groups open — 添加表情, the rename dialog —
- * and the undo line under the grid.
+ * (1g), less the ones hidden there. Also hosts the rename dialog those groups open and the undo line
+ * under the grid, which is also where 添加表情 reports back.
  *
  * Whether a pack has an update is said on 表情管理 and not here (1b): the panel is for sending.
  *
@@ -97,15 +96,15 @@ internal fun StickerPanelHost(
     val subscriptions by remember(library) { library.subscriptions }.collectAsStateWithLifecycle(emptyList())
     val layout by remember(library) { library.groupLayout }.collectAsStateWithLifecycle(StickerGroupLayout())
     val cdn by remember(library) { library.cdn }.collectAsStateWithLifecycle(StickerCdnSettings())
-    val addViewModel = viewModel(key = "sticker-add") { StickerAddViewModel(library) }
+    val navigation = LocalStickerNavigation.current
     val scope = rememberCoroutineScope()
 
-    var addOpen by rememberSaveable { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<MySticker?>(null) }
     var notice by remember { mutableStateOf<StickerNotice?>(null) }
 
     // Throttled inside to once per six hours per repository, so opening the panel is cheap.
     LaunchedEffect(library) { library.checkForUpdates(force = false) }
+    CollectStickerNotices { notice = it }
     LaunchedEffect(notice) {
         if (notice != null) {
             delay(NOTICE_MILLIS)
@@ -116,17 +115,17 @@ internal fun StickerPanelHost(
     val addedText = stringResource(Res.string.sticker_added)
     val mineTitle = stringResource(Res.string.sticker_group_mine)
     val mineEmpty = stringResource(Res.string.sticker_mine_empty)
-    val openAdd = {
-        addViewModel.reset()
-        addOpen = true
-    }
 
+    // No way in without somewhere to go: a preview or a test provides no navigation.
+    val addCell: (@Composable (Modifier) -> Unit)? = navigation?.let { nav ->
+        { modifier -> AddStickerCell(onClick = { nav.openAdd(StickerAddTab.LINK, null) }, modifier = modifier) }
+    }
     val mineGroup = EmojiGroup(
         title = { mineTitle },
         entries = mine.map { EmojiEntry.Sticker(name = it.name, shortcode = stickerMarkdown(it.name, it.url), url = it.url) },
         key = MINE_GROUP_KEY,
         icon = Icons.Default.Favorite,
-        leadingCell = { modifier -> AddStickerCell(onClick = openAdd, modifier = modifier) },
+        leadingCell = addCell,
         entryMenu = { entry, dismiss ->
             (entry as? EmojiEntry.Sticker)?.let { sticker ->
                 MineStickerMenu(
@@ -186,7 +185,7 @@ internal fun StickerPanelHost(
                 } else {
                     {
                         TextButton(onClick = {
-                            addViewModel.undoAdd(current.undoUrls)
+                            scope.launch { library.remove(current.undoUrls) }
                             notice = null
                         }) { Text(stringResource(Res.string.sticker_undo)) }
                     }
@@ -195,13 +194,6 @@ internal fun StickerPanelHost(
         }
     }
 
-    if (addOpen) {
-        StickerAddSheet(
-            viewModel = addViewModel,
-            onDismiss = { addOpen = false },
-            onNotice = { notice = it },
-        )
-    }
     renaming?.let { target ->
         RenameStickerDialog(
             initial = target.name,

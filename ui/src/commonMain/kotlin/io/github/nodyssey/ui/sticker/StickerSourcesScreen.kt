@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,19 +89,11 @@ fun StickerSourcesRoute(
     val checking by viewModel.checking.collectAsStateWithLifecycle()
     val checkError by viewModel.checkError.collectAsStateWithLifecycle()
     val upToDate by viewModel.checkedUpToDate.collectAsStateWithLifecycle()
-    val library = LocalStickerLibrary.current
-    val addViewModel = library?.let { viewModel(key = "sticker-add") { StickerAddViewModel(it) } }
-    var addOpen by rememberSaveable { mutableStateOf(false) }
+    val navigation = LocalStickerNavigation.current
     var confirming by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<StickerNotice?>(null) }
+    CollectStickerNotices { notice = it }
     val appBarState = rememberOneHandAppBarState()
-
-    fun openAdd(configure: StickerAddViewModel.() -> Unit) {
-        addViewModel ?: return
-        addViewModel.reset()
-        addViewModel.configure()
-        addOpen = true
-    }
 
     Scaffold(
         modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
@@ -139,7 +130,7 @@ fun StickerSourcesRoute(
                     SourceCard(
                         subscription = subscription,
                         gone = errors[subscription.slug] == StickerSourceError.NotFound,
-                        onOpen = { openAdd { editSource(subscription.slug) } },
+                        onOpen = { navigation?.openAdd(StickerAddTab.GITHUB, subscription.slug) },
                         onUpdate = { viewModel.applyUpdate(subscription.slug) },
                         onUnsubscribe = { confirming = subscription.slug },
                     )
@@ -154,9 +145,9 @@ fun StickerSourcesRoute(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (addViewModel != null) {
+                if (navigation != null) {
                     OutlinedButton(
-                        onClick = { openAdd { selectTab(StickerAddTab.GITHUB) } },
+                        onClick = { navigation.openAdd(StickerAddTab.GITHUB, null) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -175,9 +166,6 @@ fun StickerSourcesRoute(
         }
     }
 
-    if (addOpen && addViewModel != null) {
-        StickerAddSheet(viewModel = addViewModel, onDismiss = { addOpen = false }, onNotice = { notice = it })
-    }
     confirming?.let { slug ->
         AlertDialog(
             onDismissRequest = { confirming = null },

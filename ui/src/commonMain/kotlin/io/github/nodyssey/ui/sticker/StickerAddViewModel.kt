@@ -76,10 +76,9 @@ sealed interface RepoState {
 }
 
 /**
- * 添加表情 — the four ways into 我的 and the GitHub subscription, one sheet.
+ * 添加表情 — the four ways into 我的 and the GitHub subscription, one page.
  *
- * Owned by the screen the panel is on, so it lives as long as that editor; [reset] clears what a
- * previous opening left behind.
+ * One per opening of that page, so each starts empty.
  */
 class StickerAddViewModel(
     private val library: StickerLibrary,
@@ -94,14 +93,6 @@ class StickerAddViewModel(
     fun selectTab(tab: StickerAddTab) {
         _tab.value = tab
         if (tab == StickerAddTab.HOST && _host.value !is HostListState.Loaded) loadHost()
-    }
-
-    fun reset(tab: StickerAddTab = StickerAddTab.LINK) {
-        _linkText.value = ""
-        _previews.value = emptyList()
-        _hostSelection.value = emptySet()
-        newSource()
-        selectTab(tab)
     }
 
     // ---- 链接 -------------------------------------------------------------------------------------
@@ -281,7 +272,7 @@ class StickerAddViewModel(
 
     /**
      * Read from the store rather than [subscriptions].value, which holds anything only while
-     * something collects it — and 表情管理 calls [editSource] before the sheet that does is composed.
+     * something collects it — and 换文件夹 calls [editSource] before the page that does is composed.
      */
     private suspend fun subscribed(slugMatches: (String) -> Boolean): StickerSubscription? =
         library.subscriptions.first().firstOrNull { slugMatches(it.slug) }
@@ -323,10 +314,6 @@ class StickerAddViewModel(
         if (paths.isEmpty()) return false
         library.subscribe(listing, paths)
         return true
-    }
-
-    fun undoAdd(urls: List<String>) {
-        viewModelScope.launch { library.remove(urls) }
     }
 
     private companion object {

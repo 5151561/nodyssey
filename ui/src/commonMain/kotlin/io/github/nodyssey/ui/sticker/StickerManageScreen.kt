@@ -179,12 +179,11 @@ fun StickerManageRoute(
     val hostConfig by viewModel.hostConfig.collectAsStateWithLifecycle()
     val cdn by viewModel.cdn.collectAsStateWithLifecycle()
     val latency by viewModel.latency.collectAsStateWithLifecycle()
-    val library = LocalStickerLibrary.current
-    val addViewModel = library?.let { viewModel(key = "sticker-add") { StickerAddViewModel(it) } }
-    var addOpen by rememberSaveable { mutableStateOf(false) }
+    val navigation = LocalStickerNavigation.current
     var cdnOpen by rememberSaveable { mutableStateOf(false) }
     var importOpen by rememberSaveable { mutableStateOf(false) }
     var notice by remember { mutableStateOf<StickerNotice?>(null) }
+    CollectStickerNotices { notice = it }
     val appBarState = rememberOneHandAppBarState()
     val scope = rememberCoroutineScope()
     val copy = rememberClipboardCopy()
@@ -215,12 +214,9 @@ fun StickerManageRoute(
                     }
                 },
                 actions = {
-                    if (addViewModel != null) {
+                    if (navigation != null) {
                         FilledTonalButton(
-                            onClick = {
-                                addViewModel.reset()
-                                addOpen = true
-                            },
+                            onClick = { navigation.openAdd(StickerAddTab.LINK, null) },
                             contentPadding = PaddingValues(start = 12.dp, end = 16.dp),
                             modifier = Modifier.padding(end = Spacing.sm),
                         ) {
@@ -326,9 +322,6 @@ fun StickerManageRoute(
         }
     }
 
-    if (addOpen && addViewModel != null) {
-        StickerAddSheet(viewModel = addViewModel, onDismiss = { addOpen = false }, onNotice = { notice = it })
-    }
     if (cdnOpen) {
         CdnSheet(viewModel = viewModel, onDismiss = { cdnOpen = false })
     }

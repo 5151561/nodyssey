@@ -62,10 +62,9 @@ class StickerAddViewModelTest {
                 paths = setOf("a", "b"),
             )
             http.trees[OLD_SHA] = listOf("a/1.png", "b/1.png", "c/1.png")
-            // Built and driven the way 表情管理 does it: nothing is collecting its flows yet.
+            // Built and driven the way 换文件夹's page entry does it: nothing is collecting its flows yet.
             val viewModel = viewModels.track(StickerAddViewModel(library))
 
-            viewModel.reset()
             viewModel.editSource("o/r")
             advanceUntilIdle()
 

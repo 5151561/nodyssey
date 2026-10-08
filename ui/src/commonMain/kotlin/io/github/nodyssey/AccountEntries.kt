@@ -21,6 +21,9 @@ import io.github.nodyssey.ui.account.SecurityViewModel
 import io.github.nodyssey.ui.account.TitleBlockViewModel
 import io.github.nodyssey.ui.composer.NodeSeekEmojiGroups
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.sticker.LocalStickerNavigation
+import io.github.nodyssey.ui.sticker.StickerAddRoute
+import io.github.nodyssey.ui.sticker.StickerAddViewModel
 import io.github.nodyssey.ui.sticker.StickerGroupRoute
 import io.github.nodyssey.ui.sticker.StickerGroupViewModel
 import io.github.nodyssey.ui.sticker.StickerManageRoute
@@ -91,6 +94,24 @@ internal fun EntryProviderScope<NavKey>.accountEntries(nav: StackEntryScope) = w
         StickerSourcesRoute(
             viewModel = viewModel,
             onBack = { backStack.removeLastOrNull() },
+        )
+    }
+
+    entry<StickerAddKey> { key ->
+        val library = container.stickerLibrary
+        val notices = LocalStickerNavigation.current?.notices
+        val viewModel: StickerAddViewModel = viewModel {
+            StickerAddViewModel(library).apply {
+                if (key.source != null) editSource(key.source) else selectTab(key.tab)
+            }
+        }
+        StickerAddRoute(
+            viewModel = viewModel,
+            onBack = { backStack.removeLastOrNull() },
+            onDone = { notice ->
+                notices?.post(notice)
+                backStack.removeLastOrNull()
+            },
         )
     }
 

@@ -3,6 +3,7 @@ package io.github.nodyssey
 import androidx.navigation3.runtime.NavKey
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.sticker.StickerAddTab
 import kotlinx.serialization.Serializable
 
 /** The four bottom-navigation destinations. */
@@ -97,6 +98,16 @@ data class StickerGroupKey(val key: String) : NavKey
 /** 表情管理 › GitHub 订阅 (1i). */
 @Serializable
 data object StickerSourcesKey : NavKey
+
+/**
+ * 添加表情, opened on [tab] — or, with [source], on the GitHub tab re-picking that subscribed
+ * repository's folders (换文件夹).
+ */
+@Serializable
+data class StickerAddKey(
+    val tab: StickerAddTab = StickerAddTab.LINK,
+    val source: String? = null,
+) : NavKey
 
 @Serializable
 data object AboutAppKey : NavKey

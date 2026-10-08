@@ -12,11 +12,12 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +33,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -40,13 +42,14 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -79,11 +83,11 @@ import io.github.nodyssey.data.sticker.folderName
 import io.github.nodyssey.ui.account.formatBytes
 import io.github.nodyssey.ui.account.messageRes
 import io.github.nodyssey.ui.account.nameRes
-import io.github.nodyssey.ui.common.PlazaSheet
 import io.github.nodyssey.ui.common.rememberNewClipboardText
 import io.github.nodyssey.ui.composer.MAX_IMAGES_PER_PICK
 import io.github.nodyssey.ui.composer.rememberImagePicker
 import io.github.nodyssey.ui.resources.Res
+import io.github.nodyssey.ui.resources.action_back
 import io.github.nodyssey.ui.resources.action_retry
 import io.github.nodyssey.ui.resources.composer_image_default_name
 import io.github.nodyssey.ui.resources.sticker_add
@@ -151,29 +155,36 @@ import io.github.plaza.designsys.component.GroupedListItemSwitch
 import io.github.plaza.designsys.component.GroupedRow
 import io.github.plaza.designsys.component.ImageFallback
 import io.github.plaza.designsys.component.LayerCard
+import io.github.plaza.designsys.component.LayerPageGutter
+import io.github.plaza.designsys.component.OneHandTopAppBar
 import io.github.plaza.designsys.component.PlazaIcons
 import io.github.plaza.designsys.component.PlazaLoadingIndicator
 import io.github.plaza.designsys.component.SectionNote
 import io.github.plaza.designsys.component.TabLabel
 import io.github.plaza.designsys.component.UnderlineTabRow
+import io.github.plaza.designsys.component.rememberOneHandAppBarState
 import io.github.plaza.designsys.image.allowMeteredImage
 import io.github.plaza.designsys.theme.Spacing
+import io.github.plaza.designsys.theme.readableWidth
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * 添加表情 (1c–1e, 2a): paste links, pick from the connected image host, upload new ones, or
  * subscribe to a GitHub repository's folders.
  *
- * [onNotice] is how a finished add reports back, with its undo, to the line under the panel.
+ * A page rather than a sheet: four tabs of fields, grids and lists outgrew one, and a sheet has to
+ * be lifted over the keyboard by hand where a page's `imePadding` simply works.
+ *
+ * A finished add pops the page; [onDone] is handed the 「已添加 · 撤销」 line for the page under it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun StickerAddSheet(
+fun StickerAddRoute(
     viewModel: StickerAddViewModel,
-    onDismiss: () -> Unit,
-    onNotice: (StickerNotice) -> Unit,
+    onBack: () -> Unit,
+    onDone: (StickerNotice) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val tabs = listOf(
@@ -191,7 +202,7 @@ internal fun StickerAddSheet(
 
     // One 添加 at a time. A second tap while the first is writing would add nothing new and its
     // empty answer would replace the first one's 已添加 · 撤销. Left set once [work] has done its
-    // part: the sheet is on its way out, and a tap in that last frame would do the same.
+    // part: the page is on its way out, and a tap in that last frame would do the same.
     var busy by remember { mutableStateOf(false) }
 
     fun submit(work: suspend () -> Boolean) {
@@ -209,77 +220,83 @@ internal fun StickerAddSheet(
     added?.let { urls ->
         val text = if (urls.isEmpty()) noneText else stringResource(Res.string.sticker_added_count, urls.size)
         LaunchedEffect(urls) {
-            onNotice(StickerNotice(text, urls))
             added = null
-            onDismiss()
+            onDone(StickerNotice(text, urls))
         }
     }
+    val appBarState = rememberOneHandAppBarState()
 
-    val leaving = rememberLeavingStickerNavigation(onDismiss)
-
-    CompositionLocalProvider(LocalStickerNavigation provides leaving) {
-        SheetBody(
-            viewModel = viewModel,
-            tab = tab,
-            tabs = tabs,
-            busy = busy,
-            onDismiss = onDismiss,
-            onAddLinks = {
-                submit {
-                    added = viewModel.addLinks()
-                    true
-                }
-            },
-            onAddHost = {
-                submit {
-                    added = viewModel.addHostSelection()
-                    true
-                }
-            },
-            onSubscribe = {
-                submit {
-                    viewModel.subscribe().also { subscribed ->
-                        if (subscribed) {
-                            onNotice(StickerNotice(subscribedText))
-                            onDismiss()
-                        }
+    Scaffold(
+        modifier = modifier.nestedScroll(appBarState.nestedScrollConnection),
+        topBar = {
+            OneHandTopAppBar(
+                title = stringResource(Res.string.sticker_add),
+                state = appBarState,
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.action_back))
                     }
-                }
-            },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SheetBody(
-    viewModel: StickerAddViewModel,
-    tab: StickerAddTab,
-    tabs: List<Pair<StickerAddTab, StringResource>>,
-    busy: Boolean,
-    onDismiss: () -> Unit,
-    onAddLinks: () -> Unit,
-    onAddHost: () -> Unit,
-    onSubscribe: () -> Unit,
-) {
-    PlazaSheet(onDismiss = onDismiss, title = stringResource(Res.string.sticker_add)) {
-        UnderlineTabRow(
-            selectedTabIndex = tabs.indexOfFirst { it.first == tab },
-            tabs = tabs.map { TabLabel(stringResource(it.second)) },
-            onSelect = { viewModel.selectTab(tabs[it].first) },
-        )
+                },
+            )
+        },
+    ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            Modifier
+                .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding()
+                .fillMaxSize(),
         ) {
-            when (tab) {
-                StickerAddTab.LINK -> LinkTab(viewModel, enabled = !busy, onAdd = onAddLinks)
-                StickerAddTab.HOST -> HostTab(viewModel, enabled = !busy, onAdd = onAddHost)
-                StickerAddTab.UPLOAD -> UploadTab(viewModel)
-                StickerAddTab.GITHUB -> GitHubTab(viewModel, enabled = !busy, onSubscribe = onSubscribe)
+            UnderlineTabRow(
+                selectedTabIndex = tabs.indexOfFirst { it.first == tab },
+                tabs = tabs.map { TabLabel(stringResource(it.second)) },
+                onSelect = { viewModel.selectTab(tabs[it].first) },
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .readableWidth()
+                    .padding(horizontal = LayerPageGutter, vertical = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                when (tab) {
+                    StickerAddTab.LINK -> LinkTab(
+                        viewModel,
+                        enabled = !busy,
+                        onAdd = {
+                            submit {
+                                added = viewModel.addLinks()
+                                true
+                            }
+                        },
+                    )
+
+                    StickerAddTab.HOST -> HostTab(
+                        viewModel,
+                        enabled = !busy,
+                        onAdd = {
+                            submit {
+                                added = viewModel.addHostSelection()
+                                true
+                            }
+                        },
+                    )
+
+                    StickerAddTab.UPLOAD -> UploadTab(viewModel)
+
+                    StickerAddTab.GITHUB -> GitHubTab(
+                        viewModel,
+                        enabled = !busy,
+                        onSubscribe = {
+                            submit {
+                                viewModel.subscribe().also { subscribed ->
+                                    if (subscribed) onDone(StickerNotice(subscribedText))
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -295,7 +312,7 @@ private fun ColumnScope.LinkTab(
 ) {
     val text by viewModel.linkText.collectAsStateWithLifecycle()
     val previews by viewModel.previews.collectAsStateWithLifecycle()
-    // A fresh reader per opening: the sheet is the reader asking, and the clip on it now is what
+    // A fresh reader per opening: the page is the reader asking, and the clip on it now is what
     // they most likely copied for it.
     val readClipboard = rememberNewClipboardText()
     val clipLinks = remember { extractStickerLinks(readClipboard().orEmpty()) }
@@ -415,7 +432,7 @@ private fun LinkPreviewTile(
 }
 
 /**
- * A picture fetched for a sheet or a grid of stickers. Waived past 仅 Wi-Fi 加载图片 on the panel's
+ * A picture fetched for 添加表情 or a grid of stickers. Waived past 仅 Wi-Fi 加载图片 on the panel's
  * own grounds: the reader opened this to look at exactly these, and they are a few kilobytes each.
  */
 @Composable

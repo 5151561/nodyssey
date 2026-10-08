@@ -5,6 +5,7 @@ import androidx.savedstate.serialization.decodeFromSavedState
 import androidx.savedstate.serialization.encodeToSavedState
 import io.github.nodyssey.data.composer.PostEditTarget
 import io.github.nodyssey.ui.login.WebViewGoal
+import io.github.nodyssey.ui.sticker.StickerAddTab
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -140,6 +141,7 @@ private val EVERY_KEY: List<NavKey> =
         StickerManageKey,
         StickerGroupKey("mine"),
         StickerSourcesKey,
+        StickerAddKey(StickerAddTab.GITHUB, source = "owner/repo"),
         AboutAppKey,
         AboutCommunityKey,
         PrivacyKey,
