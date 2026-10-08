@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "channel": "dev",
-  "versionName": "1.2.22-dev.6",
-  "tag": "v1.2.22-dev.6",
-  "publishedOn": "2026-10-07",
-  "notes": "测试版，由 tag `v1.2.22-dev.6` 构建。不是正式版本，可能不稳定。\n\n### 新增\n\n- 可自建表情库，长按图片收藏、订阅、备份。\n- 关注、搜索等页可左右滑动切换 tab。\n- 编辑器可从图床选图插入。\n\n### 改进\n\n- 编辑器工具栏改回单行，右侧渐隐。\n- 首页版块条随滑动实时切换高亮。\n- 编辑框里的表情直接显示成图片。\n- 列表和楼层时间去掉 ago 后缀。\n- NodeImage 可查看和删除已传图片。\n\n### 修复\n\n- HEIC 原图上传后图床显示不出来。\n- 通知页标题栏收起时会变色。\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.22-dev.5...v1.2.22-dev.6",
+  "versionName": "1.2.22-dev.7",
+  "tag": "v1.2.22-dev.7",
+  "publishedOn": "2026-10-08",
+  "notes": "测试版，由 tag `v1.2.22-dev.7` 构建。不是正式版本，可能不稳定。\n\n### 改进\n\n- 添加表情改为独立页面。\n\n### 修复\n\n- 回复框跳页后返回卡住。\n\n**Full Changelog**: https://github.com/5151561/nodyssey/compare/v1.2.22-dev.6...v1.2.22-dev.7",
   "apk": {
-    "name": "nodyssey-v1.2.22-dev.6.apk",
-    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.22-dev.6/nodyssey-v1.2.22-dev.6.apk",
-    "sizeBytes": 6265879,
-    "sha256": "74cf888e156ee55fa08fe294d2b2faae098e9b0619d20208fd3b56793479db77"
+    "name": "nodyssey-v1.2.22-dev.7.apk",
+    "url": "https://github.com/5151561/nodyssey/releases/download/v1.2.22-dev.7/nodyssey-v1.2.22-dev.7.apk",
+    "sizeBytes": 6268395,
+    "sha256": "747a57fa7ec215ccb154d0b29f924b07751e05b196d33e14dbc88981edff6e94"
   },
-  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.22-dev.6"
+  "releaseUrl": "https://github.com/5151561/nodyssey/releases/tag/v1.2.22-dev.7"
 }
