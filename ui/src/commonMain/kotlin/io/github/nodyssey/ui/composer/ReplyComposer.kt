@@ -115,6 +115,19 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ReplyComposerHost(
     state: ReplyComposerUiState,
+    /**
+     * Another page has been pushed over the thread — 表情管理 or 图床 from the emoji panel, sign-in or
+     * the challenge from the error strip. The reply stays open in [state]; only its sheet is
+     * withheld until the thread is on top again, and then it slides back in.
+     *
+     * The sheet is a window of its own, so it does not leave with the page under it. Left drawn, a
+     * back gesture on the page on top composes the thread for the predictive-back preview, the
+     * sheet comes back with it and takes the gesture, the preview is dropped — and back never
+     * leaves that page. Closing the sheet on the way out, as [rememberLeavingStickerNavigation]
+     * does for the sheets inside this one, would throw away the reply the writer means to come
+     * back to.
+     */
+    covered: Boolean,
     onDismiss: () -> Unit,
     bodyState: TextFieldState,
     onClearReplyTo: () -> Unit,
@@ -150,7 +163,7 @@ fun ReplyComposerHost(
     // The panel is part of the sheet even though its state is not, so it goes down with it — the
     // recents are what outlive the dismissal, not a half-open drawer.
     LaunchedEffect(state.visible) { if (!state.visible) editorState.closePanels() }
-    if (!state.visible) return
+    if (!state.visible || covered) return
     // Hosted here rather than inside the editor sheet: it is a sheet too, and a sheet opened from
     // inside another sheet's content stacks two dialog windows for no reason. As siblings the wrench
     // panel simply covers the editor, which is what it should look like anyway.

@@ -241,6 +241,8 @@ import kotlin.math.roundToInt
 fun PostDetailRoute(
     viewModel: PostDetailViewModel,
     replyViewModel: ReplyComposerViewModel,
+    /** Another page is on top of this one; see [ReplyComposerHost]'s `covered`. */
+    replyCovered: Boolean,
     onBack: () -> Unit,
     onOpenBrowser: (String) -> Unit,
     onSignIn: () -> Unit,
@@ -311,6 +313,7 @@ fun PostDetailRoute(
 
     ReplyComposerHost(
         state = replyState,
+        covered = replyCovered,
         onDismiss = replyViewModel::close,
         bodyState = replyViewModel.bodyState,
         onClearReplyTo = replyViewModel::clearReplyTo,

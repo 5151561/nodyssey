@@ -79,6 +79,7 @@ class ComposerRenderTest {
             PlazaTheme(darkTheme = darkTheme) {
                 ReplyComposerHost(
                     state = REPLY,
+                    covered = false,
                     onDismiss = {},
                     bodyState = rememberTextFieldState(REPLY.body),
                     onClearReplyTo = {},

@@ -104,6 +104,9 @@ internal fun EntryProviderScope<NavKey>.threadEntries(nav: StackEntryScope) = wi
         PostDetailRoute(
             viewModel = viewModel,
             replyViewModel = replyViewModel,
+            // By identity: the stack hands the entry this very key, and an equal key further down
+            // is a different page.
+            replyCovered = backStack.lastOrNull() !== key,
             showBackButton = !(isListDetailExpanded() && backStack.showsListPane()),
             onBack = { backStack.removeLastOrNull() },
             onOpenBrowser = openWebUrl,
